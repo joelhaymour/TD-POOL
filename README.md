@@ -7,12 +7,12 @@ Mobile-first weekly **Anytime Touchdown Pool** for private fantasy leagues.
 ```bash
 npm install
 cp .env.example .env.local
+# Fill NEXT_PUBLIC_SUPABASE_URL + NEXT_PUBLIC_SUPABASE_ANON_KEY
+# Set USE_SUPABASE=true for hosted DB (recommended)
 npm run dev -- --hostname 127.0.0.1
 ```
 
 Open [http://127.0.0.1:3000/joels-league](http://127.0.0.1:3000/joels-league).
-
-> Use `127.0.0.1` (or `localhost` consistently). Mixing hosts can break Next.js client hydration in Cursor’s browser.
 
 ### Demo league
 
@@ -22,61 +22,65 @@ Open [http://127.0.0.1:3000/joels-league](http://127.0.0.1:3000/joels-league).
 | Admin PIN | `1234` |
 | Join PIN | `0000` |
 
+Seed Supabase (when `USE_SUPABASE=true`):
+
 ```bash
-npm run seed   # reseed mock data (dev server must be running)
+curl -X POST http://127.0.0.1:3000/api/seed-supabase
 ```
 
-## Phase 1 — Core product ✅
-
-- League create + invite slug links
-- Member identity picker
-- Ranked TD Pool player board + filters
-- Player research / detail pages
-- Pick submit / change with duplicate prevention
-- Parlay summary + Bet Slip
-- Money modes: individual / fixed / none
-- Admin settings + overrides
-- Local JSON store + mock providers
-
-## Phase 3 — Odds ✅
-
-- Anytime TD odds provider abstraction
-- **The Odds API** integration when `ODDS_API_KEY` is set
-- Mock fallback (app stays fully usable without a key)
-- Automatic odds refresh on league load (~every 5 min)
-- Consensus + per-book prices stored and shown on player detail
-- Dashboard shows “Odds updated X min ago · live/mock”
-
-Set in `.env.local`:
+Local JSON fallback (`USE_SUPABASE=false`):
 
 ```bash
+npm run seed
+```
+
+## What’s built
+
+### Phase 1 — Core ✅
+League create, picks, duplicate prevention, bet slip, money modes, admin, mobile UI
+
+### Phase 2 — NFL results ✅
+Auto game/status sync, TD grading, weekly results, history  
+Provider: **ESPN** (`NFL_PROVIDER=espn`) with mock fallback
+
+### Phase 3 — Odds ✅
+Anytime TD odds sync, consensus + books  
+Provider: **The Odds API** when `ODDS_API_KEY` is set, else mock
+
+### Phase 4 — Research ✅ (mock + history)
+Player detail research, History (last 5 + vs opponent), TD Pool score model  
+Live red-zone/injury/weather feeds can swap in behind existing provider interfaces
+
+### Phase 5 — Polish ✅
+PWA (manifest + service worker), leaderboard, multi-week history API, Realtime hook
+
+### Backend ✅
+- Supabase Postgres schema + RLS + Realtime publication
+- `SupabaseStore` when `USE_SUPABASE=true`
+- Local file store fallback
+
+## Env
+
+```bash
+NEXT_PUBLIC_SUPABASE_URL=
+NEXT_PUBLIC_SUPABASE_ANON_KEY=
+SUPABASE_SERVICE_ROLE_KEY=   # optional; anon works with MVP write policies
+USE_SUPABASE=true
 PROVIDER_MODE=auto
-ODDS_API_KEY=your_key_from_the-odds-api.com
+NFL_PROVIDER=espn
+ODDS_API_KEY=                # optional
 ODDS_API_REGIONS=us
 ```
 
-Note: anytime TD props on The Odds API typically need a plan that includes NFL player props. If live fetch fails, the app falls back to mock automatically.
+## Deploy (Vercel)
 
-## Stack
+```bash
+npx vercel login
+npx vercel --prod
+```
 
-- Next.js App Router + TypeScript + Tailwind
-- Local store: `.data/store.json` (`USE_SUPABASE=false`)
-- Supabase project + Postgres schema ready for Phase 3+
-- Provider interfaces: Odds / NFL / Weather / Injury
+Add the same env vars in the Vercel project settings.
 
-## Admin results demo
-
-1. Open `/joels-league/admin`
-2. Enter PIN `1234`
-3. Click **Simulate finals & resolve TDs**
-4. Return to Picks / History to see results
-
-## Legal note
+## Legal
 
 Odds and projections are informational estimates and may differ from sportsbook pricing. Gambling involves risk.
-
-## Roadmap
-
-3. **Phase 3** — Sportsbook odds integration  
-4. **Phase 4** — Full TD intelligence (usage, injuries, weather)  
-5. **Phase 5** — PWA, deeper history, leaderboards, notifications
