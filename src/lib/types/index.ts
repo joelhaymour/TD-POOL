@@ -271,6 +271,8 @@ export interface LeagueDashboard {
   pick_lock_at: string | null;
   picks_locked: boolean;
   odds_updated_at: string | null;
+  /** Where the latest odds snapshot came from. */
+  odds_source?: "live" | "mock";
 }
 
 export interface CreateLeagueInput {

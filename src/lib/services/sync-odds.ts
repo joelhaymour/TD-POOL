@@ -1,0 +1,134 @@
+import { getConfiguredOddsSource, getOddsProvider } from "@/lib/providers";
+import { getStore } from "@/lib/store";
+import type { Store } from "@/lib/store/types";
+import type { ConsensusOdds, OddsQuote } from "@/lib/providers/types";
+
+export type OddsSyncSummary = {
+  source: "live" | "mock";
+  season: number;
+  week: number;
+  quotes: number;
+  playersUpdated: number;
+  fetchedAt: string;
+  error?: string;
+};
+
+const ODDS_SYNC_TTL_MS = 5 * 60_000;
+const lastOddsSyncAt = new Map<string, number>();
+const inFlightOddsSync = new Map<string, Promise<OddsSyncSummary | null>>();
+
+export { getConfiguredOddsSource };
+
+/**
+ * Refresh anytime TD odds for a league active week.
+ * Uses The Odds API when ODDS_API_KEY is set; otherwise mock provider.
+ * Throttled (5 min) — safe on dashboard load.
+ */
+export async function autoSyncLeagueOdds(
+  slug: string,
+  options: { force?: boolean } = {},
+): Promise<OddsSyncSummary | null> {
+  const now = Date.now();
+  const last = lastOddsSyncAt.get(slug) ?? 0;
+  if (!options.force && now - last < ODDS_SYNC_TTL_MS) {
+    return null;
+  }
+
+  const existing = inFlightOddsSync.get(slug);
+  if (existing) return existing;
+
+  const run = (async () => {
+    try {
+      const store = getStore();
+      const dashboard = await store.getDashboard(slug);
+      if (!dashboard) return null;
+
+      const summary = await syncWeekOdds(store, {
+        season: dashboard.week.season,
+        week: dashboard.week.week,
+        weekId: dashboard.week.id,
+      });
+      lastOddsSyncAt.set(slug, Date.now());
+      return summary;
+    } catch (err) {
+      return {
+        source: getConfiguredOddsSource(),
+        season: 0,
+        week: 0,
+        quotes: 0,
+        playersUpdated: 0,
+        fetchedAt: new Date().toISOString(),
+        error: err instanceof Error ? err.message : "Odds sync failed",
+      };
+    } finally {
+      inFlightOddsSync.delete(slug);
+    }
+  })();
+
+  inFlightOddsSync.set(slug, run);
+  return run;
+}
+
+export async function syncWeekOdds(
+  store: Store,
+  args: { season: number; week: number; weekId: string },
+): Promise<OddsSyncSummary> {
+  const source = getConfiguredOddsSource();
+  const players = await store.listPlayers();
+  const games = await store.listGamesForWeek(args.weekId);
+
+  const provider = getOddsProvider({
+    roster: players
+      .filter((p) => p.external_player_id)
+      .map((p) => ({
+        external_player_id: p.external_player_id!,
+        name: p.name,
+        team: p.team,
+      })),
+    games: games
+      .filter((g) => g.external_game_id)
+      .map((g) => ({
+        external_game_id: g.external_game_id!,
+        home_team: g.home_team,
+        away_team: g.away_team,
+      })),
+  });
+
+  let consensus: ConsensusOdds[] = [];
+  let quotes: OddsQuote[] = [];
+  let error: string | undefined;
+  let effectiveSource: "live" | "mock" = source;
+
+  try {
+    consensus = await provider.getConsensusAnytimeTdOdds(args.season, args.week);
+    quotes = consensus.flatMap((c) => c.books);
+  } catch (err) {
+    error = err instanceof Error ? err.message : "Provider fetch failed";
+    if (source === "live") {
+      const { createMockOddsProvider } = await import(
+        "@/lib/providers/mock/mock-odds-provider"
+      );
+      const mock = createMockOddsProvider();
+      consensus = await mock.getConsensusAnytimeTdOdds(args.season, args.week);
+      quotes = consensus.flatMap((c) => c.books);
+      effectiveSource = "mock";
+      error = `${error} (fell back to mock)`;
+    }
+  }
+
+  const playersUpdated = await store.applyOddsRefresh({
+    weekId: args.weekId,
+    consensus,
+    quotes,
+  });
+
+  return {
+    source: effectiveSource,
+    season: args.season,
+    week: args.week,
+    quotes: quotes.length,
+    playersUpdated,
+    fetchedAt: new Date().toISOString(),
+    error,
+  };
+}

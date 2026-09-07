@@ -38,14 +38,24 @@ npm run seed   # reseed mock data (dev server must be running)
 - Admin settings + overrides
 - Local JSON store + mock providers
 
-## Phase 2 — Live-style NFL data ✅ (mock provider)
+## Phase 3 — Odds ✅
 
-- NFL week calendar / week detection helpers
-- Game status sync (`scheduled` → `in_progress` → `final`)
-- Auto-resolve picks: ✅ TD / ❌ NO TD / ⏳ pending
-- Weekly results + history badges
-- Admin: **Sync game status** and **Simulate finals & resolve TDs**
-- Individual-game lock when a player’s game has started
+- Anytime TD odds provider abstraction
+- **The Odds API** integration when `ODDS_API_KEY` is set
+- Mock fallback (app stays fully usable without a key)
+- Automatic odds refresh on league load (~every 5 min)
+- Consensus + per-book prices stored and shown on player detail
+- Dashboard shows “Odds updated X min ago · live/mock”
+
+Set in `.env.local`:
+
+```bash
+PROVIDER_MODE=auto
+ODDS_API_KEY=your_key_from_the-odds-api.com
+ODDS_API_REGIONS=us
+```
+
+Note: anytime TD props on The Odds API typically need a plan that includes NFL player props. If live fetch fails, the app falls back to mock automatically.
 
 ## Stack
 

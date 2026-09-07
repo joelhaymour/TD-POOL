@@ -1,5 +1,9 @@
 import { getStore } from "@/lib/store";
 import { autoSyncLeagueWeek } from "@/lib/services/sync-nfl-week";
+import {
+  autoSyncLeagueOdds,
+  getConfiguredOddsSource,
+} from "@/lib/services/sync-odds";
 import type { LeagueDashboard } from "@/lib/types";
 
 /** Strip heavy research blobs from list payloads. */
@@ -14,7 +18,6 @@ export function slimDashboard(dashboard: LeagueDashboard): LeagueDashboard {
     members: dashboard.members.map((m) => ({
       ...m,
       member: { ...m.member, pin: null },
-      // Keep player_week light on list views
       player_week: m.player_week
         ? {
             ...m.player_week,
@@ -42,11 +45,14 @@ function emptyResearch(r: LeagueDashboard["ranked_players"][number]["research_js
 export async function loadLeagueDashboard(
   slug: string,
 ): Promise<LeagueDashboard | null> {
-  // Auto-grade games/picks — no admin click required
-  await autoSyncLeagueWeek(slug);
+  // Auto-grade games/picks + refresh odds — no admin click required
+  await Promise.all([autoSyncLeagueWeek(slug), autoSyncLeagueOdds(slug)]);
 
   const store = getStore();
   const dashboard = await store.getDashboard(slug);
   if (!dashboard) return null;
-  return slimDashboard(dashboard);
+  return {
+    ...slimDashboard(dashboard),
+    odds_source: getConfiguredOddsSource(),
+  };
 }

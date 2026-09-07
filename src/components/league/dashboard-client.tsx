@@ -172,6 +172,8 @@ export function DashboardClient({
         payout={dashboard.parlay.estimated_payout}
         showMoney={dashboard.league.betting_mode !== "none"}
         currency={dashboard.league.currency}
+        oddsUpdatedAt={dashboard.odds_updated_at}
+        oddsSource={dashboard.odds_source}
       />
 
       <WeeklyResults

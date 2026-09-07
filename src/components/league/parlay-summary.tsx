@@ -11,6 +11,8 @@ export type ParlaySummaryProps = {
   payout: number | null;
   showMoney?: boolean;
   currency?: "USD" | "CAD";
+  oddsUpdatedAt?: string | null;
+  oddsSource?: "live" | "mock";
   className?: string;
 };
 
@@ -49,8 +51,12 @@ export function ParlaySummary({
   payout,
   showMoney = true,
   currency = "USD",
+  oddsUpdatedAt,
+  oddsSource,
   className,
 }: ParlaySummaryProps) {
+  const oddsLabel = formatOddsAge(oddsUpdatedAt, oddsSource);
+
   return (
     <section
       className={cn(
@@ -108,7 +114,27 @@ export function ParlaySummary({
             Money tracking is off for this league.
           </p>
         )}
+
+        {oddsLabel ? (
+          <p className="mt-3 text-[10px] font-medium uppercase tracking-wider text-chalk/45">
+            {oddsLabel}
+          </p>
+        ) : null}
       </div>
     </section>
   );
+}
+
+function formatOddsAge(
+  iso: string | null | undefined,
+  source?: "live" | "mock",
+): string | null {
+  if (!iso) return null;
+  const ms = Date.now() - new Date(iso).getTime();
+  if (Number.isNaN(ms)) return null;
+  const mins = Math.max(0, Math.round(ms / 60_000));
+  const age =
+    mins < 1 ? "just now" : mins === 1 ? "1 min ago" : `${mins} min ago`;
+  const src = source === "live" ? "live" : "mock";
+  return `Odds updated ${age} · ${src}`;
 }

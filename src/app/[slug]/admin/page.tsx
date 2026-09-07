@@ -23,6 +23,14 @@ export default function AdminPage() {
   const [overridePlayerId, setOverridePlayerId] = useState("");
   const [adminPin, setAdminPin] = useState("");
   const [overriding, setOverriding] = useState(false);
+  const [oddsRefreshing, setOddsRefreshing] = useState(false);
+  const [lastOddsSync, setLastOddsSync] = useState<{
+    source: string;
+    quotes: number;
+    playersUpdated: number;
+    fetchedAt: string;
+    error?: string;
+  } | null>(null);
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -94,6 +102,56 @@ export default function AdminPage() {
     } finally {
       setSyncing(false);
       setSimulating(false);
+    }
+  }
+
+  async function runOddsRefresh() {
+    if (!adminPin.trim()) {
+      toast({
+        title: "Admin PIN required",
+        description: "Enter the admin PIN to refresh odds.",
+        tone: "error",
+      });
+      return;
+    }
+    setOddsRefreshing(true);
+    try {
+      const res = await fetch(`/api/leagues/${slug}/odds-sync`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ adminPin, force: true }),
+      });
+      const data = (await res.json()) as {
+        error?: string;
+        summary?: {
+          source: string;
+          quotes: number;
+          playersUpdated: number;
+          fetchedAt: string;
+          error?: string;
+        };
+      };
+      if (!res.ok || !data.summary) {
+        toast({
+          title: "Odds refresh failed",
+          description: data.error ?? "Try again.",
+          tone: "error",
+        });
+        return;
+      }
+      setLastOddsSync(data.summary);
+      toast({
+        title: "Odds refreshed",
+        description: `${data.summary.source} · ${data.summary.quotes} quotes · ${data.summary.playersUpdated} players${
+          data.summary.error ? ` · ${data.summary.error}` : ""
+        }`,
+        tone: data.summary.error ? "error" : "success",
+      });
+      await refresh();
+    } catch {
+      toast({ title: "Network error", tone: "error" });
+    } finally {
+      setOddsRefreshing(false);
     }
   }
 
@@ -247,19 +305,42 @@ export default function AdminPage() {
         ) : null}
       </section>
 
-      <section className="rounded-2xl border border-border bg-chalk p-4 shadow-card">
+      <section className="space-y-3 rounded-2xl border border-border bg-chalk p-4 shadow-card">
         <h3 className="font-display text-base font-bold uppercase tracking-wide text-ink">
-          Odds
+          Odds (automatic)
         </h3>
-        <p className="mt-2 text-sm leading-relaxed text-ink-muted">
-          Odds will refresh automatically once a live sportsbook provider is
-          connected (Phase 3). Until then the app uses seeded mock odds.
-          Last mock snapshot:{" "}
+        <p className="text-sm leading-relaxed text-ink-muted">
+          Anytime TD odds refresh automatically when the league is opened
+          (about every 5 minutes). With{" "}
+          <code className="text-xs">ODDS_API_KEY</code> set, live sportsbook
+          prices are used; otherwise mock odds keep the app fully usable.
+        </p>
+        <p className="text-xs text-ink-muted">
+          Source:{" "}
+          <span className="font-semibold text-ink">
+            {dashboard.odds_source ?? "mock"}
+          </span>
+          {" · "}
+          Last snapshot:{" "}
           {dashboard.odds_updated_at
             ? new Date(dashboard.odds_updated_at).toLocaleString()
             : "n/a"}
-          .
         </p>
+        <Button
+          fullWidth
+          variant="secondary"
+          disabled={oddsRefreshing}
+          onClick={() => void runOddsRefresh()}
+        >
+          {oddsRefreshing ? "Refreshing…" : "Force odds refresh"}
+        </Button>
+        {lastOddsSync ? (
+          <p className="rounded-xl bg-field px-3 py-2 text-xs text-ink-muted">
+            Last force refresh · {lastOddsSync.source} · {lastOddsSync.quotes}{" "}
+            quotes · {lastOddsSync.playersUpdated} players
+            {lastOddsSync.error ? ` · ${lastOddsSync.error}` : ""}
+          </p>
+        ) : null}
       </section>
 
       <section className="space-y-3 rounded-2xl border border-border bg-chalk p-4 shadow-card">

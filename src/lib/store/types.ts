@@ -13,6 +13,7 @@ import type {
   SelectPickInput,
   UpdateLeagueSettingsInput,
 } from "@/lib/types";
+import type { ConsensusOdds, OddsQuote } from "@/lib/providers/types";
 
 export type GameStatusUpdate = {
   id: string;
@@ -25,6 +26,12 @@ export type PickResultUpdate = {
   pickId: string;
   result: PickResult;
   touchdown_scored: boolean | null;
+};
+
+export type ApplyOddsRefreshInput = {
+  weekId: string;
+  consensus: ConsensusOdds[];
+  quotes: OddsQuote[];
 };
 
 export interface Store {
@@ -60,6 +67,8 @@ export interface Store {
   listLeagues(): Promise<League[]>;
   updateGameStatuses(updates: GameStatusUpdate[]): Promise<number>;
   resolvePickResults(updates: PickResultUpdate[]): Promise<number>;
+  /** Phase 3: write fresh quotes + update consensus on player_week_data. */
+  applyOddsRefresh(input: ApplyOddsRefreshInput): Promise<number>;
 }
 
 export class StoreError extends Error {

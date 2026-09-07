@@ -10,7 +10,7 @@ import {
   estimatePayout,
 } from "@/lib/utils/odds";
 import { slugify } from "@/lib/utils/slug";
-import { StoreError, type Store, type GameStatusUpdate, type PickResultUpdate } from "@/lib/store/types";
+import { StoreError, type Store, type GameStatusUpdate, type PickResultUpdate, type ApplyOddsRefreshInput } from "@/lib/store/types";
 import type {
   CreateLeagueInput,
   League,
@@ -439,6 +439,89 @@ export class LocalFileStore implements Store {
         changed += 1;
       }
       return changed;
+    });
+  }
+
+  async applyOddsRefresh(input: ApplyOddsRefreshInput): Promise<number> {
+    return this.withData((data) => {
+      const playersByExternal = new Map(
+        data.players
+          .filter((p) => p.external_player_id)
+          .map((p) => [p.external_player_id!, p] as const),
+      );
+      const gamesByExternal = new Map(
+        data.games
+          .filter((g) => g.external_game_id)
+          .map((g) => [g.external_game_id!, g] as const),
+      );
+
+      const fetchedAt =
+        input.quotes[0]?.fetched_at ??
+        input.consensus[0]?.fetched_at ??
+        nowIso();
+
+      // Replace odds rows for this week
+      data.player_odds = data.player_odds.filter((o) => o.week_id !== input.weekId);
+
+      for (const quote of input.quotes) {
+        const player = playersByExternal.get(quote.external_player_id);
+        if (!player) continue;
+        const game =
+          gamesByExternal.get(quote.external_game_id) ??
+          data.games.find(
+            (g) =>
+              g.week_id === input.weekId &&
+              data.player_week_data.some(
+                (pwd) =>
+                  pwd.week_id === input.weekId &&
+                  pwd.player_id === player.id &&
+                  pwd.game_id === g.id,
+              ),
+          );
+        if (!game) continue;
+
+        data.player_odds.push({
+          id: newId("odds"),
+          player_id: player.id,
+          game_id: game.id,
+          week_id: input.weekId,
+          sportsbook: quote.sportsbook,
+          market: quote.market,
+          american_odds: quote.american_odds,
+          decimal_odds: quote.decimal_odds,
+          implied_probability: quote.implied_probability,
+          fetched_at: quote.fetched_at || fetchedAt,
+        });
+      }
+
+      let playersUpdated = 0;
+      for (const row of input.consensus) {
+        const player = playersByExternal.get(row.external_player_id);
+        if (!player) continue;
+        const pwd = data.player_week_data.find(
+          (p) => p.week_id === input.weekId && p.player_id === player.id,
+        );
+        if (!pwd) continue;
+
+        pwd.consensus_american_odds = row.american_odds;
+        pwd.consensus_decimal_odds = row.decimal_odds;
+        pwd.market_probability = row.implied_probability;
+        pwd.research_json = {
+          ...pwd.research_json,
+          market: {
+            consensus_american: row.american_odds,
+            consensus_implied: row.implied_probability,
+            books: row.books.map((b) => ({
+              sportsbook: b.sportsbook,
+              american_odds: b.american_odds,
+            })),
+          },
+        };
+        pwd.updated_at = fetchedAt;
+        playersUpdated += 1;
+      }
+
+      return playersUpdated;
     });
   }
 
