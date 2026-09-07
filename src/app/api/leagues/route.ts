@@ -41,6 +41,11 @@ export async function POST(request: Request) {
       logo_url: body.logo_url,
     });
 
+    // Kick off week board build in background — first dashboard open finishes it.
+    void import("@/lib/services/align-league-week")
+      .then(({ alignLeagueActiveWeek }) => alignLeagueActiveWeek(store, league))
+      .catch((err) => console.error("createLeague materialize failed", err));
+
     const members = await store.listMembers(league.id);
     const admin =
       members.find((m) => m.role === "admin") ??

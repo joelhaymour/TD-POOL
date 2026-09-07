@@ -89,8 +89,10 @@ export async function syncNflWeek(
       season = season ?? current.season;
       week = week ?? current.week;
     } else {
-      season = season ?? 2025;
-      week = week ?? 4;
+      const { resolvePoolWeek } = await import("@/lib/nfl/calendar");
+      const pool = resolvePoolWeek(asOf);
+      season = season ?? pool.season;
+      week = week ?? pool.week;
     }
   }
 

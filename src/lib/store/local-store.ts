@@ -10,6 +10,7 @@ import {
   estimatePayout,
 } from "@/lib/utils/odds";
 import { slugify } from "@/lib/utils/slug";
+import { resolvePoolWeek, weekWindow } from "@/lib/nfl/calendar";
 import { StoreError, type Store, type GameStatusUpdate, type PickResultUpdate, type ApplyOddsRefreshInput, type JoinLeagueInput, type JoinLeagueResult } from "@/lib/store/types";
 import type {
   CreateLeagueInput,
@@ -160,16 +161,19 @@ export class LocalFileStore implements Store {
 
       const memberCount = input.member_count ?? memberNames.length;
 
-      // Reuse active week from seed if present; otherwise create a placeholder week.
-      let week = data.weeks.find((w) => w.season === 2025 && w.week === 4);
+      const pool = resolvePoolWeek(new Date());
+      const window = weekWindow(pool.season, pool.week);
+      let week = data.weeks.find(
+        (w) => w.season === pool.season && w.week === pool.week,
+      );
       if (!week) {
         week = {
           id: newId("week"),
-          season: 2025,
-          week: 4,
-          start_date: "2025-09-24",
-          end_date: "2025-09-30",
-          label: "NFL Week 4",
+          season: pool.season,
+          week: pool.week,
+          start_date: window.start_date,
+          end_date: window.end_date,
+          label: window.label,
         };
         data.weeks.push(week);
       }
@@ -624,6 +628,170 @@ export class LocalFileStore implements Store {
       }
 
       return playersUpdated;
+    });
+  }
+
+  async ensureWeek(input: {
+    season: number;
+    week: number;
+    start_date: string;
+    end_date: string;
+    label?: string;
+  }): Promise<NflWeek> {
+    return this.withData((data) => {
+      const existing = data.weeks.find(
+        (w) => w.season === input.season && w.week === input.week,
+      );
+      if (existing) {
+        existing.start_date = input.start_date;
+        existing.end_date = input.end_date;
+        if (input.label) existing.label = input.label;
+        return existing;
+      }
+      const week: NflWeek = {
+        id: newId("week"),
+        season: input.season,
+        week: input.week,
+        start_date: input.start_date,
+        end_date: input.end_date,
+        label: input.label ?? `NFL Week ${input.week}`,
+      };
+      data.weeks.push(week);
+      return week;
+    });
+  }
+
+  async upsertGamesForWeek(
+    weekId: string,
+    games: import("@/lib/providers/types").ProviderGame[],
+  ): Promise<Map<string, string>> {
+    return this.withData((data) => {
+      const map = new Map<string, string>();
+      for (const g of games) {
+        const existing = data.games.find(
+          (row) =>
+            row.week_id === weekId &&
+            (row.external_game_id === g.external_game_id ||
+              (row.home_team === g.home_team && row.away_team === g.away_team)),
+        );
+        if (existing) {
+          existing.external_game_id = g.external_game_id;
+          existing.kickoff_at = g.kickoff_at;
+          existing.status = g.status;
+          existing.spread = g.spread;
+          existing.total = g.total;
+          existing.home_score = g.home_score;
+          existing.away_score = g.away_score;
+          existing.stadium = g.stadium;
+          existing.is_dome = g.is_dome;
+          map.set(g.external_game_id, existing.id);
+          continue;
+        }
+        const id = newId("game");
+        data.games.push({
+          id,
+          week_id: weekId,
+          external_game_id: g.external_game_id,
+          home_team: g.home_team,
+          away_team: g.away_team,
+          kickoff_at: g.kickoff_at,
+          status: g.status,
+          spread: g.spread,
+          total: g.total,
+          home_score: g.home_score,
+          away_score: g.away_score,
+          stadium: g.stadium,
+          is_dome: g.is_dome,
+        });
+        map.set(g.external_game_id, id);
+      }
+      return map;
+    });
+  }
+
+  async upsertPlayers(
+    players: import("@/lib/providers/types").ProviderPlayer[],
+  ): Promise<Map<string, string>> {
+    return this.withData((data) => {
+      const map = new Map<string, string>();
+      for (const p of players) {
+        const existing = data.players.find(
+          (row) =>
+            row.external_player_id === p.external_player_id ||
+            (row.name.toLowerCase() === p.name.toLowerCase() &&
+              row.team === p.team),
+        );
+        if (existing) {
+          existing.external_player_id = p.external_player_id;
+          existing.name = p.name;
+          existing.team = p.team;
+          existing.position = p.position;
+          existing.active = p.active;
+          existing.jersey_number = p.jersey_number;
+          existing.headshot_url = p.headshot_url;
+          map.set(p.external_player_id, existing.id);
+          continue;
+        }
+        const id = newId("player");
+        data.players.push({
+          id,
+          external_player_id: p.external_player_id,
+          name: p.name,
+          team: p.team,
+          position: p.position,
+          active: p.active,
+          jersey_number: p.jersey_number,
+          headshot_url: p.headshot_url,
+        });
+        map.set(p.external_player_id, id);
+      }
+      return map;
+    });
+  }
+
+  async upsertPlayerWeekBoard(
+    weekId: string,
+    rows: Array<{
+      player_id: string;
+      game_id: string;
+      market_probability: number;
+      our_probability: number;
+      td_pool_score: number;
+      td_pool_rank: number;
+      matchup_rating: number;
+      goal_line_rating: number;
+      research_json: import("@/lib/types").ResearchJson;
+      injury_status: import("@/lib/types").InjuryStatus;
+      availability: import("@/lib/types").PlayerAvailability;
+      tier: import("@/lib/types").TdTier;
+      consensus_american_odds: number;
+      consensus_decimal_odds: number;
+    }>,
+  ): Promise<number> {
+    return this.withData((data) => {
+      let upserted = 0;
+      const now = nowIso();
+      for (const row of rows) {
+        const existing = data.player_week_data.find(
+          (p) => p.week_id === weekId && p.player_id === row.player_id,
+        );
+        if (existing) {
+          Object.assign(existing, {
+            ...row,
+            week_id: weekId,
+            updated_at: now,
+          });
+        } else {
+          data.player_week_data.push({
+            id: newId("pwd"),
+            week_id: weekId,
+            updated_at: now,
+            ...row,
+          });
+        }
+        upserted += 1;
+      }
+      return upserted;
     });
   }
 

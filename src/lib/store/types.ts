@@ -90,6 +90,50 @@ export interface Store {
   resolvePickResults(updates: PickResultUpdate[]): Promise<number>;
   /** Phase 3: write fresh quotes + update consensus on player_week_data. */
   applyOddsRefresh(input: ApplyOddsRefreshInput): Promise<number>;
+
+  /** Ensure nfl_weeks row exists for season/week. */
+  ensureWeek(input: {
+    season: number;
+    week: number;
+    start_date: string;
+    end_date: string;
+    label?: string;
+  }): Promise<NflWeek>;
+
+  /** Upsert games for a week from provider payloads; returns external_game_id → id. */
+  upsertGamesForWeek(
+    weekId: string,
+    games: import("@/lib/providers/types").ProviderGame[],
+  ): Promise<Map<string, string>>;
+
+  /** Upsert NFL players; returns external_player_id → id. */
+  upsertPlayers(
+    players: import("@/lib/providers/types").ProviderPlayer[],
+  ): Promise<Map<string, string>>;
+
+  /**
+   * Upsert ranked board rows for a week (research + ratings).
+   * Does not delete other players' historical rows outside this set.
+   */
+  upsertPlayerWeekBoard(
+    weekId: string,
+    rows: Array<{
+      player_id: string;
+      game_id: string;
+      market_probability: number;
+      our_probability: number;
+      td_pool_score: number;
+      td_pool_rank: number;
+      matchup_rating: number;
+      goal_line_rating: number;
+      research_json: import("@/lib/types").ResearchJson;
+      injury_status: import("@/lib/types").InjuryStatus;
+      availability: import("@/lib/types").PlayerAvailability;
+      tier: import("@/lib/types").TdTier;
+      consensus_american_odds: number;
+      consensus_decimal_odds: number;
+    }>,
+  ): Promise<number>;
 }
 
 export class StoreError extends Error {

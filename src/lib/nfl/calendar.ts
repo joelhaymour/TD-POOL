@@ -90,3 +90,63 @@ export function getNflWeekForDate(
 
   return null;
 }
+
+/**
+ * Active pool week for the product:
+ * - During the season → calendar week
+ * - Before Week 1 kickoff → upcoming Week 1
+ * - After Week 18 → stay on Week 18 of that season until next Week 1 window opens
+ */
+export function resolvePoolWeek(asOf: Date = new Date()): {
+  season: number;
+  week: number;
+} {
+  const mapped = getNflWeekForDate(asOf);
+  if (mapped) return mapped;
+
+  const y = asOf.getUTCFullYear();
+  for (const season of [y - 1, y, y + 1, y + 2]) {
+    const weeks = listSeasonWeeks(season);
+    const first = weeks[0];
+    const last = weeks[weeks.length - 1];
+    if (!first || !last) continue;
+    if (asOf.getTime() < first.start.getTime()) {
+      return { season, week: 1 };
+    }
+    if (
+      asOf.getTime() >= last.start.getTime() &&
+      asOf.getTime() < last.end.getTime() + 7 * MS_PER_DAY
+    ) {
+      return { season, week: last.week };
+    }
+  }
+
+  return { season: y, week: 1 };
+}
+
+export function nextPoolWeek(
+  season: number,
+  week: number,
+): { season: number; week: number } | null {
+  if (week < REGULAR_SEASON_WEEKS) return { season, week: week + 1 };
+  return { season: season + 1, week: 1 };
+}
+
+export function weekWindow(
+  season: number,
+  week: number,
+): { start_date: string; end_date: string; label: string } {
+  const ref =
+    listSeasonWeeks(season).find((w) => w.week === week) ??
+    listSeasonWeeks(season)[0]!;
+  const start = ref.start.toISOString().slice(0, 10);
+  const endExclusive = ref.end;
+  const end = new Date(endExclusive.getTime() - MS_PER_DAY)
+    .toISOString()
+    .slice(0, 10);
+  return {
+    start_date: start,
+    end_date: end,
+    label: `NFL Week ${week}`,
+  };
+}

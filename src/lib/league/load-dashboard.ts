@@ -4,6 +4,7 @@ import {
   autoSyncLeagueOdds,
   getConfiguredOddsSource,
 } from "@/lib/services/sync-odds";
+import { alignLeagueActiveWeek } from "@/lib/services/align-league-week";
 import type { LeagueDashboard } from "@/lib/types";
 
 /** Strip heavy research blobs from list payloads. */
@@ -45,10 +46,28 @@ function emptyResearch(r: LeagueDashboard["ranked_players"][number]["research_js
 export async function loadLeagueDashboard(
   slug: string,
 ): Promise<LeagueDashboard | null> {
-  // Auto-grade games/picks + refresh odds — no admin click required
+  const store = getStore();
+  const league = await store.getLeagueBySlug(slug);
+  if (!league) return null;
+
+  // 1) Make sure we have a board for the league's current pointer (or pool week).
+  try {
+    await alignLeagueActiveWeek(store, league);
+  } catch (err) {
+    console.error("alignLeagueActiveWeek failed", err);
+  }
+
+  // 2) Grade games/picks + refresh odds for the active week.
   await Promise.all([autoSyncLeagueWeek(slug), autoSyncLeagueOdds(slug)]);
 
-  const store = getStore();
+  // 3) If that grading finished the week, advance and materialize next.
+  try {
+    const fresh = await store.getLeagueBySlug(slug);
+    if (fresh) await alignLeagueActiveWeek(store, fresh);
+  } catch (err) {
+    console.error("alignLeagueActiveWeek (post-sync) failed", err);
+  }
+
   const dashboard = await store.getDashboard(slug);
   if (!dashboard) return null;
   return {

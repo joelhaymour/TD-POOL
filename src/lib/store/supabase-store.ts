@@ -17,6 +17,7 @@ import {
   estimatePayout,
 } from "@/lib/utils/odds";
 import { slugify } from "@/lib/utils/slug";
+import { resolvePoolWeek, weekWindow } from "@/lib/nfl/calendar";
 import type {
   CreateLeagueInput,
   InjuryStatus,
@@ -306,23 +307,33 @@ export class SupabaseStore implements Store {
     }
     const memberCount = input.member_count ?? memberNames.length;
 
-    let week = await this.getWeekBySeasonWeek(2025, 4);
+    const pool = resolvePoolWeek(new Date());
+    const window = weekWindow(pool.season, pool.week);
+    let week = await this.getWeekBySeasonWeek(pool.season, pool.week);
     if (!week) {
       const weekId = randomUUID();
       const { data: insertedWeek, error: weekErr } = await this.client
         .from("nfl_weeks")
         .insert({
           id: weekId,
-          season: 2025,
-          week: 4,
-          start_date: "2025-09-24",
-          end_date: "2025-09-30",
-          label: "NFL Week 4",
+          season: pool.season,
+          week: pool.week,
+          start_date: window.start_date,
+          end_date: window.end_date,
+          label: window.label,
         })
         .select("*")
         .single();
       if (weekErr) throw weekErr;
       week = mapWeek(insertedWeek);
+    } else {
+      await this.ensureWeek({
+        season: pool.season,
+        week: pool.week,
+        start_date: window.start_date,
+        end_date: window.end_date,
+        label: window.label,
+      });
     }
 
     const createdAt = nowIso();
@@ -959,6 +970,235 @@ export class SupabaseStore implements Store {
     }
 
     return playersUpdated;
+  }
+
+  async ensureWeek(input: {
+    season: number;
+    week: number;
+    start_date: string;
+    end_date: string;
+    label?: string;
+  }): Promise<NflWeek> {
+    const existing = await this.getWeekBySeasonWeek(input.season, input.week);
+    if (existing) {
+      const { data, error } = await this.client
+        .from("nfl_weeks")
+        .update({
+          start_date: input.start_date,
+          end_date: input.end_date,
+          label: input.label ?? existing.label ?? `NFL Week ${input.week}`,
+        })
+        .eq("id", existing.id)
+        .select("*")
+        .single();
+      if (error) throw error;
+      return mapWeek(data);
+    }
+
+    const { data, error } = await this.client
+      .from("nfl_weeks")
+      .insert({
+        id: randomUUID(),
+        season: input.season,
+        week: input.week,
+        start_date: input.start_date,
+        end_date: input.end_date,
+        label: input.label ?? `NFL Week ${input.week}`,
+      })
+      .select("*")
+      .single();
+    if (error) throw error;
+    return mapWeek(data);
+  }
+
+  async upsertGamesForWeek(
+    weekId: string,
+    games: import("@/lib/providers/types").ProviderGame[],
+  ): Promise<Map<string, string>> {
+    const map = new Map<string, string>();
+    for (const g of games) {
+      const { data: byExternal } = await this.client
+        .from("nfl_games")
+        .select("id")
+        .eq("week_id", weekId)
+        .eq("external_game_id", g.external_game_id)
+        .maybeSingle();
+
+      const { data: byMatchup } = byExternal
+        ? { data: null }
+        : await this.client
+            .from("nfl_games")
+            .select("id")
+            .eq("week_id", weekId)
+            .eq("home_team", g.home_team)
+            .eq("away_team", g.away_team)
+            .maybeSingle();
+
+      const existingId = byExternal?.id
+        ? String(byExternal.id)
+        : byMatchup?.id
+          ? String(byMatchup.id)
+          : null;
+
+      const fields = {
+        week_id: weekId,
+        external_game_id: g.external_game_id,
+        home_team: g.home_team,
+        away_team: g.away_team,
+        kickoff_at: g.kickoff_at,
+        status: g.status,
+        spread: g.spread,
+        total: g.total,
+        home_score: g.home_score,
+        away_score: g.away_score,
+        stadium: g.stadium,
+        is_dome: g.is_dome,
+      };
+
+      if (existingId) {
+        const { error } = await this.client
+          .from("nfl_games")
+          .update(fields)
+          .eq("id", existingId);
+        if (error) throw error;
+        map.set(g.external_game_id, existingId);
+      } else {
+        const id = randomUUID();
+        const { error } = await this.client
+          .from("nfl_games")
+          .insert({ id, ...fields });
+        if (error) throw error;
+        map.set(g.external_game_id, id);
+      }
+    }
+    return map;
+  }
+
+  async upsertPlayers(
+    players: import("@/lib/providers/types").ProviderPlayer[],
+  ): Promise<Map<string, string>> {
+    const map = new Map<string, string>();
+    const concurrency = 8;
+    let cursor = 0;
+
+    const workers = Array.from({ length: concurrency }, async () => {
+      while (cursor < players.length) {
+        const i = cursor;
+        cursor += 1;
+        const p = players[i]!;
+
+        const { data: byExternal } = await this.client
+          .from("nfl_players")
+          .select("id")
+          .eq("external_player_id", p.external_player_id)
+          .maybeSingle();
+
+        let existingId = byExternal?.id ? String(byExternal.id) : null;
+        if (!existingId) {
+          const { data: byName } = await this.client
+            .from("nfl_players")
+            .select("id")
+            .ilike("name", p.name)
+            .eq("team", p.team)
+            .maybeSingle();
+          existingId = byName?.id ? String(byName.id) : null;
+        }
+
+        const fields = {
+          external_player_id: p.external_player_id,
+          name: p.name,
+          team: p.team,
+          position: p.position,
+          active: p.active,
+          jersey_number: p.jersey_number,
+          headshot_url: p.headshot_url,
+        };
+
+        if (existingId) {
+          const { error } = await this.client
+            .from("nfl_players")
+            .update(fields)
+            .eq("id", existingId);
+          if (error) throw error;
+          map.set(p.external_player_id, existingId);
+        } else {
+          const id = randomUUID();
+          const { error } = await this.client
+            .from("nfl_players")
+            .insert({ id, ...fields });
+          if (error) throw error;
+          map.set(p.external_player_id, id);
+        }
+      }
+    });
+
+    await Promise.all(workers);
+    return map;
+  }
+
+  async upsertPlayerWeekBoard(
+    weekId: string,
+    rows: Array<{
+      player_id: string;
+      game_id: string;
+      market_probability: number;
+      our_probability: number;
+      td_pool_score: number;
+      td_pool_rank: number;
+      matchup_rating: number;
+      goal_line_rating: number;
+      research_json: import("@/lib/types").ResearchJson;
+      injury_status: import("@/lib/types").InjuryStatus;
+      availability: import("@/lib/types").PlayerAvailability;
+      tier: import("@/lib/types").TdTier;
+      consensus_american_odds: number;
+      consensus_decimal_odds: number;
+    }>,
+  ): Promise<number> {
+    let upserted = 0;
+    const now = nowIso();
+    for (const row of rows) {
+      const payload = {
+        player_id: row.player_id,
+        week_id: weekId,
+        game_id: row.game_id,
+        market_probability: row.market_probability,
+        our_probability: row.our_probability,
+        td_pool_score: row.td_pool_score,
+        td_pool_rank: row.td_pool_rank,
+        matchup_rating: row.matchup_rating,
+        goal_line_rating: row.goal_line_rating,
+        research_json: row.research_json,
+        injury_status: injuryToDb(row.injury_status),
+        availability: row.availability,
+        tier: row.tier,
+        consensus_american_odds: row.consensus_american_odds,
+        consensus_decimal_odds: row.consensus_decimal_odds,
+        updated_at: now,
+      };
+
+      const { data: existing } = await this.client
+        .from("player_week_data")
+        .select("id")
+        .eq("player_id", row.player_id)
+        .eq("week_id", weekId)
+        .maybeSingle();
+
+      if (existing?.id) {
+        const { error } = await this.client
+          .from("player_week_data")
+          .update(payload)
+          .eq("id", existing.id);
+        if (error) throw error;
+      } else {
+        const { error } = await this.client
+          .from("player_week_data")
+          .insert({ id: randomUUID(), ...payload });
+        if (error) throw error;
+      }
+      upserted += 1;
+    }
+    return upserted;
   }
 
   /** Optional: wipe + reseed via seed helper (dev). */

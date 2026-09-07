@@ -8,7 +8,7 @@
  * Summary:    /apis/site/v2/sports/football/nfl/summary?event={id}
  */
 
-import { getNflWeekForDate } from "@/lib/nfl/calendar";
+import { getNflWeekForDate, resolvePoolWeek } from "@/lib/nfl/calendar";
 import { normalizePlayerName } from "@/lib/providers/the-odds-api/maps";
 import type {
   NFLDataProvider,
@@ -491,9 +491,8 @@ export class EspnNFLProvider implements NFLDataProvider {
       // fall through to calendar
     }
 
-    const mapped = getNflWeekForDate(asOf) ?? getNflWeekForDate(asOf, asOf.getUTCFullYear());
-    if (mapped) return mapped;
-    return { season: asOf.getUTCFullYear(), week: 1 };
+    const mapped = getNflWeekForDate(asOf) ?? resolvePoolWeek(asOf);
+    return mapped;
   }
 
   async getWeekSchedule(season: number, week: number): Promise<ProviderGame[]> {

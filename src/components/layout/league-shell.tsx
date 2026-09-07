@@ -56,7 +56,7 @@ export function LeagueShell({
       header={
         <LeagueHeader
           leagueName={leagueName}
-          weekNumber={weekNumber || 4}
+          weekNumber={weekNumber || 1}
           settingsHref={`${basePath}/settings`}
         />
       }
