@@ -4,8 +4,6 @@ import {
   getSleeperPlayersMap,
   getSleeperSkillPlayers,
   parseSleeperExternalId,
-  rushAttemptsFromStat,
-  touchdownsFromStat,
 } from "@/lib/providers/sleeper/client";
 import {
   buildLivePlayerHistoryFromContext,
@@ -20,7 +18,7 @@ import type { InjuryStatus, NflWeek } from "@/lib/types";
 const materializeInFlight = new Map<string, Promise<NflWeek>>();
 const materializeDoneAt = new Map<string, number>();
 /** Bump when scoring rules change so boards rebuild. */
-const BOARD_VERSION = "anytime-rush-rec-v1";
+const BOARD_VERSION = "anytime-rush-rec-v2-replace";
 const MATERIALIZE_TTL_MS = 10 * 60_000;
 
 function mapInjury(raw: string | null | undefined): InjuryStatus {
@@ -45,18 +43,21 @@ export async function ensureNflWeekMaterialized(
 ): Promise<NflWeek> {
   const key = `${BOARD_VERSION}:${season}-${week}`;
   const last = materializeDoneAt.get(key) ?? 0;
-  if (!options.force && Date.now() - last < MATERIALIZE_TTL_MS) {
-    const existing = await store.getWeekBySeasonWeek(season, week);
-    if (existing) {
-      const pwd = await store.getPlayerWeekData(existing.id);
-      // Rebuild if board was scored under the old pass-TD bug (QBs dominating).
-      const top = [...pwd].sort((a, b) => a.td_pool_rank - b.td_pool_rank)[0];
-      const topPlayer = top
-        ? (await store.listPlayers()).find((p) => p.id === top.player_id)
-        : null;
-      if (pwd.length > 0 && topPlayer?.position !== "QB") return existing;
+    if (!options.force && Date.now() - last < MATERIALIZE_TTL_MS) {
+      const existing = await store.getWeekBySeasonWeek(season, week);
+      if (existing) {
+        const pwd = await store.getPlayerWeekData(existing.id);
+        if (pwd.length > 0) {
+          const players = await store.listPlayers();
+          const byId = new Map(players.map((p) => [p.id, p]));
+          const hasStaleQb = pwd.some((row) => {
+            const p = byId.get(row.player_id);
+            return p?.position === "QB" && row.td_pool_rank <= 10;
+          });
+          if (!hasStaleQb) return existing;
+        }
+      }
     }
-  }
 
   const inflight = materializeInFlight.get(key);
   if (inflight) return inflight;
@@ -86,7 +87,7 @@ export async function ensureNflWeekMaterialized(
       gamesByTeam.set(g.away_team, g);
     }
 
-    // Prefetch history before filtering QBs (need rush TD sample).
+    // Prefetch Sleeper history for RB/WR/TE research.
     const historyCtx = await prefetchHistoryContext({
       beforeSeason: season,
       beforeWeek: week,
@@ -94,19 +95,8 @@ export async function ensureNflWeekMaterialized(
 
     const weekPlayers = sleeperPlayers.filter((p) => {
       if (!gamesByTeam.has(p.team)) return false;
-      // Anytime TD = rush/rec only. Keep QBs only if they actually run.
-      if (p.position !== "QB") return true;
-      const sleeperId = parseSleeperExternalId(p.external_player_id);
-      if (!sleeperId) return false;
-      let rushTds = 0;
-      let rushAtt = 0;
-      for (const { season: s, week: w } of historyCtx.weeksToScan) {
-        const stat = historyCtx.weekStats.get(`${s}-${w}`)?.get(sleeperId);
-        if (!stat) continue;
-        rushTds += touchdownsFromStat(stat);
-        rushAtt += rushAttemptsFromStat(stat);
-      }
-      return rushTds > 0 || rushAtt >= 15;
+      // Anytime TD = rush/receiving only — no QBs on this board.
+      return p.position === "RB" || p.position === "WR" || p.position === "TE";
     });
 
     const playerIdByExternal = await store.upsertPlayers(weekPlayers);
@@ -134,7 +124,7 @@ export async function ensureNflWeekMaterialized(
     }
 
     // Research per player (CPU-bound over cached stats)
-    type BoardRow = Parameters<Store["upsertPlayerWeekBoard"]>[1][number];
+    type BoardRow = Parameters<Store["replacePlayerWeekBoard"]>[1][number];
     const board: BoardRow[] = [];
 
     for (const player of weekPlayers) {
@@ -212,7 +202,7 @@ export async function ensureNflWeekMaterialized(
 
     // Keep board size usable on mobile
     const trimmed = board.slice(0, 60);
-    await store.upsertPlayerWeekBoard(nflWeek.id, trimmed);
+    await store.replacePlayerWeekBoard(nflWeek.id, trimmed);
 
     materializeDoneAt.set(key, Date.now());
     return nflWeek;

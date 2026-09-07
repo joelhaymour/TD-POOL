@@ -112,10 +112,10 @@ export interface Store {
   ): Promise<Map<string, string>>;
 
   /**
-   * Upsert ranked board rows for a week (research + ratings).
-   * Does not delete other players' historical rows outside this set.
+   * Replace the ranked board for a week (deletes prior rows for that week first).
+   * Needed so scoring-rule changes don't leave stale QBs / duplicate ranks.
    */
-  upsertPlayerWeekBoard(
+  replacePlayerWeekBoard(
     weekId: string,
     rows: Array<{
       player_id: string;

@@ -1136,7 +1136,7 @@ export class SupabaseStore implements Store {
     return map;
   }
 
-  async upsertPlayerWeekBoard(
+  async replacePlayerWeekBoard(
     weekId: string,
     rows: Array<{
       player_id: string;
@@ -1155,50 +1155,38 @@ export class SupabaseStore implements Store {
       consensus_decimal_odds: number;
     }>,
   ): Promise<number> {
-    let upserted = 0;
+    const { error: delErr } = await this.client
+      .from("player_week_data")
+      .delete()
+      .eq("week_id", weekId);
+    if (delErr) throw delErr;
+
+    if (rows.length === 0) return 0;
+
     const now = nowIso();
-    for (const row of rows) {
-      const payload = {
-        player_id: row.player_id,
-        week_id: weekId,
-        game_id: row.game_id,
-        market_probability: row.market_probability,
-        our_probability: row.our_probability,
-        td_pool_score: row.td_pool_score,
-        td_pool_rank: row.td_pool_rank,
-        matchup_rating: row.matchup_rating,
-        goal_line_rating: row.goal_line_rating,
-        research_json: row.research_json,
-        injury_status: injuryToDb(row.injury_status),
-        availability: row.availability,
-        tier: row.tier,
-        consensus_american_odds: row.consensus_american_odds,
-        consensus_decimal_odds: row.consensus_decimal_odds,
-        updated_at: now,
-      };
+    const payload = rows.map((row) => ({
+      id: randomUUID(),
+      player_id: row.player_id,
+      week_id: weekId,
+      game_id: row.game_id,
+      market_probability: row.market_probability,
+      our_probability: row.our_probability,
+      td_pool_score: row.td_pool_score,
+      td_pool_rank: row.td_pool_rank,
+      matchup_rating: row.matchup_rating,
+      goal_line_rating: row.goal_line_rating,
+      research_json: row.research_json,
+      injury_status: injuryToDb(row.injury_status),
+      availability: row.availability,
+      tier: row.tier,
+      consensus_american_odds: row.consensus_american_odds,
+      consensus_decimal_odds: row.consensus_decimal_odds,
+      updated_at: now,
+    }));
 
-      const { data: existing } = await this.client
-        .from("player_week_data")
-        .select("id")
-        .eq("player_id", row.player_id)
-        .eq("week_id", weekId)
-        .maybeSingle();
-
-      if (existing?.id) {
-        const { error } = await this.client
-          .from("player_week_data")
-          .update(payload)
-          .eq("id", existing.id);
-        if (error) throw error;
-      } else {
-        const { error } = await this.client
-          .from("player_week_data")
-          .insert({ id: randomUUID(), ...payload });
-        if (error) throw error;
-      }
-      upserted += 1;
-    }
-    return upserted;
+    const { error } = await this.client.from("player_week_data").insert(payload);
+    if (error) throw error;
+    return payload.length;
   }
 
   /** Optional: wipe + reseed via seed helper (dev). */

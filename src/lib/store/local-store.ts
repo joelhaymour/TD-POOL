@@ -749,7 +749,7 @@ export class LocalFileStore implements Store {
     });
   }
 
-  async upsertPlayerWeekBoard(
+  async replacePlayerWeekBoard(
     weekId: string,
     rows: Array<{
       player_id: string;
@@ -769,29 +769,19 @@ export class LocalFileStore implements Store {
     }>,
   ): Promise<number> {
     return this.withData((data) => {
-      let upserted = 0;
+      data.player_week_data = data.player_week_data.filter(
+        (p) => p.week_id !== weekId,
+      );
       const now = nowIso();
       for (const row of rows) {
-        const existing = data.player_week_data.find(
-          (p) => p.week_id === weekId && p.player_id === row.player_id,
-        );
-        if (existing) {
-          Object.assign(existing, {
-            ...row,
-            week_id: weekId,
-            updated_at: now,
-          });
-        } else {
-          data.player_week_data.push({
-            id: newId("pwd"),
-            week_id: weekId,
-            updated_at: now,
-            ...row,
-          });
-        }
-        upserted += 1;
+        data.player_week_data.push({
+          id: newId("pwd"),
+          week_id: weekId,
+          updated_at: now,
+          ...row,
+        });
       }
-      return upserted;
+      return rows.length;
     });
   }
 
