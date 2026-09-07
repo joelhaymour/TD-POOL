@@ -174,14 +174,16 @@ export function opponentFromSchedule(
   return { opponent: home ? g.away : g.home, home };
 }
 
+/** Anytime TD = rush TD + receiving TD only (never passing TDs). */
 export function touchdownsFromStat(stat: SleeperWeekStat): number {
-  return (
-    Number(stat.rush_td ?? 0) +
-    Number(stat.rec_td ?? 0) +
-    Number(stat.pass_td ?? 0)
-  );
+  return Number(stat.rush_td ?? 0) + Number(stat.rec_td ?? 0);
 }
 
 export function rzTouchesFromStat(stat: SleeperWeekStat): number {
   return Number(stat.rush_rz_att ?? 0) + Number(stat.rec_rz_tgt ?? 0);
+}
+
+/** Rushing attempts — used to keep designed-run QBs in the pool. */
+export function rushAttemptsFromStat(stat: SleeperWeekStat): number {
+  return Number(stat.rush_att ?? 0);
 }

@@ -353,7 +353,15 @@ export function scoreTdPoolFromResearch(research: ResearchJson): {
     (research.game_environment.total ?? 44) / 200 +
     weatherBoost;
 
-  const our_probability = Math.max(0.04, Math.min(0.55, raw));
+  // Cap realistic anytime (rush/rec) TD rates — QBs with one sneak shouldn't dominate.
+  const positionCap =
+    research.usage.carry_share && research.usage.carry_share > 0.2
+      ? 0.42
+      : research.usage.target_share && research.usage.target_share > 0
+        ? 0.38
+        : 0.22;
+
+  const our_probability = Math.max(0.03, Math.min(positionCap, raw));
   const score = our_probability * 100;
   const matchup_rating = Math.max(
     1,

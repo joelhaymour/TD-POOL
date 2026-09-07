@@ -4,6 +4,8 @@ import {
   getSleeperPlayersMap,
   getSleeperSkillPlayers,
   parseSleeperExternalId,
+  rushAttemptsFromStat,
+  touchdownsFromStat,
 } from "@/lib/providers/sleeper/client";
 import {
   buildLivePlayerHistoryFromContext,
@@ -17,6 +19,8 @@ import type { InjuryStatus, NflWeek } from "@/lib/types";
 
 const materializeInFlight = new Map<string, Promise<NflWeek>>();
 const materializeDoneAt = new Map<string, number>();
+/** Bump when scoring rules change so boards rebuild. */
+const BOARD_VERSION = "anytime-rush-rec-v1";
 const MATERIALIZE_TTL_MS = 10 * 60_000;
 
 function mapInjury(raw: string | null | undefined): InjuryStatus {
@@ -39,13 +43,18 @@ export async function ensureNflWeekMaterialized(
   week: number,
   options: { force?: boolean } = {},
 ): Promise<NflWeek> {
-  const key = `${season}-${week}`;
+  const key = `${BOARD_VERSION}:${season}-${week}`;
   const last = materializeDoneAt.get(key) ?? 0;
   if (!options.force && Date.now() - last < MATERIALIZE_TTL_MS) {
     const existing = await store.getWeekBySeasonWeek(season, week);
     if (existing) {
       const pwd = await store.getPlayerWeekData(existing.id);
-      if (pwd.length > 0) return existing;
+      // Rebuild if board was scored under the old pass-TD bug (QBs dominating).
+      const top = [...pwd].sort((a, b) => a.td_pool_rank - b.td_pool_rank)[0];
+      const topPlayer = top
+        ? (await store.listPlayers()).find((p) => p.id === top.player_id)
+        : null;
+      if (pwd.length > 0 && topPlayer?.position !== "QB") return existing;
     }
   }
 
@@ -76,7 +85,30 @@ export async function ensureNflWeekMaterialized(
       gamesByTeam.set(g.home_team, g);
       gamesByTeam.set(g.away_team, g);
     }
-    const weekPlayers = sleeperPlayers.filter((p) => gamesByTeam.has(p.team));
+
+    // Prefetch history before filtering QBs (need rush TD sample).
+    const historyCtx = await prefetchHistoryContext({
+      beforeSeason: season,
+      beforeWeek: week,
+    });
+
+    const weekPlayers = sleeperPlayers.filter((p) => {
+      if (!gamesByTeam.has(p.team)) return false;
+      // Anytime TD = rush/rec only. Keep QBs only if they actually run.
+      if (p.position !== "QB") return true;
+      const sleeperId = parseSleeperExternalId(p.external_player_id);
+      if (!sleeperId) return false;
+      let rushTds = 0;
+      let rushAtt = 0;
+      for (const { season: s, week: w } of historyCtx.weeksToScan) {
+        const stat = historyCtx.weekStats.get(`${s}-${w}`)?.get(sleeperId);
+        if (!stat) continue;
+        rushTds += touchdownsFromStat(stat);
+        rushAtt += rushAttemptsFromStat(stat);
+      }
+      return rushTds > 0 || rushAtt >= 15;
+    });
+
     const playerIdByExternal = await store.upsertPlayers(weekPlayers);
     const sleeperMeta = await getSleeperPlayersMap();
 
@@ -100,12 +132,6 @@ export async function ensureNflWeekMaterialized(
       });
       await Promise.all(workers);
     }
-
-    // Prefetch Sleeper weekly stats once for the whole board.
-    const historyCtx = await prefetchHistoryContext({
-      beforeSeason: season,
-      beforeWeek: week,
-    });
 
     // Research per player (CPU-bound over cached stats)
     type BoardRow = Parameters<Store["upsertPlayerWeekBoard"]>[1][number];
