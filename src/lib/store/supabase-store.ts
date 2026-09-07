@@ -18,6 +18,7 @@ import {
 } from "@/lib/utils/odds";
 import { slugify } from "@/lib/utils/slug";
 import { resolvePoolWeek, weekWindow } from "@/lib/nfl/calendar";
+import { playerWeekRankKey } from "@/lib/scoring/rank";
 import type {
   CreateLeagueInput,
   InjuryStatus,
@@ -969,6 +970,40 @@ export class SupabaseStore implements Store {
       playersUpdated += 1;
     }
 
+    // Persist fresh ranks after market quotes land.
+    const { data: weekRows, error: weekRowsErr } = await this.client
+      .from("player_week_data")
+      .select(
+        "id, market_probability, td_pool_score, our_probability, consensus_american_odds",
+      )
+      .eq("week_id", input.weekId);
+    if (weekRowsErr) throw weekRowsErr;
+
+    const ordered = [...(weekRows ?? [])].sort(
+      (a, b) =>
+        playerWeekRankKey({
+          market_probability: num(b.market_probability),
+          td_pool_score: num(b.td_pool_score),
+          our_probability: num(b.our_probability),
+          consensus_american_odds: num(b.consensus_american_odds),
+        }) -
+        playerWeekRankKey({
+          market_probability: num(a.market_probability),
+          td_pool_score: num(a.td_pool_score),
+          our_probability: num(a.our_probability),
+          consensus_american_odds: num(a.consensus_american_odds),
+        }),
+    );
+
+    for (let i = 0; i < ordered.length; i += 1) {
+      const row = ordered[i]!;
+      const { error: rankErr } = await this.client
+        .from("player_week_data")
+        .update({ td_pool_rank: i + 1, updated_at: fetchedAt })
+        .eq("id", row.id);
+      if (rankErr) throw rankErr;
+    }
+
     return playersUpdated;
   }
 
@@ -1315,7 +1350,12 @@ export class SupabaseStore implements Store {
           game: NflGame;
           taken_by: string | null;
         } => row !== null,
-      );
+      )
+      .sort((a, b) => playerWeekRankKey(b) - playerWeekRankKey(a))
+      .map((row, index) => ({
+        ...row,
+        td_pool_rank: index + 1,
+      }));
 
     const firstKickoff =
       games.map((g) => g.kickoff_at).sort()[0] ?? null;

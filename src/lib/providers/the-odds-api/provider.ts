@@ -108,17 +108,20 @@ export class TheOddsApiProvider implements OddsProvider {
     const key = normalizePlayerName(description);
     if (this.nameIndex.has(key)) return this.nameIndex.get(key)!;
 
-    // Soft match: last name + first initial / contains
+    // Soft match: last name + first initial only (avoid "includes" false positives).
+    const parts = key.split(" ").filter(Boolean);
+    if (parts.length < 2) return null;
+    const last = parts.at(-1)!;
+    const firstInitial = parts[0]![0];
+    const hits: string[] = [];
     for (const [norm, id] of this.nameIndex) {
-      if (norm === key) return id;
-      if (norm.includes(key) || key.includes(norm)) return id;
-      const a = norm.split(" ");
-      const b = key.split(" ");
-      if (a.length >= 2 && b.length >= 2 && a.at(-1) === b.at(-1) && a[0]?.[0] === b[0]?.[0]) {
-        return id;
+      const a = norm.split(" ").filter(Boolean);
+      if (a.length < 2) continue;
+      if (a.at(-1) === last && a[0]?.[0] === firstInitial) {
+        hits.push(id);
       }
     }
-    return null;
+    return hits.length === 1 ? hits[0]! : null;
   }
 
   private resolveGameId(homeFull: string, awayFull: string): string | null {

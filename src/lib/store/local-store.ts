@@ -11,6 +11,7 @@ import {
 } from "@/lib/utils/odds";
 import { slugify } from "@/lib/utils/slug";
 import { resolvePoolWeek, weekWindow } from "@/lib/nfl/calendar";
+import { playerWeekRankKey } from "@/lib/scoring/rank";
 import { StoreError, type Store, type GameStatusUpdate, type PickResultUpdate, type ApplyOddsRefreshInput, type JoinLeagueInput, type JoinLeagueResult } from "@/lib/store/types";
 import type {
   CreateLeagueInput,
@@ -627,6 +628,14 @@ export class LocalFileStore implements Store {
         playersUpdated += 1;
       }
 
+      // Re-rank so market favorites (e.g. Gibbs) rise above long shots.
+      data.player_week_data
+        .filter((p) => p.week_id === input.weekId)
+        .sort((a, b) => playerWeekRankKey(b) - playerWeekRankKey(a))
+        .forEach((row, index) => {
+          row.td_pool_rank = index + 1;
+        });
+
       return playersUpdated;
     });
   }
@@ -879,8 +888,8 @@ export class LocalFileStore implements Store {
 
       const ranked_players = data.player_week_data
         .filter((pwd) => pwd.week_id === week.id)
-        .sort((a, b) => a.td_pool_rank - b.td_pool_rank)
-        .map((pwd) => {
+        .sort((a, b) => playerWeekRankKey(b) - playerWeekRankKey(a))
+        .map((pwd, index) => {
           const player = playersById.get(pwd.player_id);
           const game = gamesById.get(pwd.game_id);
           if (!player || !game) return null;
@@ -900,6 +909,7 @@ export class LocalFileStore implements Store {
           }
           return {
             ...pwd,
+            td_pool_rank: index + 1,
             availability,
             player,
             game,

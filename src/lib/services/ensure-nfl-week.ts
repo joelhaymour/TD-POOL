@@ -14,11 +14,12 @@ import {
 import { fetchGameWeather } from "@/lib/providers/weather/open-meteo";
 import type { Store } from "@/lib/store/types";
 import type { InjuryStatus, NflWeek } from "@/lib/types";
+import { invalidateOddsSyncThrottle } from "@/lib/services/sync-odds";
 
 const materializeInFlight = new Map<string, Promise<NflWeek>>();
 const materializeDoneAt = new Map<string, number>();
 /** Bump when scoring rules change so boards rebuild. */
-const BOARD_VERSION = "anytime-rush-rec-v2-replace";
+const BOARD_VERSION = "anytime-rush-rec-v3-discriminative";
 const MATERIALIZE_TTL_MS = 10 * 60_000;
 
 function mapInjury(raw: string | null | undefined): InjuryStatus {
@@ -175,7 +176,8 @@ export async function ensureNflWeekMaterialized(
       board.push({
         player_id: playerId,
         game_id: gameId,
-        market_probability: scored.our_probability * 0.9,
+        // Market stays 0 until Odds API sync — do not fake it from the model.
+        market_probability: 0,
         our_probability: scored.our_probability,
         td_pool_score: scored.score,
         td_pool_rank: 0,
@@ -203,6 +205,7 @@ export async function ensureNflWeekMaterialized(
     // Keep board size usable on mobile
     const trimmed = board.slice(0, 60);
     await store.replacePlayerWeekBoard(nflWeek.id, trimmed);
+    invalidateOddsSyncThrottle();
 
     materializeDoneAt.set(key, Date.now());
     return nflWeek;

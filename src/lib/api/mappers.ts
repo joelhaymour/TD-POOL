@@ -2,6 +2,7 @@ import type { PlayerCardData } from "@/components/players/player-card";
 import type { PlayerDetailData } from "@/components/players/player-detail";
 import type { BetSlipLeg } from "@/components/picks/bet-slip";
 import { buildPlayerHistory } from "@/lib/providers/mock/mock-history";
+import { displayOurProbability } from "@/lib/scoring/rank";
 import type { LeagueDashboard, MemberPickStatus } from "@/lib/types";
 
 type RankedPlayer = LeagueDashboard["ranked_players"][number];
@@ -26,7 +27,7 @@ export function toPlayerCard(
       row.game.home_team === row.player.team
         ? row.game.away_team
         : row.game.home_team,
-    ourProbability: row.our_probability,
+    ourProbability: displayOurProbability(row),
     marketProbability: row.market_probability,
     americanOdds: row.consensus_american_odds,
     matchupStars: row.matchup_rating,
@@ -59,7 +60,7 @@ export function toPlayerDetail(
     position: row.player.position,
     opponent,
     rank: row.td_pool_rank,
-    ourProbability: row.our_probability,
+    ourProbability: displayOurProbability(row),
     marketProbability: row.market_probability,
     americanOdds: row.consensus_american_odds,
     consensusOdds: row.consensus_american_odds,

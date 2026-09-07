@@ -289,12 +289,20 @@ export function buildResearchFromLive(args: {
       notes: history.vs_opponent_summary,
     },
     usage: {
-      snap_share: 0,
-      carry_share: args.position === "RB" ? 0.45 : 0,
+      // Derive from recent RZ involvement so RBs aren't all identical.
+      snap_share: Math.min(0.85, avgRz / 7),
+      carry_share:
+        args.position === "RB"
+          ? Math.min(0.7, Math.max(0.08, avgRz / 9))
+          : 0,
       target_share:
-        args.position === "WR" || args.position === "TE" ? 0.18 : 0.08,
+        args.position === "RB"
+          ? Math.min(0.18, Math.max(0.02, avgRz * 0.025))
+          : Math.min(0.35, Math.max(0.06, avgRz / 10)),
       targets_per_game:
-        args.position === "WR" || args.position === "TE" ? 6 : 2,
+        args.position === "RB"
+          ? Math.min(6, Math.max(1, Number((avgRz * 0.45).toFixed(1))))
+          : Math.min(12, Math.max(2, Number((avgRz * 1.1).toFixed(1)))),
       end_zone_targets: Math.round(glAvg),
       recent_trend: history.recent_trend,
       last_games_summary: history.last_5_summary,
@@ -333,62 +341,116 @@ export function scoreTdPoolFromResearch(research: ResearchJson): {
   tier: TdTier;
 } {
   const hist = research.history;
+  const games = hist?.last_5.length ?? 0;
+  const n = Math.max(1, games);
   const tds = hist?.last_5.reduce((s, g) => s + g.touchdowns, 0) ?? 0;
   const rz = hist?.last_5.reduce((s, g) => s + g.rz_touches, 0) ?? 0;
   const gl = hist?.last_5.reduce((s, g) => s + g.goal_line_chances, 0) ?? 0;
   const vs = hist?.vs_opponent.reduce((s, g) => s + g.touchdowns, 0) ?? 0;
-  const carryShare = research.usage.carry_share ?? 0;
-  const weatherBoost =
-    research.game_environment.weather.severity !== "none"
-      ? carryShare > 0
-        ? 0.04
-        : -0.03
-      : 0;
+  const vsGames = hist?.vs_opponent.length ?? 0;
 
-  const raw =
-    tds * 0.12 +
-    rz * 0.025 +
-    gl * 0.04 +
-    vs * 0.08 +
-    (research.game_environment.total ?? 44) / 200 +
-    weatherBoost;
+  const tdRate = tds / n; // rush/rec TDs per recent game
+  const rzRate = rz / n;
+  const glRate = gl / n;
+  const vsRate = vsGames > 0 ? vs / vsGames : 0;
 
-  // Cap realistic anytime (rush/rec) TD rates — QBs with one sneak shouldn't dominate.
-  const positionCap =
-    research.usage.carry_share && research.usage.carry_share > 0.2
-      ? 0.42
-      : research.usage.target_share && research.usage.target_share > 0
-        ? 0.38
-        : 0.22;
+  const carry = research.usage.carry_share ?? 0;
+  const tgt = research.usage.target_share ?? 0;
+  const implied = research.game_environment.team_implied_points ?? 21;
 
-  const our_probability = Math.max(0.03, Math.min(positionCap, raw));
-  const score = our_probability * 100;
+  // Poisson-ish anytime TD probability from recent TD rate, then layer usage.
+  let our = 1 - Math.exp(-Math.max(0, tdRate) * 1.15);
+  our += Math.min(0.1, rzRate * 0.015);
+  our += Math.min(0.08, glRate * 0.025);
+  our += Math.min(0.05, vsRate * 0.04);
+  our += carry * 0.14 + tgt * 0.12;
+  our += Math.min(0.04, Math.max(-0.03, (implied - 22) * 0.004));
+
+  const total = research.game_environment.total;
+  if (total != null && total >= 48) our += 0.015;
+  if (total != null && total <= 40) our -= 0.01;
+
+  if (research.game_environment.weather.severity === "severe") {
+    if (carry >= 0.25) our += 0.01;
+    else our -= 0.015;
+  }
+
+  if (research.injuries.player_status === "questionable") our *= 0.92;
+  if (research.injuries.player_status === "doubtful") our *= 0.75;
+  if (
+    research.injuries.player_status === "out" ||
+    research.injuries.player_status === "injured_reserve"
+  ) {
+    our *= 0.15;
+  }
+
+  // Keep display probabilities in a realistic anytime-TD band, but stay granular.
+  const our_probability = Math.max(0.04, Math.min(0.52, our));
+
+  // Rank score must stay discriminative even when probabilities cluster.
+  // Do NOT equal score to capped probability.
+  const score =
+    tdRate * 1000 +
+    rzRate * 45 +
+    glRate * 70 +
+    vsRate * 120 +
+    carry * 220 +
+    tgt * 180 +
+    implied * 4 +
+    our_probability * 80 +
+    (total ?? 44) * 0.5 -
+    (research.injuries.player_status === "questionable" ? 40 : 0);
+
   const matchup_rating = Math.max(
     1,
     Math.min(
       5,
-      Math.round(2 + vs + (research.game_environment.total ?? 44) / 50),
+      Math.round(
+        2.2 +
+          vsRate * 1.5 +
+          ((total ?? 44) - 44) / 8 +
+          (research.game_environment.weather.severity === "none" ? 0.2 : 0),
+      ),
     ),
   );
   const goal_line_rating = Math.max(
     1,
-    Math.min(
-      5,
-      Math.round(
-        1 + gl / 2 + (hist?.last_5.length ? rz / hist.last_5.length : 0),
-      ),
-    ),
+    Math.min(5, Math.round(1.2 + glRate * 1.1 + rzRate * 0.35)),
   );
+
   const tier: TdTier =
-    our_probability >= 0.28
+    our_probability >= 0.32
       ? "elite"
-      : our_probability >= 0.2
+      : our_probability >= 0.24
         ? "strong"
-        : our_probability >= 0.12
+        : our_probability >= 0.16
           ? "solid"
-          : our_probability >= 0.08
+          : our_probability >= 0.1
             ? "average"
             : "long_shot";
 
   return { score, our_probability, matchup_rating, goal_line_rating, tier };
+}
+
+/** Blend research model with live market odds for display + ranking. */
+export function blendModelWithMarket(args: {
+  modelProbability: number;
+  modelScore: number;
+  marketProbability: number | null;
+  marketAmerican: number | null;
+}): { our_probability: number; score: number } {
+  const market = args.marketProbability;
+  if (market == null || market <= 0 || !args.marketAmerican) {
+    return {
+      our_probability: args.modelProbability,
+      score: args.modelScore,
+    };
+  }
+  // Market is the best public anytime-TD signal when present.
+  const our_probability = Math.max(
+    0.035,
+    Math.min(0.5, args.modelProbability * 0.35 + market * 0.65),
+  );
+  const score = market * 10_000 + args.modelScore;
+  return { our_probability, score };
 }

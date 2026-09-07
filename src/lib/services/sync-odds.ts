@@ -19,6 +19,11 @@ const inFlightOddsSync = new Map<string, Promise<OddsSyncSummary | null>>();
 
 export { getConfiguredOddsSource };
 
+/** Call after rematerializing a player board so the next dashboard load re-pulls quotes. */
+export function invalidateOddsSyncThrottle(): void {
+  lastOddsSyncAt.clear();
+}
+
 /**
  * Refresh anytime TD odds for a league active week.
  * Uses The Odds API when ODDS_API_KEY is set; otherwise mock provider.
