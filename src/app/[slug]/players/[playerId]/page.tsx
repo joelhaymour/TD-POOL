@@ -10,8 +10,7 @@ import {
 } from "@/components/players/player-detail";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/components/ui/toast";
-
-const MEMBER_KEY = (slug: string) => `tdpool:member:${slug}`;
+import { memberStorageKey } from "@/lib/league/member-storage";
 
 type DetailResponse = {
   player: PlayerDetailData;
@@ -47,7 +46,7 @@ export default function PlayerDetailPage() {
   }, [refresh]);
 
   async function onSelect(id: string) {
-    const memberId = window.localStorage.getItem(MEMBER_KEY(slug));
+    const memberId = window.localStorage.getItem(memberStorageKey(slug));
     if (!memberId || !data) {
       toast({
         title: "Pick who you are first",

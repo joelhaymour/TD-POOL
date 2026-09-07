@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import {
@@ -34,6 +34,14 @@ export default function SettingsPage() {
     currency: "USD",
   });
 
+  const [joinPin, setJoinPin] = useState<string | null>(null);
+  const [inviteLoading, setInviteLoading] = useState(false);
+
+  const inviteUrl = useMemo(() => {
+    if (typeof window === "undefined") return `/${slug}`;
+    return `${window.location.origin}/${slug}`;
+  }, [slug]);
+
   useEffect(() => {
     let cancelled = false;
     async function load() {
@@ -63,6 +71,55 @@ export default function SettingsPage() {
       cancelled = true;
     };
   }, [slug]);
+
+  async function copyText(label: string, value: string) {
+    try {
+      await navigator.clipboard.writeText(value);
+      toast({ title: `${label} copied`, tone: "success" });
+    } catch {
+      toast({ title: "Copy failed", description: value, tone: "error" });
+    }
+  }
+
+  async function loadInvite(regenerate = false) {
+    if (!adminPin.trim()) {
+      toast({
+        title: "Admin PIN required",
+        description: "Enter the admin PIN to show or rotate the join PIN.",
+        tone: "error",
+      });
+      return;
+    }
+    setInviteLoading(true);
+    try {
+      const res = await fetch(`/api/leagues/${slug}/invite`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ adminPin, regenerate }),
+      });
+      const data = (await res.json()) as {
+        error?: string;
+        join_pin?: string;
+      };
+      if (!res.ok || !data.join_pin) {
+        toast({
+          title: regenerate ? "Could not regenerate PIN" : "Could not load invite",
+          description: data.error ?? "Check your admin PIN.",
+          tone: "error",
+        });
+        return;
+      }
+      setJoinPin(data.join_pin);
+      toast({
+        title: regenerate ? "Join PIN regenerated" : "Invite details loaded",
+        tone: "success",
+      });
+    } catch {
+      toast({ title: "Network error", tone: "error" });
+    } finally {
+      setInviteLoading(false);
+    }
+  }
 
   async function onSave(e: FormEvent) {
     e.preventDefault();
@@ -128,6 +185,87 @@ export default function SettingsPage() {
           Changes require the admin PIN.
         </p>
       </div>
+
+      <section className="space-y-3 rounded-2xl border border-border bg-chalk p-4 shadow-card">
+        <h3 className="font-display text-base font-bold uppercase tracking-wide text-ink">
+          Invite friends
+        </h3>
+        <p className="text-sm text-ink-muted">
+          Share the link, league code, and join PIN in your group chat. Friends
+          use Join on the home page.
+        </p>
+        <label className="block">
+          <span className="mb-1.5 block text-[10px] font-bold uppercase tracking-[0.1em] text-ink-faint">
+            League link
+          </span>
+          <div className="flex gap-2">
+            <input readOnly className={inputClass} value={inviteUrl} />
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => void copyText("Link", inviteUrl)}
+            >
+              Copy
+            </Button>
+          </div>
+        </label>
+        <label className="block">
+          <span className="mb-1.5 block text-[10px] font-bold uppercase tracking-[0.1em] text-ink-faint">
+            League code
+          </span>
+          <div className="flex gap-2">
+            <input readOnly className={inputClass} value={slug} />
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => void copyText("Code", slug)}
+            >
+              Copy
+            </Button>
+          </div>
+        </label>
+        <label className="block">
+          <span className="mb-1.5 block text-[10px] font-bold uppercase tracking-[0.1em] text-ink-faint">
+            Join PIN
+          </span>
+          <div className="flex gap-2">
+            <input
+              readOnly
+              className={inputClass}
+              value={joinPin ?? "••••"}
+            />
+            {joinPin ? (
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => void copyText("Join PIN", joinPin)}
+              >
+                Copy
+              </Button>
+            ) : null}
+          </div>
+        </label>
+        <div className="grid gap-2 sm:grid-cols-2">
+          <Button
+            type="button"
+            variant="secondary"
+            fullWidth
+            disabled={inviteLoading}
+            onClick={() => void loadInvite(false)}
+          >
+            {inviteLoading ? "Loading…" : "Show join PIN"}
+          </Button>
+          <Button
+            type="button"
+            variant="secondary"
+            fullWidth
+            disabled={inviteLoading}
+            onClick={() => void loadInvite(true)}
+          >
+            Regenerate PIN
+          </Button>
+        </div>
+      </section>
 
       <label className="block">
         <span className="mb-1.5 block text-[10px] font-bold uppercase tracking-[0.1em] text-ink-faint">

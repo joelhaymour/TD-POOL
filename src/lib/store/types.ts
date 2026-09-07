@@ -34,10 +34,29 @@ export type ApplyOddsRefreshInput = {
   quotes: OddsQuote[];
 };
 
+export type JoinLeagueInput = {
+  slug: string;
+  display_name: string;
+  join_pin: string;
+};
+
+export type JoinLeagueResult = {
+  league: League;
+  member: LeagueMember;
+};
+
 export interface Store {
   getLeagueBySlug(slug: string): Promise<League | null>;
   createLeague(input: CreateLeagueInput): Promise<League>;
+  /** Join via slug + join PIN; creates (or reactivates) a member row. */
+  joinLeague(input: JoinLeagueInput): Promise<JoinLeagueResult>;
   listMembers(leagueId: string): Promise<LeagueMember[]>;
+  /** Soft-deactivate or reactivate a member. Blocks deactivating the last admin. */
+  setMemberActive(
+    leagueId: string,
+    memberId: string,
+    active: boolean,
+  ): Promise<LeagueMember>;
   getPicksForWeek(leagueId: string, weekId: string): Promise<Pick[]>;
   /**
    * Atomically submit a pick.

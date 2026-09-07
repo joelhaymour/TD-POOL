@@ -9,10 +9,9 @@ import type { PlayerFiltersValue } from "@/components/players/player-filters";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/components/ui/toast";
 import { useLeagueRealtime } from "@/hooks/use-league-realtime";
+import { memberStorageKey } from "@/lib/league/member-storage";
 import { toPlayerCard } from "@/lib/api/mappers";
 import type { LeagueDashboard } from "@/lib/types";
-
-const MEMBER_KEY = (slug: string) => `tdpool:member:${slug}`;
 
 export function DashboardClient({
   slug,
@@ -71,7 +70,7 @@ export function DashboardClient({
     return () => window.clearInterval(id);
   }, [slug, realtimeConnected, refresh]);
   useEffect(() => {
-    const saved = window.localStorage.getItem(MEMBER_KEY(slug));
+    const saved = window.localStorage.getItem(memberStorageKey(slug));
     if (saved) setMemberId(saved);
   }, [slug]);
 
@@ -81,7 +80,7 @@ export function DashboardClient({
     const first = admin ?? dashboard.members[0];
     if (first) {
       setMemberId(first.member.id);
-      window.localStorage.setItem(MEMBER_KEY(slug), first.member.id);
+      window.localStorage.setItem(memberStorageKey(slug), first.member.id);
     }
   }, [dashboard, memberId, slug]);
 
@@ -205,7 +204,7 @@ export function DashboardClient({
           onChange={(e) => {
             const id = e.target.value;
             setMemberId(id);
-            window.localStorage.setItem(MEMBER_KEY(slug), id);
+            window.localStorage.setItem(memberStorageKey(slug), id);
           }}
         >
           {dashboard.members.map((m) => (

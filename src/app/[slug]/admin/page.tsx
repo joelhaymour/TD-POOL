@@ -22,6 +22,7 @@ export default function AdminPage() {
   const [adminPin, setAdminPin] = useState("");
   const [overriding, setOverriding] = useState(false);
   const [oddsRefreshing, setOddsRefreshing] = useState(false);
+  const [removingId, setRemovingId] = useState<string | null>(null);
   const [lastOddsSync, setLastOddsSync] = useState<{
     source: string;
     quotes: number;
@@ -191,6 +192,47 @@ export default function AdminPage() {
     }
   }
 
+  async function onRemoveMember(memberId: string, displayName: string) {
+    if (!adminPin.trim()) {
+      toast({
+        title: "Admin PIN required",
+        description: "Enter the admin PIN to remove members.",
+        tone: "error",
+      });
+      return;
+    }
+    setRemovingId(memberId);
+    try {
+      const res = await fetch(
+        `/api/leagues/${slug}/members/${memberId}/remove`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ adminPin }),
+        },
+      );
+      const data = (await res.json()) as { error?: string };
+      if (!res.ok) {
+        toast({
+          title: "Remove failed",
+          description: data.error ?? "Try again.",
+          tone: "error",
+        });
+        return;
+      }
+      toast({
+        title: "Member removed",
+        description: `${displayName} can no longer pick.`,
+        tone: "success",
+      });
+      await refresh();
+    } catch {
+      toast({ title: "Network error", tone: "error" });
+    } finally {
+      setRemovingId(null);
+    }
+  }
+
   if (loading && !dashboard) {
     return (
       <div className="space-y-3">
@@ -350,30 +392,60 @@ export default function AdminPage() {
         <h3 className="font-display text-base font-bold uppercase tracking-wide text-ink">
           Members
         </h3>
+        <p className="mt-1 text-sm text-ink-muted">
+          Invite friends from Settings (link + join PIN). Removing a member
+          soft-deactivates them; pick history is kept.
+        </p>
         <ul className="mt-3 divide-y divide-border">
-          {dashboard.members.map((m) => (
-            <li
-              key={m.member.id}
-              className="flex items-center justify-between gap-2 py-2.5 text-sm"
-            >
-              <span className="font-semibold text-ink">
-                {m.member.display_name}
-                <span className="ml-2 text-xs font-medium uppercase text-ink-faint">
-                  {m.member.role}
-                </span>
-              </span>
-              <span className="truncate text-ink-muted">
-                {m.player?.name ?? "Needs pick"}
-                {m.pick?.result === "td"
-                  ? " · ✅ TD"
-                  : m.pick?.result === "no_td"
-                    ? " · ❌ NO TD"
-                    : m.pick
-                      ? " · ⏳"
-                      : ""}
-              </span>
-            </li>
-          ))}
+          {dashboard.members.map((m) => {
+            const adminCount = dashboard.members.filter(
+              (x) => x.member.role === "admin",
+            ).length;
+            const canRemove =
+              m.member.role !== "admin" || adminCount > 1;
+
+            return (
+              <li
+                key={m.member.id}
+                className="flex items-center justify-between gap-2 py-2.5 text-sm"
+              >
+                <div className="min-w-0 flex-1">
+                  <span className="font-semibold text-ink">
+                    {m.member.display_name}
+                    <span className="ml-2 text-xs font-medium uppercase text-ink-faint">
+                      {m.member.role}
+                    </span>
+                  </span>
+                  <p className="truncate text-ink-muted">
+                    {m.player?.name ?? "Needs pick"}
+                    {m.pick?.result === "td"
+                      ? " · ✅ TD"
+                      : m.pick?.result === "no_td"
+                        ? " · ❌ NO TD"
+                        : m.pick
+                          ? " · ⏳"
+                          : ""}
+                  </p>
+                </div>
+                {canRemove ? (
+                  <Button
+                    type="button"
+                    variant="danger"
+                    size="sm"
+                    disabled={removingId === m.member.id}
+                    onClick={() =>
+                      void onRemoveMember(
+                        m.member.id,
+                        m.member.display_name,
+                      )
+                    }
+                  >
+                    {removingId === m.member.id ? "…" : "Remove"}
+                  </Button>
+                ) : null}
+              </li>
+            );
+          })}
         </ul>
       </section>
     </div>

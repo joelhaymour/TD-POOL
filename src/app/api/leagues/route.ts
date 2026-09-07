@@ -41,7 +41,22 @@ export async function POST(request: Request) {
       logo_url: body.logo_url,
     });
 
-    return NextResponse.json(league, { status: 201 });
+    const members = await store.listMembers(league.id);
+    const admin =
+      members.find((m) => m.role === "admin") ??
+      members.find(
+        (m) =>
+          m.display_name.toLowerCase() ===
+          body.admin_display_name!.trim().toLowerCase(),
+      );
+
+    return NextResponse.json(
+      {
+        ...league,
+        admin_member_id: admin?.id ?? null,
+      },
+      { status: 201 },
+    );
   } catch (err) {
     return storeErrorResponse(err);
   }

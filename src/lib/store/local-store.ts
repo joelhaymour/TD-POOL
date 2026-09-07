@@ -10,7 +10,7 @@ import {
   estimatePayout,
 } from "@/lib/utils/odds";
 import { slugify } from "@/lib/utils/slug";
-import { StoreError, type Store, type GameStatusUpdate, type PickResultUpdate, type ApplyOddsRefreshInput } from "@/lib/store/types";
+import { StoreError, type Store, type GameStatusUpdate, type PickResultUpdate, type ApplyOddsRefreshInput, type JoinLeagueInput, type JoinLeagueResult } from "@/lib/store/types";
 import type {
   CreateLeagueInput,
   League,
@@ -215,6 +215,100 @@ export class LocalFileStore implements Store {
       }
 
       return league;
+    });
+  }
+
+  async joinLeague(input: JoinLeagueInput): Promise<JoinLeagueResult> {
+    return this.withData((data) => {
+      const slug = input.slug.trim().toLowerCase();
+      const displayName = input.display_name.trim();
+      const joinPin = input.join_pin.trim();
+
+      if (!displayName) {
+        throw new StoreError("Display name is required", "VALIDATION");
+      }
+      if (!joinPin) {
+        throw new StoreError("Join PIN is required", "VALIDATION");
+      }
+
+      const league = data.leagues.find((l) => l.slug === slug);
+      if (!league) throw new StoreError("League not found", "NOT_FOUND");
+      if (league.join_pin !== joinPin) {
+        throw new StoreError("Invalid join PIN", "FORBIDDEN");
+      }
+
+      const existing = data.members.find(
+        (m) =>
+          m.league_id === league.id &&
+          m.display_name.toLowerCase() === displayName.toLowerCase(),
+      );
+
+      if (existing) {
+        if (existing.active) {
+          throw new StoreError(
+            "That display name is already taken in this league",
+            "CONFLICT",
+          );
+        }
+        existing.active = true;
+        return { league, member: existing };
+      }
+
+      const member: LeagueMember = {
+        id: newId("member"),
+        league_id: league.id,
+        user_id: null,
+        display_name: displayName,
+        role: "member",
+        active: true,
+        pin: null,
+        created_at: nowIso(),
+      };
+      data.members.push(member);
+      league.member_count = data.members.filter(
+        (m) => m.league_id === league.id && m.active,
+      ).length;
+      league.updated_at = nowIso();
+      return { league, member };
+    });
+  }
+
+  async setMemberActive(
+    leagueId: string,
+    memberId: string,
+    active: boolean,
+  ): Promise<LeagueMember> {
+    return this.withData((data) => {
+      const member = data.members.find(
+        (m) => m.id === memberId && m.league_id === leagueId,
+      );
+      if (!member) throw new StoreError("Member not found", "NOT_FOUND");
+
+      if (!active && member.role === "admin") {
+        const otherAdmins = data.members.filter(
+          (m) =>
+            m.league_id === leagueId &&
+            m.active &&
+            m.role === "admin" &&
+            m.id !== memberId,
+        );
+        if (otherAdmins.length === 0) {
+          throw new StoreError(
+            "Cannot remove the last admin from the league",
+            "FORBIDDEN",
+          );
+        }
+      }
+
+      member.active = active;
+      const league = data.leagues.find((l) => l.id === leagueId);
+      if (league) {
+        league.member_count = data.members.filter(
+          (m) => m.league_id === leagueId && m.active,
+        ).length;
+        league.updated_at = nowIso();
+      }
+      return member;
     });
   }
 

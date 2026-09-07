@@ -4,6 +4,8 @@ import {
   StoreError,
   type ApplyOddsRefreshInput,
   type GameStatusUpdate,
+  type JoinLeagueInput,
+  type JoinLeagueResult,
   type PickResultUpdate,
   type Store,
 } from "@/lib/store/types";
@@ -376,6 +378,149 @@ export class SupabaseStore implements Store {
     if (membersErr) throw membersErr;
 
     return mapLeague(leagueRow);
+  }
+
+  async joinLeague(input: JoinLeagueInput): Promise<JoinLeagueResult> {
+    const slug = input.slug.trim().toLowerCase();
+    const displayName = input.display_name.trim();
+    const joinPin = input.join_pin.trim();
+
+    if (!displayName) {
+      throw new StoreError("Display name is required", "VALIDATION");
+    }
+    if (!joinPin) {
+      throw new StoreError("Join PIN is required", "VALIDATION");
+    }
+
+    const league = await this.getLeagueBySlug(slug);
+    if (!league) throw new StoreError("League not found", "NOT_FOUND");
+    if (league.join_pin !== joinPin) {
+      throw new StoreError("Invalid join PIN", "FORBIDDEN");
+    }
+
+    const { data: existingRows, error: existingErr } = await this.client
+      .from("league_members")
+      .select("*")
+      .eq("league_id", league.id)
+      .ilike("display_name", displayName);
+    if (existingErr) throw existingErr;
+
+    const existing = (existingRows ?? []).find(
+      (row) =>
+        String(row.display_name).toLowerCase() === displayName.toLowerCase(),
+    );
+
+    if (existing) {
+      if (existing.active) {
+        throw new StoreError(
+          "That display name is already taken in this league",
+          "CONFLICT",
+        );
+      }
+      const { data: reactivated, error: reactivateErr } = await this.client
+        .from("league_members")
+        .update({ active: true })
+        .eq("id", existing.id)
+        .select("*")
+        .single();
+      if (reactivateErr) throw reactivateErr;
+      await this.client
+        .from("leagues")
+        .update({
+          member_count_setting: (await this.listMembers(league.id)).length,
+          updated_at: nowIso(),
+        })
+        .eq("id", league.id);
+      return { league, member: mapMember(reactivated) };
+    }
+
+    const createdAt = nowIso();
+    const { data: inserted, error: insertErr } = await this.client
+      .from("league_members")
+      .insert({
+        id: randomUUID(),
+        league_id: league.id,
+        user_id: null,
+        display_name: displayName,
+        role: "member",
+        active: true,
+        pin: null,
+        created_at: createdAt,
+      })
+      .select("*")
+      .single();
+
+    if (insertErr) {
+      if (isUniqueViolation(insertErr)) {
+        throw new StoreError(
+          "That display name is already taken in this league",
+          "CONFLICT",
+        );
+      }
+      throw insertErr;
+    }
+
+    const members = await this.listMembers(league.id);
+    await this.client
+      .from("leagues")
+      .update({
+        member_count_setting: members.length,
+        updated_at: nowIso(),
+      })
+      .eq("id", league.id);
+
+    return { league, member: mapMember(inserted) };
+  }
+
+  async setMemberActive(
+    leagueId: string,
+    memberId: string,
+    active: boolean,
+  ): Promise<LeagueMember> {
+    const { data: memberRow, error: memberErr } = await this.client
+      .from("league_members")
+      .select("*")
+      .eq("id", memberId)
+      .eq("league_id", leagueId)
+      .maybeSingle();
+    if (memberErr) throw memberErr;
+    if (!memberRow) throw new StoreError("Member not found", "NOT_FOUND");
+
+    if (!active && memberRow.role === "admin") {
+      const { data: otherAdmins, error: adminsErr } = await this.client
+        .from("league_members")
+        .select("id")
+        .eq("league_id", leagueId)
+        .eq("active", true)
+        .eq("role", "admin")
+        .neq("id", memberId);
+      if (adminsErr) throw adminsErr;
+      if (!otherAdmins?.length) {
+        throw new StoreError(
+          "Cannot remove the last admin from the league",
+          "FORBIDDEN",
+        );
+      }
+    }
+
+    const { data: updated, error: updateErr } = await this.client
+      .from("league_members")
+      .update({ active })
+      .eq("id", memberId)
+      .select("*")
+      .single();
+    if (updateErr) throw updateErr;
+
+    const members = await this.listMembers(leagueId);
+    await this.client
+      .from("leagues")
+      .update({
+        member_count_setting: members.length,
+        updated_at: nowIso(),
+      })
+      .eq("id", leagueId);
+
+    return mapMember(updated);
   }
 
   async listMembers(leagueId: string): Promise<LeagueMember[]> {
