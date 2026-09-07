@@ -101,6 +101,8 @@ export interface WeatherReport {
 
 export interface PlayerTouchdownResult {
   external_player_id: string;
+  /** Display name when available — used to match mock roster IDs. */
+  player_name?: string;
   external_game_id: string;
   touchdowns: number;
   game_status: ProviderGame["status"];

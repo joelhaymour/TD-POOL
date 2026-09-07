@@ -62,6 +62,8 @@ export interface Store {
     season: number,
     week: number,
   ): Promise<NflWeek | null>;
+  /** All NFL week rows in the store (supports multi-week history). */
+  listWeeks(): Promise<NflWeek[]>;
   listGamesForWeek(weekId: string): Promise<NflGame[]>;
   listPlayers(): Promise<NflPlayer[]>;
   listLeagues(): Promise<League[]>;

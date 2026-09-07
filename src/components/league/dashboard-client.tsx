@@ -8,6 +8,7 @@ import { PlayerList } from "@/components/players/player-list";
 import type { PlayerFiltersValue } from "@/components/players/player-filters";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/components/ui/toast";
+import { useLeagueRealtime } from "@/hooks/use-league-realtime";
 import { toPlayerCard } from "@/lib/api/mappers";
 import type { LeagueDashboard } from "@/lib/types";
 
@@ -34,33 +35,41 @@ export function DashboardClient({
   });
   const [selecting, setSelecting] = useState(false);
 
-  const refresh = useCallback(
-    async (silent = false) => {
-      if (!silent) setLoading(true);
-      try {
-        const res = await fetch(`/api/leagues/${slug}`, { cache: "no-store" });
-        if (!res.ok) {
-          if (!silent) setDashboard(null);
-          return;
-        }
-        const data = (await res.json()) as LeagueDashboard;
-        setDashboard(data);
-      } catch {
-        if (!silent && !dashboard) setDashboard(null);
-      } finally {
-        if (!silent) setLoading(false);
+  const refresh = useCallback(async (silent = false) => {
+    if (!silent) setLoading(true);
+    try {
+      const res = await fetch(`/api/leagues/${slug}`, { cache: "no-store" });
+      if (!res.ok) {
+        if (!silent) setDashboard(null);
+        return;
       }
-    },
-    [slug, dashboard],
+      const data = (await res.json()) as LeagueDashboard;
+      setDashboard(data);
+    } catch {
+      // Keep last good snapshot on transient errors
+    } finally {
+      if (!silent) setLoading(false);
+    }
+  }, [slug]);
+
+  const onRealtimeInvalidate = useCallback(() => {
+    void refresh(true);
+  }, [refresh]);
+
+  const { connected: realtimeConnected } = useLeagueRealtime(
+    dashboard?.league.id,
+    onRealtimeInvalidate,
   );
 
   useEffect(() => {
     if (!initialDashboard) void refresh();
-    const id = window.setInterval(() => void refresh(true), 4000);
-    return () => window.clearInterval(id);
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- mount poller once per slug
-  }, [slug]);
+  }, [slug, initialDashboard, refresh]);
 
+  useEffect(() => {
+    const ms = realtimeConnected ? 15_000 : 4_000;
+    const id = window.setInterval(() => void refresh(true), ms);
+    return () => window.clearInterval(id);
+  }, [slug, realtimeConnected, refresh]);
   useEffect(() => {
     const saved = window.localStorage.getItem(MEMBER_KEY(slug));
     if (saved) setMemberId(saved);

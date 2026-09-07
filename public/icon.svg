@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="TD Pool">
+  <rect width="512" height="512" rx="96" fill="#1f8a4c"/>
+  <circle cx="256" cy="256" r="148" fill="#b8f24a"/>
+  <circle cx="256" cy="256" r="118" fill="none" stroke="#0d1f14" stroke-width="28"/>
+  <text
+    x="256"
+    y="286"
+    text-anchor="middle"
+    font-family="ui-sans-serif, system-ui, sans-serif"
+    font-size="140"
+    font-weight="800"
+    fill="#0d1f14"
+  >TD</text>
+</svg>

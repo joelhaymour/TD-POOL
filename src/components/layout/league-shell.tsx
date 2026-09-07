@@ -51,9 +51,9 @@ export function LeagueShell({
 
   const navItems: BottomNavItem[] = [
     { href: basePath, label: "Picks", icon: "picks" },
-    { href: `${basePath}/bet-slip`, label: "Bet Slip", icon: "slip" },
+    { href: `${basePath}/bet-slip`, label: "Slip", icon: "slip" },
     { href: `${basePath}/history`, label: "History", icon: "history" },
-    { href: `${basePath}/admin`, label: "Admin", icon: "league" },
+    { href: `${basePath}/leaderboard`, label: "Board", icon: "board" },
   ];
 
   return (

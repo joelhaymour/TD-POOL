@@ -397,6 +397,14 @@ export class LocalFileStore implements Store {
     );
   }
 
+  async listWeeks(): Promise<NflWeek[]> {
+    return this.withRead((data) =>
+      [...data.weeks].sort((a, b) =>
+        a.season !== b.season ? a.season - b.season : a.week - b.week,
+      ),
+    );
+  }
+
   async listGamesForWeek(weekId: string): Promise<NflGame[]> {
     return this.withRead((data) =>
       data.games.filter((g) => g.week_id === weekId),

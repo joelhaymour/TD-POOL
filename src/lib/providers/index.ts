@@ -1,3 +1,4 @@
+import { createEspnNFLProvider } from "@/lib/providers/espn/espn-nfl-provider";
 import { createMockNFLProvider } from "@/lib/providers/mock/mock-nfl-provider";
 import { createMockOddsProvider } from "@/lib/providers/mock/mock-odds-provider";
 import { createTheOddsApiProvider } from "@/lib/providers/the-odds-api/provider";
@@ -25,6 +26,14 @@ function resolveProviderMode(): ProviderMode {
   return process.env.ODDS_API_KEY?.trim() ? "auto" : "mock";
 }
 
+function shouldUseEspnNFL(): boolean {
+  const nfl = process.env.NFL_PROVIDER?.toLowerCase();
+  if (nfl === "espn") return true;
+  if (nfl === "mock") return false;
+  const mode = resolveProviderMode();
+  return mode === "live" || mode === "auto";
+}
+
 export function getConfiguredOddsSource(): "live" | "mock" {
   const mode = resolveProviderMode();
   const key = process.env.ODDS_API_KEY?.trim();
@@ -34,7 +43,13 @@ export function getConfiguredOddsSource(): "live" | "mock" {
 }
 
 export function getNFLProvider(): NFLDataProvider {
-  // Live NFL schedule provider arrives in a later integration; mock is reliable for V1–2.
+  if (shouldUseEspnNFL()) {
+    try {
+      return createEspnNFLProvider();
+    } catch {
+      // Construction failure → mock so the app keeps running.
+    }
+  }
   return createMockNFLProvider();
 }
 
@@ -55,5 +70,6 @@ export function getOddsProvider(ctx: OddsProviderContext = {}): OddsProvider {
   return createMockOddsProvider();
 }
 
+export { createEspnNFLProvider, matchPlayerExternalId } from "@/lib/providers/espn/espn-nfl-provider";
 export { createMockNFLProvider, createMockOddsProvider };
 export type * from "@/lib/providers/types";

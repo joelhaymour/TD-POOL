@@ -7,13 +7,14 @@ import {
   History,
   Layers,
   Ticket,
+  Trophy,
 } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 
 export type BottomNavItem = {
   href: string;
   label: string;
-  icon: "picks" | "league" | "slip" | "history";
+  icon: "picks" | "league" | "slip" | "history" | "board";
   badge?: number;
 };
 
@@ -28,13 +29,14 @@ const iconMap = {
   league: ClipboardList,
   slip: Ticket,
   history: History,
+  board: Trophy,
 };
 
 const defaultItems = (basePath: string): BottomNavItem[] => [
   { href: `${basePath}`, label: "Picks", icon: "picks" },
-  { href: `${basePath}/league`, label: "League", icon: "league" },
-  { href: `${basePath}/slip`, label: "Bet Slip", icon: "slip" },
+  { href: `${basePath}/bet-slip`, label: "Slip", icon: "slip" },
   { href: `${basePath}/history`, label: "History", icon: "history" },
+  { href: `${basePath}/leaderboard`, label: "Board", icon: "board" },
 ];
 
 export function BottomNav({

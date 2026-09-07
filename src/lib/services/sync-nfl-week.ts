@@ -116,10 +116,18 @@ export async function syncNflWeek(
     const byExternal = new Map(
       refreshed.map((g) => [g.external_game_id, g] as const),
     );
+    const byMatchup = new Map(
+      refreshed.map(
+        (g) => [`${g.away_team}@${g.home_team}`, g] as const,
+      ),
+    );
 
     const updates = storeGames.flatMap((game) => {
-      if (!game.external_game_id) return [];
-      const next = byExternal.get(game.external_game_id);
+      const next =
+        (game.external_game_id
+          ? byExternal.get(game.external_game_id)
+          : undefined) ??
+        byMatchup.get(`${game.away_team}@${game.home_team}`);
       if (!next) return [];
       if (
         game.status === next.status &&
@@ -147,9 +155,26 @@ export async function syncNflWeek(
   const tdRows = provider.getPlayerTouchdownsForWeek
     ? await provider.getPlayerTouchdownsForWeek(season, week, asOf)
     : [];
-  const tdByExternalPlayer = new Map(
-    tdRows.map((row) => [row.external_player_id, row] as const),
+
+  const { matchPlayerExternalId } = await import(
+    "@/lib/providers/espn/espn-nfl-provider"
   );
+  const rosterForMatch = (await store.listPlayers())
+    .filter((p) => p.external_player_id)
+    .map((p) => ({
+      external_player_id: p.external_player_id!,
+      name: p.name,
+      team: p.team,
+    }));
+
+  const tdByExternalPlayer = new Map<string, (typeof tdRows)[number]>();
+  for (const row of tdRows) {
+    tdByExternalPlayer.set(row.external_player_id, row);
+    if (row.player_name) {
+      const matched = matchPlayerExternalId(row.player_name, rosterForMatch);
+      if (matched) tdByExternalPlayer.set(matched, row);
+    }
+  }
 
   const players = await store.listPlayers();
   const playersById = new Map(players.map((p) => [p.id, p]));

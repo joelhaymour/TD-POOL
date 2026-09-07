@@ -131,9 +131,9 @@ export default function HistoryPage() {
               </div>
               <Badge
                 status={
-                  w.status === "final"
+                  w.status === "complete" || w.status === "final"
                     ? "td"
-                    : w.status === "locked"
+                    : w.status === "active" || w.status === "locked"
                       ? "locked"
                       : "pending"
                 }

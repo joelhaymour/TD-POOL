@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, type FormEvent } from "react";
+import Link from "next/link";
 import { useParams } from "next/navigation";
 import {
   MoneySettingsForm,
@@ -186,6 +187,13 @@ export default function SettingsPage() {
       <Button type="submit" fullWidth disabled={saving}>
         {saving ? "Saving…" : "Save settings"}
       </Button>
+
+      <Link
+        href={`/${slug}/admin`}
+        className="block rounded-xl border border-border bg-field px-4 py-3 text-center text-sm font-bold text-turf hover:bg-field-deep"
+      >
+        Open admin tools →
+      </Link>
     </form>
   );
 }

@@ -2,6 +2,17 @@ import { NextResponse } from "next/server";
 import { getStore } from "@/lib/store";
 import { storeErrorResponse } from "@/lib/api/store-error";
 import { autoSyncLeagueWeek } from "@/lib/services/sync-nfl-week";
+import {
+  americanToDecimal,
+  calculateWeeklyStake,
+  combineParlayDecimal,
+  decimalToAmerican,
+  estimatePayout,
+} from "@/lib/utils/odds";
+
+function weekPhaseStatus(isActive: boolean): "active" | "complete" {
+  return isActive ? "active" : "complete";
+}
 
 export async function GET(
   _request: Request,
@@ -11,58 +22,124 @@ export async function GET(
     const { slug } = await context.params;
     await autoSyncLeagueWeek(slug);
     const store = getStore();
-    const dashboard = await store.getDashboard(slug);
-    if (!dashboard) {
+    const league = await store.getLeagueBySlug(slug);
+    if (!league) {
       return NextResponse.json(
         { error: "League not found", code: "NOT_FOUND" },
         { status: 404 },
       );
     }
 
-    const picks = dashboard.members
-      .filter((m) => m.pick && m.player)
-      .map((m) => ({
-        memberId: m.member.id,
-        memberName: m.member.display_name,
-        playerId: m.player!.id,
-        playerName: m.player!.name,
-        team: m.player!.team,
-        result: m.pick!.result,
-        americanOdds:
-          m.player_week?.consensus_american_odds ?? m.pick!.odds_at_selection,
-      }));
+    const [members, weeks, players] = await Promise.all([
+      store.listMembers(league.id),
+      store.listWeeks(),
+      store.listPlayers(),
+    ]);
 
-    const decided = picks.filter(
-      (p) => p.result === "td" || p.result === "no_td",
-    ).length;
-    const allPending = picks.every(
-      (p) => p.result === "pending" || p.result === "game_not_finished",
+    const playersById = new Map(players.map((p) => [p.id, p]));
+    const stake = calculateWeeklyStake(league);
+
+    // Prefer weeks that have league picks, plus the active week always.
+    const weekIdsWithPicks = new Set<string>();
+    const picksByWeek = new Map<
+      string,
+      Awaited<ReturnType<typeof store.getPicksForWeek>>
+    >();
+
+    for (const week of weeks) {
+      const picks = await store.getPicksForWeek(league.id, week.id);
+      picksByWeek.set(week.id, picks);
+      if (picks.length > 0) weekIdsWithPicks.add(week.id);
+    }
+
+    const relevantWeeks = weeks.filter(
+      (w) =>
+        weekIdsWithPicks.has(w.id) ||
+        w.id === league.active_week_id ||
+        weeks.length === 1,
     );
-    const weekStatus =
-      decided > 0 && decided === picks.length
-        ? "final"
-        : decided > 0 || !allPending
-          ? "in_progress"
-          : dashboard.picks_locked
-            ? "locked"
-            : "open";
+
+    const weekRows = await Promise.all(
+      relevantWeeks.map(async (week) => {
+        const picks = picksByWeek.get(week.id) ?? [];
+        const playerWeek = await store.getPlayerWeekData(week.id);
+        const pwdByPlayer = new Map(playerWeek.map((p) => [p.player_id, p]));
+
+        const pickRows = picks.map((pick) => {
+          const player = playersById.get(pick.player_id);
+          const pwd = pwdByPlayer.get(pick.player_id);
+          const member = members.find((m) => m.id === pick.member_id);
+          return {
+            memberId: pick.member_id,
+            memberName: member?.display_name ?? "Unknown",
+            playerId: pick.player_id,
+            playerName: player?.name ?? "Unknown",
+            team: player?.team ?? "—",
+            result: pick.result,
+            americanOdds:
+              pwd?.consensus_american_odds ?? pick.odds_at_selection,
+          };
+        });
+
+        const decimalLegs = picks.map((p) => {
+          const pwd = pwdByPlayer.get(p.player_id);
+          if (pwd) return pwd.consensus_decimal_odds;
+          return americanToDecimal(p.odds_at_selection);
+        });
+
+        let parlay = {
+          picks_submitted: picks.length,
+          picks_total: members.length,
+          stake,
+          combined_decimal: null as number | null,
+          combined_american: null as number | null,
+          estimated_payout: null as number | null,
+          estimated_profit: null as number | null,
+          currency: league.currency,
+          betting_mode: league.betting_mode,
+        };
+
+        if (decimalLegs.length > 0) {
+          const combined = combineParlayDecimal(decimalLegs);
+          parlay = {
+            ...parlay,
+            combined_decimal: Number(combined.toFixed(4)),
+            combined_american: decimalToAmerican(combined),
+          };
+          if (league.betting_mode !== "none") {
+            const { payout, profit } = estimatePayout(stake, combined);
+            parlay.estimated_payout = Number(payout.toFixed(2));
+            parlay.estimated_profit = Number(profit.toFixed(2));
+          }
+        }
+
+        const isActive = week.id === league.active_week_id;
+        const status = weekPhaseStatus(isActive);
+
+        return {
+          week,
+          picks_submitted: picks.length,
+          picks_total: members.length,
+          parlay,
+          picks: pickRows,
+          status,
+        };
+      }),
+    );
+
+    // Newest week first
+    weekRows.sort((a, b) => {
+      if (a.week.season !== b.week.season) return b.week.season - a.week.season;
+      return b.week.week - a.week.week;
+    });
 
     return NextResponse.json({
       league: {
-        id: dashboard.league.id,
-        slug: dashboard.league.slug,
-        name: dashboard.league.name,
+        id: league.id,
+        slug: league.slug,
+        name: league.name,
       },
-      weeks: [
-        {
-          week: dashboard.week,
-          picks_submitted: dashboard.parlay.picks_submitted,
-          picks_total: dashboard.parlay.picks_total,
-          parlay: dashboard.parlay,
-          picks,
-          status: weekStatus,
-        },
-      ],
+      weeks: weekRows,
     });
   } catch (err) {
     return storeErrorResponse(err);
