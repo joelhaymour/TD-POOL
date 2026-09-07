@@ -4,6 +4,7 @@ import { Badge, type BadgeStatus } from "@/components/ui/badge";
 import { StarRating } from "@/components/ui/star-rating";
 import { SelectPickButton } from "@/components/picks/select-pick-button";
 import { Button } from "@/components/ui/button";
+import type { ResearchGameLog, ResearchHistory } from "@/lib/types";
 
 export type SportsbookQuote = {
   book: string;
@@ -40,11 +41,9 @@ export type PlayerDetailData = {
     concerns?: string[];
     verdict?: string;
   };
-  opportunity?: ResearchStat[];
+  history?: ResearchHistory;
   matchup?: ResearchStat[];
   gameEnvironment?: ResearchStat[];
-  recentForm?: ResearchStat[];
-  recentTrend?: "up" | "stable" | "down";
   availabilityNotes?: string[];
   analysisNotes?: string[];
 };
@@ -129,6 +128,115 @@ const trendLabel = {
   stable: "→ Stable",
   down: "↓ Decreasing",
 } as const;
+
+function GameLogTable({
+  games,
+  emptyLabel,
+}: {
+  games: ResearchGameLog[];
+  emptyLabel: string;
+}) {
+  if (games.length === 0) {
+    return <p className="text-sm text-ink-muted">{emptyLabel}</p>;
+  }
+
+  return (
+    <div className="overflow-hidden rounded-xl border border-border">
+      <table className="w-full text-left text-sm">
+        <thead className="bg-field text-[10px] font-bold uppercase tracking-wider text-ink-faint">
+          <tr>
+            <th className="px-2.5 py-2 font-bold">Wk</th>
+            <th className="px-2.5 py-2 font-bold">Opp</th>
+            <th className="px-2.5 py-2 text-center font-bold">TD</th>
+            <th className="px-2.5 py-2 text-center font-bold">RZ</th>
+            <th className="px-2.5 py-2 text-center font-bold">GL</th>
+            <th className="px-2.5 py-2 text-right font-bold">Res</th>
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-border">
+          {games.map((g) => (
+            <tr key={`${g.week}-${g.opponent}-${g.home ? "h" : "a"}`}>
+              <td className="px-2.5 py-2 font-medium text-ink-muted">{g.week}</td>
+              <td className="px-2.5 py-2 font-semibold text-ink">
+                {g.home ? "vs" : "@"} {g.opponent}
+              </td>
+              <td
+                className={cn(
+                  "px-2.5 py-2 text-center font-display text-base font-bold",
+                  g.touchdowns > 0 ? "text-turf" : "text-ink-faint",
+                )}
+              >
+                {g.touchdowns}
+              </td>
+              <td className="px-2.5 py-2 text-center font-medium text-ink">
+                {g.rz_touches}
+              </td>
+              <td className="px-2.5 py-2 text-center font-medium text-ink">
+                {g.goal_line_chances}
+              </td>
+              <td className="px-2.5 py-2 text-right font-bold text-ink-muted">
+                {g.result}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function HistorySection({
+  history,
+  opponent,
+}: {
+  history?: ResearchHistory;
+  opponent: string;
+}) {
+  if (!history) {
+    return (
+      <Section title="History">
+        <p className="text-sm text-ink-muted">Game history not available yet.</p>
+      </Section>
+    );
+  }
+
+  return (
+    <Section title="History">
+      <div className="space-y-4">
+        <div>
+          <div className="mb-1.5 flex items-center justify-between gap-2">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-ink-faint">
+              Last 5 games
+            </p>
+            <p className="text-[11px] font-semibold text-ink-muted">
+              {trendLabel[history.recent_trend]}
+            </p>
+          </div>
+          <p className="mb-2 text-xs leading-snug text-ink-muted">
+            {history.last_5_summary}
+          </p>
+          <GameLogTable
+            games={history.last_5}
+            emptyLabel="No recent games logged."
+          />
+        </div>
+
+        <div>
+          <p className="mb-1.5 text-[10px] font-bold uppercase tracking-wider text-ink-faint">
+            vs {opponent}
+          </p>
+          <p className="mb-2 text-xs leading-snug text-ink-muted">
+            {history.vs_opponent_summary}
+          </p>
+          <GameLogTable
+            games={history.vs_opponent}
+            emptyLabel={`No recent meetings vs ${opponent}.`}
+          />
+        </div>
+      </div>
+    </Section>
+  );
+}
 
 export function PlayerDetail({
   player,
@@ -296,9 +404,7 @@ export function PlayerDetail({
         </p>
       </Section>
 
-      <Section title="Opportunity">
-        <StatGrid stats={player.opportunity} />
-      </Section>
+      <HistorySection history={player.history} opponent={player.opponent} />
 
       <Section title="Matchup">
         <div className="mb-3">
@@ -309,15 +415,6 @@ export function PlayerDetail({
 
       <Section title="Game Environment">
         <StatGrid stats={player.gameEnvironment} />
-      </Section>
-
-      <Section title="Recent Form">
-        {player.recentTrend ? (
-          <p className="mb-3 text-sm font-semibold text-ink">
-            Usage trend: {trendLabel[player.recentTrend]}
-          </p>
-        ) : null}
-        <StatGrid stats={player.recentForm} />
       </Section>
 
       <Section title="Availability">

@@ -5,6 +5,7 @@ import {
   TEAM_TO_GAME,
 } from "@/lib/providers/mock/mock-nfl-provider";
 import { CONSENSUS_AMERICAN } from "@/lib/providers/mock/mock-odds-provider";
+import { buildPlayerHistory } from "@/lib/providers/mock/mock-history";
 import { impliedProbabilityFromAmerican } from "@/lib/utils/odds";
 import type {
   InjuryStatus,
@@ -243,6 +244,14 @@ export function generatePlayerResearch(
 
   const trend = trendFor(player.external_player_id);
   const isRunner = player.position === "RB" || player.position === "QB";
+  const history = buildPlayerHistory({
+    externalPlayerId: player.external_player_id,
+    team: player.team,
+    position: player.position,
+    opponent,
+    currentWeek: game.week,
+    recentTrend: trend,
+  });
 
   const research: ResearchJson = {
     why_we_like: model.whyWeLike,
@@ -291,13 +300,9 @@ export function generatePlayerResearch(
           ? null
           : Math.round(seededUnit(player.external_player_id, "ez") * 4),
       recent_trend: trend,
-      last_games_summary:
-        trend === "up"
-          ? "Usage trending up over the last 3 games."
-          : trend === "down"
-            ? "Slight usage dip in recent games."
-            : "Stable role over recent weeks.",
+      last_games_summary: history.last_5_summary,
     },
+    history,
     game_environment: {
       spread: game.spread,
       total: game.total,

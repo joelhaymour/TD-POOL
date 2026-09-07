@@ -108,6 +108,28 @@ export interface NflPlayer {
   headshot_url: string | null;
 }
 
+/** Compact per-game log for TD Pool research. */
+export interface ResearchGameLog {
+  week: number;
+  opponent: string;
+  home: boolean;
+  result: "W" | "L" | "T";
+  touchdowns: number;
+  /** Red-zone touches (carries + targets inside the 20). */
+  rz_touches: number;
+  /** Goal-line / inside-5 carries or end-zone targets, position-aware. */
+  goal_line_chances: number;
+}
+
+export interface ResearchHistory {
+  last_5: ResearchGameLog[];
+  /** Prior meetings vs this week's opponent (most recent first). */
+  vs_opponent: ResearchGameLog[];
+  last_5_summary: string;
+  vs_opponent_summary: string;
+  recent_trend: TrendDirection;
+}
+
 export interface ResearchJson {
   why_we_like: string[];
   concerns: string[];
@@ -142,6 +164,8 @@ export interface ResearchJson {
     recent_trend: TrendDirection;
     last_games_summary: string;
   };
+  /** Preferred research block for recent / matchup history. */
+  history?: ResearchHistory;
   game_environment: {
     spread: number | null;
     total: number | null;
