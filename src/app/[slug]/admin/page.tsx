@@ -15,9 +15,7 @@ export default function AdminPage() {
 
   const [dashboard, setDashboard] = useState<LeagueDashboard | null>(null);
   const [loading, setLoading] = useState(true);
-  const [reseeding, setReseeding] = useState(false);
   const [syncing, setSyncing] = useState(false);
-  const [simulating, setSimulating] = useState(false);
   const [lastSync, setLastSync] = useState<SyncNflWeekSummary | null>(null);
   const [overrideMemberId, setOverrideMemberId] = useState("");
   const [overridePlayerId, setOverridePlayerId] = useState("");
@@ -55,7 +53,7 @@ export default function AdminPage() {
     void refresh();
   }, [refresh]);
 
-  async function runSync(simulateFinal: boolean) {
+  async function runSync() {
     if (!adminPin.trim()) {
       toast({
         title: "Admin PIN required",
@@ -65,14 +63,13 @@ export default function AdminPage() {
       return;
     }
 
-    if (simulateFinal) setSimulating(true);
-    else setSyncing(true);
+    setSyncing(true);
 
     try {
       const res = await fetch(`/api/leagues/${slug}/sync`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ adminPin, simulateFinal }),
+        body: JSON.stringify({ adminPin }),
       });
       const data = (await res.json()) as {
         error?: string;
@@ -90,9 +87,7 @@ export default function AdminPage() {
       setLastSync(data.summary);
       const s = data.summary;
       toast({
-        title: simulateFinal
-          ? "Finals simulated & TDs resolved"
-          : "Game status synced",
+        title: "Game status synced",
         description: `${s.gamesUpdated} games · ${s.picksResolved} picks updated · ${s.hits} TD / ${s.misses} miss / ${s.pending} pending`,
         tone: "success",
       });
@@ -101,7 +96,6 @@ export default function AdminPage() {
       toast({ title: "Network error", tone: "error" });
     } finally {
       setSyncing(false);
-      setSimulating(false);
     }
   }
 
@@ -152,33 +146,6 @@ export default function AdminPage() {
       toast({ title: "Network error", tone: "error" });
     } finally {
       setOddsRefreshing(false);
-    }
-  }
-
-  async function onReseed() {
-    setReseeding(true);
-    try {
-      const res = await fetch("/api/seed", { method: "POST" });
-      const data = (await res.json()) as { error?: string; slug?: string };
-      if (!res.ok) {
-        toast({
-          title: "Reseed failed",
-          description: data.error ?? "Try again.",
-          tone: "error",
-        });
-        return;
-      }
-      setLastSync(null);
-      toast({
-        title: "Store reseeded",
-        description: `Demo league: ${data.slug ?? "joels-league"}`,
-        tone: "success",
-      });
-      await refresh();
-    } catch {
-      toast({ title: "Network error", tone: "error" });
-    } finally {
-      setReseeding(false);
     }
   }
 
@@ -251,19 +218,19 @@ export default function AdminPage() {
           Admin
         </h2>
         <p className="mt-1 text-sm text-ink-muted">
-          Override picks, demo tools, and reset local seed data. Results sync
-          automatically.
+          Override picks and force-refresh results or odds. Sync runs
+          automatically when the league is opened.
         </p>
       </div>
 
       <section className="space-y-3 rounded-2xl border border-border bg-chalk p-4 shadow-card">
         <h3 className="font-display text-base font-bold uppercase tracking-wide text-ink">
-          Results (automatic)
+          Results
         </h3>
         <p className="text-sm leading-relaxed text-ink-muted">
           Game status and pick results refresh automatically whenever someone
-          opens the league (about once a minute). You do not need to sync
-          manually. Use simulate only to demo a finished week with mock data.
+          opens the league (about once a minute). Use force refresh if you need
+          an immediate update.
         </p>
         <label className="block">
           <span className="mb-1.5 block text-[10px] font-bold uppercase tracking-[0.1em] text-ink-faint">
@@ -276,26 +243,17 @@ export default function AdminPage() {
             className={inputClass}
             value={adminPin}
             onChange={(e) => setAdminPin(e.target.value)}
-            placeholder="1234"
+            placeholder="Admin PIN"
           />
         </label>
-        <div className="grid gap-2 sm:grid-cols-2">
-          <Button
-            fullWidth
-            variant="secondary"
-            disabled={syncing || simulating}
-            onClick={() => void runSync(false)}
-          >
-            {syncing ? "Refreshing…" : "Force refresh now"}
-          </Button>
-          <Button
-            fullWidth
-            disabled={syncing || simulating}
-            onClick={() => void runSync(true)}
-          >
-            {simulating ? "Resolving…" : "Demo: simulate finals"}
-          </Button>
-        </div>
+        <Button
+          fullWidth
+          variant="secondary"
+          disabled={syncing}
+          onClick={() => void runSync()}
+        >
+          {syncing ? "Refreshing…" : "Force refresh now"}
+        </Button>
         {lastSync ? (
           <p className="rounded-xl bg-field px-3 py-2 text-xs text-ink-muted">
             Last sync · W{lastSync.week} · {lastSync.gamesUpdated} games ·{" "}
@@ -307,18 +265,16 @@ export default function AdminPage() {
 
       <section className="space-y-3 rounded-2xl border border-border bg-chalk p-4 shadow-card">
         <h3 className="font-display text-base font-bold uppercase tracking-wide text-ink">
-          Odds (automatic)
+          Odds
         </h3>
         <p className="text-sm leading-relaxed text-ink-muted">
           Anytime TD odds refresh automatically when the league is opened
-          (about every 5 minutes). With{" "}
-          <code className="text-xs">ODDS_API_KEY</code> set, live sportsbook
-          prices are used; otherwise mock odds keep the app fully usable.
+          (about every 5 minutes).
         </p>
         <p className="text-xs text-ink-muted">
           Source:{" "}
           <span className="font-semibold text-ink">
-            {dashboard.odds_source ?? "mock"}
+            {dashboard.odds_source ?? "—"}
           </span>
           {" · "}
           Last snapshot:{" "}
@@ -419,24 +375,6 @@ export default function AdminPage() {
             </li>
           ))}
         </ul>
-      </section>
-
-      <section className="rounded-2xl border border-danger/25 bg-danger/5 p-4">
-        <h3 className="font-display text-base font-bold uppercase tracking-wide text-danger">
-          Dev: reseed store
-        </h3>
-        <p className="mt-2 text-sm text-ink-muted">
-          Wipes local `.data/store.json` and restores the joels-league demo.
-        </p>
-        <Button
-          variant="danger"
-          className="mt-3"
-          fullWidth
-          disabled={reseeding}
-          onClick={() => void onReseed()}
-        >
-          {reseeding ? "Reseeding…" : "Reseed local store"}
-        </Button>
       </section>
     </div>
   );

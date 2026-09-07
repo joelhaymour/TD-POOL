@@ -32,12 +32,15 @@ const iconMap = {
   board: Trophy,
 };
 
-const defaultItems = (basePath: string): BottomNavItem[] => [
-  { href: `${basePath}`, label: "Picks", icon: "picks" },
-  { href: `${basePath}/bet-slip`, label: "Slip", icon: "slip" },
-  { href: `${basePath}/history`, label: "History", icon: "history" },
-  { href: `${basePath}/leaderboard`, label: "Board", icon: "board" },
-];
+/** Single source of truth for league bottom nav (avoids SSR/client label drift). */
+export function leagueNavItems(basePath: string): BottomNavItem[] {
+  return [
+    { href: basePath, label: "Picks", icon: "picks" },
+    { href: `${basePath}/bet-slip`, label: "Slip", icon: "slip" },
+    { href: `${basePath}/history`, label: "History", icon: "history" },
+    { href: `${basePath}/leaderboard`, label: "Board", icon: "board" },
+  ];
+}
 
 export function BottomNav({
   basePath,
@@ -45,7 +48,7 @@ export function BottomNav({
   className,
 }: BottomNavProps) {
   const pathname = usePathname();
-  const navItems = items ?? defaultItems(basePath);
+  const navItems = items ?? leagueNavItems(basePath);
 
   return (
     <nav

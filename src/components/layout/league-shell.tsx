@@ -3,7 +3,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { AppShell } from "@/components/layout/app-shell";
 import { LeagueHeader } from "@/components/layout/league-header";
-import type { BottomNavItem } from "@/components/layout/bottom-nav";
+import { leagueNavItems } from "@/components/layout/bottom-nav";
 
 export function LeagueShell({
   slug,
@@ -49,17 +49,10 @@ export function LeagueShell({
     };
   }, [slug]);
 
-  const navItems: BottomNavItem[] = [
-    { href: basePath, label: "Picks", icon: "picks" },
-    { href: `${basePath}/bet-slip`, label: "Slip", icon: "slip" },
-    { href: `${basePath}/history`, label: "History", icon: "history" },
-    { href: `${basePath}/leaderboard`, label: "Board", icon: "board" },
-  ];
-
   return (
     <AppShell
       basePath={basePath}
-      navItems={navItems}
+      navItems={leagueNavItems(basePath)}
       header={
         <LeagueHeader
           leagueName={leagueName}

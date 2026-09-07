@@ -2,7 +2,6 @@
 
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
-import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
 
@@ -79,16 +78,9 @@ export default function HomePage() {
           group chat league.
         </p>
 
-        <Link
-          href="/joels-league"
-          className="mt-8 inline-flex h-12 items-center justify-center rounded-xl bg-ink px-5 font-display text-sm font-bold uppercase tracking-wider text-lime transition hover:bg-ink/90"
-        >
-          Open demo league
-        </Link>
-
         <form
           onSubmit={onSubmit}
-          className="mt-10 space-y-3 rounded-2xl border border-border bg-chalk/90 p-4 shadow-card backdrop-blur-sm"
+          className="mt-8 space-y-3 rounded-2xl border border-border bg-chalk/90 p-4 shadow-card backdrop-blur-sm"
         >
           <h2 className="font-display text-lg font-bold uppercase tracking-wide text-ink">
             Create a league
@@ -115,9 +107,6 @@ export default function HomePage() {
               className="h-11 w-full rounded-xl border border-border-strong bg-field px-3 text-sm font-semibold text-ink outline-none focus:border-turf focus:ring-2 focus:ring-turf/20"
             />
           </label>
-          <p className="text-[11px] text-ink-faint">
-            Defaults: admin PIN 1234 · join PIN 0000
-          </p>
           <Button type="submit" fullWidth disabled={loading}>
             {loading ? "Creating…" : "Create league"}
           </Button>

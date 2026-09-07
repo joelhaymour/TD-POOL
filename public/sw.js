@@ -1,6 +1,6 @@
-/* TD Pool — minimal cache-first SW for static assets */
-const CACHE = "td-pool-static-v1";
-const PRECACHE = ["/", "/icon.svg", "/manifest.webmanifest"];
+/* TD Pool — cache icons/manifest only; never cache-first Next JS/CSS (causes hydration mismatches). */
+const CACHE = "td-pool-static-v2";
+const PRECACHE = ["/icon.svg", "/manifest.webmanifest"];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
@@ -22,14 +22,14 @@ self.addEventListener("fetch", (event) => {
 
   const url = new URL(request.url);
   if (url.origin !== self.location.origin) return;
-  if (url.pathname.startsWith("/api/")) return;
 
-  const isStatic =
-    url.pathname === "/" ||
-    url.pathname.startsWith("/_next/static/") ||
-    /\.(?:js|css|svg|png|jpg|jpeg|webp|woff2?|webmanifest)$/i.test(url.pathname);
+  // Only cache static brand assets — never HTML, API, or /_next bundles.
+  const isAsset =
+    url.pathname === "/icon.svg" ||
+    url.pathname === "/manifest.webmanifest" ||
+    /\.(?:svg|png|jpg|jpeg|webp|woff2?)$/i.test(url.pathname);
 
-  if (!isStatic) return;
+  if (!isAsset) return;
 
   event.respondWith(
     caches.open(CACHE).then(async (cache) => {

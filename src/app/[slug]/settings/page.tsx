@@ -125,7 +125,7 @@ export default function SettingsPage() {
           League settings
         </h2>
         <p className="mt-1 text-sm text-ink-muted">
-          Changes require the admin PIN (demo: 1234).
+          Changes require the admin PIN.
         </p>
       </div>
 
