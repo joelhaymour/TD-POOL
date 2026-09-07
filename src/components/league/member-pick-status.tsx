@@ -11,6 +11,7 @@ export type MemberPickRow = {
   playerId?: string | null;
   playerName?: string | null;
   playerHref?: string | null;
+  result?: "pending" | "td" | "no_td" | "game_not_finished";
 };
 
 export type MemberPickStatusProps = {

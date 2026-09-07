@@ -1,5 +1,7 @@
+import { getNflWeekForDate } from "@/lib/nfl/calendar";
 import type {
   NFLDataProvider,
+  PlayerTouchdownResult,
   ProviderGame,
   ProviderPlayer,
   ProviderPlayerGameStats,
@@ -7,6 +9,19 @@ import type {
 
 const SEASON = 2025;
 const WEEK = 4;
+/** Typical NFL game length used for scheduled → in_progress → final. */
+const GAME_DURATION_MS = 3.5 * 60 * 60 * 1000;
+
+/**
+ * Fixed seed set so demo picks (Barkley, Henry, Chase, Gibbs) reliably score TDs
+ * when games are final. Other players use deterministic hashing (~55%).
+ */
+const GUARANTEED_TD_PLAYER_IDS = new Set([
+  "p-barkley",
+  "p-henry",
+  "p-chase",
+  "p-gibbs",
+]);
 
 /** Week 4 2025-style mock schedule (8–10 games). */
 export const MOCK_WEEK4_GAMES: ProviderGame[] = [
@@ -294,6 +309,52 @@ function assertWeek(season: number, week: number): void {
   }
 }
 
+function hashString(input: string): number {
+  let h = 2166136261;
+  for (let i = 0; i < input.length; i += 1) {
+    h ^= input.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return h >>> 0;
+}
+
+function mockFinalScores(game: ProviderGame): {
+  home_score: number;
+  away_score: number;
+} {
+  const h = hashString(game.external_game_id);
+  const home = 10 + (h % 28);
+  const away = 7 + ((h >>> 8) % 31);
+  // Avoid ties for cleaner demos.
+  if (home === away) {
+    return { home_score: home + 3, away_score: away };
+  }
+  return { home_score: home, away_score: away };
+}
+
+function statusForKickoff(
+  kickoffAt: string,
+  asOf: Date,
+): ProviderGame["status"] {
+  const kickoff = new Date(kickoffAt).getTime();
+  const t = asOf.getTime();
+  if (t < kickoff) return "scheduled";
+  if (t < kickoff + GAME_DURATION_MS) return "in_progress";
+  return "final";
+}
+
+function playerScoredTd(externalPlayerId: string): boolean {
+  if (GUARANTEED_TD_PLAYER_IDS.has(externalPlayerId)) return true;
+  // ~55% of remaining skill players score when final.
+  return hashString(`td:${externalPlayerId}`) % 100 < 55;
+}
+
+function tdCountForPlayer(externalPlayerId: string): number {
+  if (!playerScoredTd(externalPlayerId)) return 0;
+  const h = hashString(`tdcount:${externalPlayerId}`);
+  return 1 + (h % 3 === 0 ? 1 : 0); // mostly 1, occasionally 2
+}
+
 export class MockNFLProvider implements NFLDataProvider {
   async getWeekSchedule(season: number, week: number): Promise<ProviderGame[]> {
     assertWeek(season, week);
@@ -331,6 +392,85 @@ export class MockNFLProvider implements NFLDataProvider {
   ): Promise<ProviderPlayerGameStats[]> {
     const stats = MOCK_RECENT_STATS[externalPlayerId] ?? [];
     return stats.slice(0, lastN).map((s) => ({ ...s }));
+  }
+
+  async getCurrentWeek(
+    asOf: Date = new Date(),
+  ): Promise<{ season: number; week: number }> {
+    const mapped = getNflWeekForDate(asOf, SEASON) ?? getNflWeekForDate(asOf);
+    if (mapped) return mapped;
+    // Default demo week when outside the calendar window.
+    return { season: SEASON, week: WEEK };
+  }
+
+  async refreshGameStatuses(
+    season: number,
+    week: number,
+    asOf: Date = new Date(),
+  ): Promise<ProviderGame[]> {
+    const schedule = await this.getWeekSchedule(season, week);
+    return schedule.map((game) => {
+      const status = statusForKickoff(game.kickoff_at, asOf);
+      if (status === "final") {
+        const scores = mockFinalScores(game);
+        return {
+          ...game,
+          status,
+          home_score: scores.home_score,
+          away_score: scores.away_score,
+        };
+      }
+      if (status === "in_progress") {
+        const scores = mockFinalScores(game);
+        // Partial score while live.
+        return {
+          ...game,
+          status,
+          home_score: Math.floor(scores.home_score / 2),
+          away_score: Math.floor(scores.away_score / 2),
+        };
+      }
+      return {
+        ...game,
+        status: "scheduled",
+        home_score: null,
+        away_score: null,
+      };
+    });
+  }
+
+  async getPlayerTouchdownsForWeek(
+    season: number,
+    week: number,
+    asOf: Date = new Date(),
+  ): Promise<PlayerTouchdownResult[]> {
+    const games = await this.refreshGameStatuses(season, week, asOf);
+    const gamesByExternal = new Map(
+      games.map((g) => [g.external_game_id, g] as const),
+    );
+    const players = await this.getPlayersForWeek(season, week);
+
+    return players.map((player) => {
+      const externalGameId = TEAM_TO_GAME[player.team];
+      const game = externalGameId
+        ? gamesByExternal.get(externalGameId)
+        : undefined;
+      const game_status = game?.status ?? "scheduled";
+      if (game_status !== "final") {
+        return {
+          external_player_id: player.external_player_id,
+          external_game_id: externalGameId ?? "",
+          touchdowns: 0,
+          game_status,
+        };
+      }
+      return {
+        external_player_id: player.external_player_id,
+        external_game_id: externalGameId ?? "",
+        touchdowns: tdCountForPlayer(player.external_player_id),
+        game_status,
+      };
+    });
   }
 }
 

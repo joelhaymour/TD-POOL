@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/components/ui/toast";
 import type { LeagueDashboard } from "@/lib/types";
+import type { SyncNflWeekSummary } from "@/lib/services/sync-nfl-week";
 
 export default function AdminPage() {
   const params = useParams<{ slug: string }>();
@@ -15,6 +16,9 @@ export default function AdminPage() {
   const [dashboard, setDashboard] = useState<LeagueDashboard | null>(null);
   const [loading, setLoading] = useState(true);
   const [reseeding, setReseeding] = useState(false);
+  const [syncing, setSyncing] = useState(false);
+  const [simulating, setSimulating] = useState(false);
+  const [lastSync, setLastSync] = useState<SyncNflWeekSummary | null>(null);
   const [overrideMemberId, setOverrideMemberId] = useState("");
   const [overridePlayerId, setOverridePlayerId] = useState("");
   const [adminPin, setAdminPin] = useState("");
@@ -43,6 +47,56 @@ export default function AdminPage() {
     void refresh();
   }, [refresh]);
 
+  async function runSync(simulateFinal: boolean) {
+    if (!adminPin.trim()) {
+      toast({
+        title: "Admin PIN required",
+        description: "Enter the admin PIN to sync NFL results.",
+        tone: "error",
+      });
+      return;
+    }
+
+    if (simulateFinal) setSimulating(true);
+    else setSyncing(true);
+
+    try {
+      const res = await fetch(`/api/leagues/${slug}/sync`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ adminPin, simulateFinal }),
+      });
+      const data = (await res.json()) as {
+        error?: string;
+        summary?: SyncNflWeekSummary;
+      };
+      if (!res.ok || !data.summary) {
+        toast({
+          title: "Sync failed",
+          description: data.error ?? "Try again.",
+          tone: "error",
+        });
+        return;
+      }
+
+      setLastSync(data.summary);
+      const s = data.summary;
+      toast({
+        title: simulateFinal
+          ? "Finals simulated & TDs resolved"
+          : "Game status synced",
+        description: `${s.gamesUpdated} games · ${s.picksResolved} picks updated · ${s.hits} TD / ${s.misses} miss / ${s.pending} pending`,
+        tone: "success",
+      });
+      await refresh();
+    } catch {
+      toast({ title: "Network error", tone: "error" });
+    } finally {
+      setSyncing(false);
+      setSimulating(false);
+    }
+  }
+
   async function onReseed() {
     setReseeding(true);
     try {
@@ -56,6 +110,7 @@ export default function AdminPage() {
         });
         return;
       }
+      setLastSync(null);
       toast({
         title: "Store reseeded",
         description: `Demo league: ${data.slug ?? "joels-league"}`,
@@ -138,9 +193,57 @@ export default function AdminPage() {
           Admin
         </h2>
         <p className="mt-1 text-sm text-ink-muted">
-          Override picks, inspect members, and reset local seed data.
+          Sync NFL results, override picks, and reset local seed data.
         </p>
       </div>
+
+      <section className="space-y-3 rounded-2xl border border-border bg-chalk p-4 shadow-card">
+        <h3 className="font-display text-base font-bold uppercase tracking-wide text-ink">
+          Sync NFL results
+        </h3>
+        <p className="text-sm leading-relaxed text-ink-muted">
+          Refresh game status for Week {dashboard.week.week} and resolve whether
+          each pick scored a TD. Use simulate to force all games to final.
+        </p>
+        <label className="block">
+          <span className="mb-1.5 block text-[10px] font-bold uppercase tracking-[0.1em] text-ink-faint">
+            Admin PIN
+          </span>
+          <input
+            type="password"
+            inputMode="numeric"
+            autoComplete="off"
+            className={inputClass}
+            value={adminPin}
+            onChange={(e) => setAdminPin(e.target.value)}
+            placeholder="1234"
+          />
+        </label>
+        <div className="grid gap-2 sm:grid-cols-2">
+          <Button
+            fullWidth
+            variant="secondary"
+            disabled={syncing || simulating}
+            onClick={() => void runSync(false)}
+          >
+            {syncing ? "Syncing…" : "Sync game status"}
+          </Button>
+          <Button
+            fullWidth
+            disabled={syncing || simulating}
+            onClick={() => void runSync(true)}
+          >
+            {simulating ? "Resolving…" : "Simulate finals & resolve TDs"}
+          </Button>
+        </div>
+        {lastSync ? (
+          <p className="rounded-xl bg-field px-3 py-2 text-xs text-ink-muted">
+            Last sync · W{lastSync.week} · {lastSync.gamesUpdated} games ·{" "}
+            {lastSync.hits} TD / {lastSync.misses} miss / {lastSync.pending}{" "}
+            pending
+          </p>
+        ) : null}
+      </section>
 
       <section className="rounded-2xl border border-border bg-chalk p-4 shadow-card">
         <h3 className="font-display text-base font-bold uppercase tracking-wide text-ink">
@@ -194,20 +297,6 @@ export default function AdminPage() {
             ))}
           </select>
         </label>
-        <label className="block">
-          <span className="mb-1.5 block text-[10px] font-bold uppercase tracking-[0.1em] text-ink-faint">
-            Admin PIN
-          </span>
-          <input
-            type="password"
-            inputMode="numeric"
-            autoComplete="off"
-            className={inputClass}
-            value={adminPin}
-            onChange={(e) => setAdminPin(e.target.value)}
-            placeholder="1234"
-          />
-        </label>
         <Button
           fullWidth
           disabled={overriding}
@@ -235,6 +324,13 @@ export default function AdminPage() {
               </span>
               <span className="truncate text-ink-muted">
                 {m.player?.name ?? "Needs pick"}
+                {m.pick?.result === "td"
+                  ? " · ✅ TD"
+                  : m.pick?.result === "no_td"
+                    ? " · ❌ NO TD"
+                    : m.pick
+                      ? " · ⏳"
+                      : ""}
               </span>
             </li>
           ))}

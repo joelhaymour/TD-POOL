@@ -7,20 +7,29 @@ import type { BottomNavItem } from "@/components/layout/bottom-nav";
 
 export function LeagueShell({
   slug,
+  leagueName: initialName,
+  weekNumber: initialWeek,
   children,
 }: {
   slug: string;
+  leagueName: string;
+  weekNumber: number;
   children: ReactNode;
 }) {
   const basePath = `/${slug}`;
-  const [leagueName, setLeagueName] = useState("Loading…");
-  const [weekNumber, setWeekNumber] = useState(0);
+  const [leagueName, setLeagueName] = useState(initialName);
+  const [weekNumber, setWeekNumber] = useState(initialWeek);
+
+  useEffect(() => {
+    setLeagueName(initialName);
+    setWeekNumber(initialWeek);
+  }, [initialName, initialWeek]);
 
   useEffect(() => {
     let cancelled = false;
     async function load() {
       try {
-        const res = await fetch(`/api/leagues/${slug}`);
+        const res = await fetch(`/api/leagues/${slug}`, { cache: "no-store" });
         if (!res.ok) return;
         const data = (await res.json()) as {
           league: { name: string };
@@ -31,7 +40,7 @@ export function LeagueShell({
           setWeekNumber(data.week.week);
         }
       } catch {
-        // header stays in loading state
+        // keep SSR values
       }
     }
     void load();

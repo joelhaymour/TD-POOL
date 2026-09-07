@@ -10,6 +10,7 @@ import {
   estimatePayout,
 } from "@/lib/utils/odds";
 import { slugify } from "@/lib/utils/slug";
+import { StoreError, type Store, type GameStatusUpdate, type PickResultUpdate } from "@/lib/store/types";
 import type {
   CreateLeagueInput,
   League,
@@ -18,13 +19,13 @@ import type {
   MemberPickStatus,
   NflGame,
   NflPlayer,
+  NflWeek,
   ParlaySummary,
   Pick,
   PlayerWeekData,
   SelectPickInput,
   UpdateLeagueSettingsInput,
 } from "@/lib/types";
-import { StoreError, type Store } from "@/lib/store/types";
 
 const STORE_PATH = path.join(process.cwd(), ".data", "store.json");
 
@@ -271,6 +272,19 @@ export class LocalFileStore implements Store {
       throw new StoreError("Player not available for this week", "NOT_FOUND");
     }
 
+    const game = data.games.find((g) => g.id === pwd.game_id);
+    if (
+      mode !== "override" &&
+      league.pick_lock_type === "individual_game" &&
+      game &&
+      (game.status === "in_progress" || game.status === "final")
+    ) {
+      throw new StoreError(
+        "This player's game has already started",
+        "LOCKED",
+      );
+    }
+
     const existingMemberPick = data.picks.find(
       (p) =>
         p.league_id === input.league_id &&
@@ -373,6 +387,61 @@ export class LocalFileStore implements Store {
     });
   }
 
+  async getWeekBySeasonWeek(
+    season: number,
+    week: number,
+  ): Promise<NflWeek | null> {
+    return this.withRead(
+      (data) =>
+        data.weeks.find((w) => w.season === season && w.week === week) ?? null,
+    );
+  }
+
+  async listGamesForWeek(weekId: string): Promise<NflGame[]> {
+    return this.withRead((data) =>
+      data.games.filter((g) => g.week_id === weekId),
+    );
+  }
+
+  async listPlayers(): Promise<NflPlayer[]> {
+    return this.withRead((data) => [...data.players]);
+  }
+
+  async listLeagues(): Promise<League[]> {
+    return this.withRead((data) => [...data.leagues]);
+  }
+
+  async updateGameStatuses(updates: GameStatusUpdate[]): Promise<number> {
+    if (updates.length === 0) return 0;
+    return this.withData((data) => {
+      let changed = 0;
+      for (const update of updates) {
+        const game = data.games.find((g) => g.id === update.id);
+        if (!game) continue;
+        game.status = update.status;
+        game.home_score = update.home_score;
+        game.away_score = update.away_score;
+        changed += 1;
+      }
+      return changed;
+    });
+  }
+
+  async resolvePickResults(updates: PickResultUpdate[]): Promise<number> {
+    if (updates.length === 0) return 0;
+    return this.withData((data) => {
+      let changed = 0;
+      for (const update of updates) {
+        const pick = data.picks.find((p) => p.id === update.pickId);
+        if (!pick) continue;
+        pick.result = update.result;
+        pick.touchdown_scored = update.touchdown_scored;
+        changed += 1;
+      }
+      return changed;
+    });
+  }
+
   /** Wipe and reseed the local JSON store (dev helper). */
   async reseed(): Promise<{ slug: string; leagueName: string }> {
     return this.mutex.run(async () => {
@@ -472,9 +541,20 @@ export class LocalFileStore implements Store {
           const player = playersById.get(pwd.player_id);
           const game = gamesById.get(pwd.game_id);
           if (!player || !game) return null;
-          const availability = takenByPlayer.has(pwd.player_id)
+          const gameStarted =
+            game.status === "in_progress" || game.status === "final";
+          let availability = takenByPlayer.has(pwd.player_id)
             ? ("taken" as const)
             : pwd.availability;
+          // Individual-game lock: once a player's game has started (after sync),
+          // mark remaining open slots as locked so they can't be newly picked.
+          if (
+            availability !== "taken" &&
+            league.pick_lock_type === "individual_game" &&
+            gameStarted
+          ) {
+            availability = "locked";
+          }
           return {
             ...pwd,
             availability,

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getStore } from "@/lib/store";
 import { storeErrorResponse } from "@/lib/api/store-error";
+import { loadLeagueDashboard } from "@/lib/league/load-dashboard";
 import type { UpdateLeagueSettingsInput } from "@/lib/types";
 
 type PatchBody = UpdateLeagueSettingsInput & { admin_pin?: string };
@@ -11,23 +12,14 @@ export async function GET(
 ) {
   try {
     const { slug } = await context.params;
-    const store = getStore();
-    const dashboard = await store.getDashboard(slug);
+    const dashboard = await loadLeagueDashboard(slug);
     if (!dashboard) {
       return NextResponse.json(
         { error: "League not found", code: "NOT_FOUND" },
         { status: 404 },
       );
     }
-    const { admin_pin: _a, join_pin: _j, ...safeLeague } = dashboard.league;
-    return NextResponse.json({
-      ...dashboard,
-      league: safeLeague,
-      members: dashboard.members.map((m) => ({
-        ...m,
-        member: { ...m.member, pin: undefined },
-      })),
-    });
+    return NextResponse.json(dashboard);
   } catch (err) {
     return storeErrorResponse(err);
   }

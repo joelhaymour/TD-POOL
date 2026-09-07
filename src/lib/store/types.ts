@@ -1,13 +1,31 @@
 import type {
   CreateLeagueInput,
+  GameStatus,
   League,
   LeagueDashboard,
   LeagueMember,
+  NflGame,
+  NflPlayer,
+  NflWeek,
   Pick,
+  PickResult,
   PlayerWeekData,
   SelectPickInput,
   UpdateLeagueSettingsInput,
 } from "@/lib/types";
+
+export type GameStatusUpdate = {
+  id: string;
+  status: GameStatus;
+  home_score: number | null;
+  away_score: number | null;
+};
+
+export type PickResultUpdate = {
+  pickId: string;
+  result: PickResult;
+  touchdown_scored: boolean | null;
+};
 
 export interface Store {
   getLeagueBySlug(slug: string): Promise<League | null>;
@@ -31,6 +49,17 @@ export interface Store {
    * Still enforces player uniqueness within the week unless releasing first.
    */
   overridePick(input: SelectPickInput): Promise<Pick>;
+
+  /** Phase 2: look up NFL week row by season + week number. */
+  getWeekBySeasonWeek(
+    season: number,
+    week: number,
+  ): Promise<NflWeek | null>;
+  listGamesForWeek(weekId: string): Promise<NflGame[]>;
+  listPlayers(): Promise<NflPlayer[]>;
+  listLeagues(): Promise<League[]>;
+  updateGameStatuses(updates: GameStatusUpdate[]): Promise<number>;
+  resolvePickResults(updates: PickResultUpdate[]): Promise<number>;
 }
 
 export class StoreError extends Error {

@@ -30,6 +30,21 @@ export async function GET(
           m.player_week?.consensus_american_odds ?? m.pick!.odds_at_selection,
       }));
 
+    const decided = picks.filter(
+      (p) => p.result === "td" || p.result === "no_td",
+    ).length;
+    const allPending = picks.every(
+      (p) => p.result === "pending" || p.result === "game_not_finished",
+    );
+    const weekStatus =
+      decided > 0 && decided === picks.length
+        ? "final"
+        : decided > 0 || !allPending
+          ? "in_progress"
+          : dashboard.picks_locked
+            ? "locked"
+            : "open";
+
     return NextResponse.json({
       league: {
         id: dashboard.league.id,
@@ -43,7 +58,7 @@ export async function GET(
           picks_total: dashboard.parlay.picks_total,
           parlay: dashboard.parlay,
           picks,
-          status: dashboard.picks_locked ? "locked" : "open",
+          status: weekStatus,
         },
       ],
     });

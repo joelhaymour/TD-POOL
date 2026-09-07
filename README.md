@@ -2,17 +2,17 @@
 
 Mobile-first weekly **Anytime Touchdown Pool** for private fantasy leagues.
 
-Phase 1 is fully playable with mock NFL/odds data and a local JSON store. Supabase schema is provisioned for Phase 2+ (live data + Realtime).
-
 ## Quick start
 
 ```bash
 npm install
 cp .env.example .env.local
-npm run dev
+npm run dev -- --hostname 127.0.0.1
 ```
 
-Open [http://localhost:3000/joels-league](http://localhost:3000/joels-league).
+Open [http://127.0.0.1:3000/joels-league](http://127.0.0.1:3000/joels-league).
+
+> Use `127.0.0.1` (or `localhost` consistently). Mixing hosts can break Next.js client hydration in Cursor’s browser.
 
 ### Demo league
 
@@ -22,47 +22,44 @@ Open [http://localhost:3000/joels-league](http://localhost:3000/joels-league).
 | Admin PIN | `1234` |
 | Join PIN | `0000` |
 
-Reseed mock data (dev server running):
-
 ```bash
-npm run seed
+npm run seed   # reseed mock data (dev server must be running)
 ```
 
-## What's in Phase 1
+## Phase 1 — Core product ✅
 
 - League create + invite slug links
-- Member identity picker (localStorage)
-- Ranked TD Pool player list with filters
+- Member identity picker
+- Ranked TD Pool player board + filters
 - Player research / detail pages
-- Pick submit + change with duplicate prevention
-- Parlay summary + Bet Slip (copy picks)
+- Pick submit / change with duplicate prevention
+- Parlay summary + Bet Slip
 - Money modes: individual / fixed / none
-- Admin settings + override tools
-- Polling refresh every 3s (Realtime wired for Supabase later)
-- Provider interfaces: Odds / NFL / Weather / Injury (mock implementations)
-- Weighted **TD Pool Score** model (market-anchored, not odds-only)
+- Admin settings + overrides
+- Local JSON store + mock providers
+
+## Phase 2 — Live-style NFL data ✅ (mock provider)
+
+- NFL week calendar / week detection helpers
+- Game status sync (`scheduled` → `in_progress` → `final`)
+- Auto-resolve picks: ✅ TD / ❌ NO TD / ⏳ pending
+- Weekly results + history badges
+- Admin: **Sync game status** and **Simulate finals & resolve TDs**
+- Individual-game lock when a player’s game has started
 
 ## Stack
 
-- Next.js (App Router) + TypeScript + Tailwind
+- Next.js App Router + TypeScript + Tailwind
 - Local store: `.data/store.json` (`USE_SUPABASE=false`)
-- Supabase project + Postgres schema (RLS, uniqueness constraints, Realtime publication)
-- Vercel-compatible
+- Supabase project + Postgres schema ready for Phase 3+
+- Provider interfaces: Odds / NFL / Weather / Injury
 
-## Architecture
+## Admin results demo
 
-```
-External APIs (later) → providers → store/DB → API routes → mobile UI
-```
-
-Key folders:
-
-- `src/app/[slug]/*` — league pages
-- `src/components/*` — UI
-- `src/lib/providers/*` — data provider abstractions
-- `src/lib/scoring/*` — TD Pool model
-- `src/lib/store/*` — persistence
-- `supabase/migrations/*` — Postgres schema
+1. Open `/joels-league/admin`
+2. Enter PIN `1234`
+3. Click **Simulate finals & resolve TDs**
+4. Return to Picks / History to see results
 
 ## Legal note
 
@@ -70,8 +67,6 @@ Odds and projections are informational estimates and may differ from sportsbook 
 
 ## Roadmap
 
-1. **Phase 1** — Core product with mock data ✅
-2. **Phase 2** — Live NFL schedule / results
-3. **Phase 3** — Sportsbook odds integration
-4. **Phase 4** — Full TD intelligence (usage, injuries, weather)
-5. **Phase 5** — PWA, history depth, leaderboards, notifications
+3. **Phase 3** — Sportsbook odds integration  
+4. **Phase 4** — Full TD intelligence (usage, injuries, weather)  
+5. **Phase 5** — PWA, deeper history, leaderboards, notifications

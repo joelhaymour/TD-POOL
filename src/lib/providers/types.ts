@@ -99,6 +99,13 @@ export interface WeatherReport {
   fetched_at: string;
 }
 
+export interface PlayerTouchdownResult {
+  external_player_id: string;
+  external_game_id: string;
+  touchdowns: number;
+  game_status: ProviderGame["status"];
+}
+
 export interface NFLDataProvider {
   getWeekSchedule(season: number, week: number): Promise<ProviderGame[]>;
   getPlayersForWeek(season: number, week: number): Promise<ProviderPlayer[]>;
@@ -108,6 +115,20 @@ export interface NFLDataProvider {
     externalPlayerId: string,
     lastN?: number,
   ): Promise<ProviderPlayerGameStats[]>;
+  /** Optional Phase 2: resolve current NFL week from calendar. */
+  getCurrentWeek?(asOf?: Date): Promise<{ season: number; week: number }>;
+  /** Optional Phase 2: player TD counts for a week (0 when game not final). */
+  getPlayerTouchdownsForWeek?(
+    season: number,
+    week: number,
+    asOf?: Date,
+  ): Promise<PlayerTouchdownResult[]>;
+  /** Optional Phase 2: recompute game statuses/scores relative to asOf. */
+  refreshGameStatuses?(
+    season: number,
+    week: number,
+    asOf?: Date,
+  ): Promise<ProviderGame[]>;
 }
 
 export interface OddsProvider {

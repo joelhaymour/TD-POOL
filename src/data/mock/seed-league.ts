@@ -56,8 +56,10 @@ function nowIso(): string {
 }
 
 /**
- * Complete demo league payload for local Phase 1 development.
+ * Complete demo league payload for local Phase 1–2 development.
  * League: Sunday TD Club / joels-league, Week 4 active, individual $10 × 12.
+ * Games stay `scheduled` until admin sync; seed picks (Barkley/Henry/Chase/Gibbs)
+ * are guaranteed TDs when finals are simulated via the mock provider.
  */
 export async function buildSeedPayload(): Promise<SeedPayload> {
   const createdAt = nowIso();
