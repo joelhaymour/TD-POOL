@@ -1,0 +1,42 @@
+import type { ReactNode } from "react";
+import { cn } from "@/lib/utils/cn";
+import { BottomNav, type BottomNavItem } from "@/components/layout/bottom-nav";
+
+export type AppShellProps = {
+  children: ReactNode;
+  header?: ReactNode;
+  basePath: string;
+  navItems?: BottomNavItem[];
+  hideNav?: boolean;
+  className?: string;
+};
+
+export function AppShell({
+  children,
+  header,
+  basePath,
+  navItems,
+  hideNav = false,
+  className,
+}: AppShellProps) {
+  return (
+    <div className={cn("relative mx-auto flex min-h-dvh w-full max-w-lg flex-col", className)}>
+      {header ? (
+        <header className="sticky top-0 z-30 border-b border-border/80 bg-field/90 px-4 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))] backdrop-blur-md">
+          {header}
+        </header>
+      ) : null}
+
+      <main
+        className={cn(
+          "flex-1 px-4 py-4",
+          !hideNav && "pb-[calc(5.25rem+env(safe-area-inset-bottom))]",
+        )}
+      >
+        {children}
+      </main>
+
+      {!hideNav ? <BottomNav basePath={basePath} items={navItems} /> : null}
+    </div>
+  );
+}
