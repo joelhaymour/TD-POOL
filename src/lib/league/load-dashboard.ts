@@ -1,4 +1,5 @@
 import { getStore } from "@/lib/store";
+import { autoSyncLeagueWeek } from "@/lib/services/sync-nfl-week";
 import type { LeagueDashboard } from "@/lib/types";
 
 /** Strip heavy research blobs from list payloads. */
@@ -41,6 +42,9 @@ function emptyResearch(r: LeagueDashboard["ranked_players"][number]["research_js
 export async function loadLeagueDashboard(
   slug: string,
 ): Promise<LeagueDashboard | null> {
+  // Auto-grade games/picks — no admin click required
+  await autoSyncLeagueWeek(slug);
+
   const store = getStore();
   const dashboard = await store.getDashboard(slug);
   if (!dashboard) return null;

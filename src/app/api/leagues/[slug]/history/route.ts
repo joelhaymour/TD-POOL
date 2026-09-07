@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getStore } from "@/lib/store";
 import { storeErrorResponse } from "@/lib/api/store-error";
+import { autoSyncLeagueWeek } from "@/lib/services/sync-nfl-week";
 
 export async function GET(
   _request: Request,
@@ -8,6 +9,7 @@ export async function GET(
 ) {
   try {
     const { slug } = await context.params;
+    await autoSyncLeagueWeek(slug);
     const store = getStore();
     const dashboard = await store.getDashboard(slug);
     if (!dashboard) {

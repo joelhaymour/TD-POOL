@@ -193,17 +193,19 @@ export default function AdminPage() {
           Admin
         </h2>
         <p className="mt-1 text-sm text-ink-muted">
-          Sync NFL results, override picks, and reset local seed data.
+          Override picks, demo tools, and reset local seed data. Results sync
+          automatically.
         </p>
       </div>
 
       <section className="space-y-3 rounded-2xl border border-border bg-chalk p-4 shadow-card">
         <h3 className="font-display text-base font-bold uppercase tracking-wide text-ink">
-          Sync NFL results
+          Results (automatic)
         </h3>
         <p className="text-sm leading-relaxed text-ink-muted">
-          Refresh game status for Week {dashboard.week.week} and resolve whether
-          each pick scored a TD. Use simulate to force all games to final.
+          Game status and pick results refresh automatically whenever someone
+          opens the league (about once a minute). You do not need to sync
+          manually. Use simulate only to demo a finished week with mock data.
         </p>
         <label className="block">
           <span className="mb-1.5 block text-[10px] font-bold uppercase tracking-[0.1em] text-ink-faint">
@@ -226,14 +228,14 @@ export default function AdminPage() {
             disabled={syncing || simulating}
             onClick={() => void runSync(false)}
           >
-            {syncing ? "Syncing…" : "Sync game status"}
+            {syncing ? "Refreshing…" : "Force refresh now"}
           </Button>
           <Button
             fullWidth
             disabled={syncing || simulating}
             onClick={() => void runSync(true)}
           >
-            {simulating ? "Resolving…" : "Simulate finals & resolve TDs"}
+            {simulating ? "Resolving…" : "Demo: simulate finals"}
           </Button>
         </div>
         {lastSync ? (
@@ -247,11 +249,12 @@ export default function AdminPage() {
 
       <section className="rounded-2xl border border-border bg-chalk p-4 shadow-card">
         <h3 className="font-display text-base font-bold uppercase tracking-wide text-ink">
-          Odds refresh
+          Odds
         </h3>
         <p className="mt-2 text-sm leading-relaxed text-ink-muted">
-          Phase 1 uses mock odds. Live refresh arrives with the provider
-          integration. Last mock update:{" "}
+          Odds will refresh automatically once a live sportsbook provider is
+          connected (Phase 3). Until then the app uses seeded mock odds.
+          Last mock snapshot:{" "}
           {dashboard.odds_updated_at
             ? new Date(dashboard.odds_updated_at).toLocaleString()
             : "n/a"}

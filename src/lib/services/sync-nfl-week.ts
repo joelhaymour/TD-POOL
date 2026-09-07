@@ -1,4 +1,5 @@
 import { getNFLProvider } from "@/lib/providers";
+import { getStore } from "@/lib/store";
 import type { Store } from "@/lib/store/types";
 import type { League, PickResult } from "@/lib/types";
 
@@ -19,6 +20,55 @@ export type SyncNflWeekSummary = {
   misses: number;
   pending: number;
 };
+
+/** Avoid hammering sync on every 3–4s client poll. */
+const AUTO_SYNC_TTL_MS = 60_000;
+const lastAutoSyncAt = new Map<string, number>();
+const inFlightAutoSync = new Map<string, Promise<SyncNflWeekSummary | null>>();
+
+/**
+ * Automatically refresh game status + pick results for a league's active week.
+ * Throttled — safe to call on every dashboard / history load.
+ */
+export async function autoSyncLeagueWeek(
+  slug: string,
+  options: { force?: boolean } = {},
+): Promise<SyncNflWeekSummary | null> {
+  const key = slug;
+  const now = Date.now();
+  const last = lastAutoSyncAt.get(key) ?? 0;
+  if (!options.force && now - last < AUTO_SYNC_TTL_MS) {
+    return null;
+  }
+
+  const existing = inFlightAutoSync.get(key);
+  if (existing) return existing;
+
+  const run = (async () => {
+    try {
+      const store = getStore();
+      const dashboard = await store.getDashboard(slug);
+      if (!dashboard) return null;
+
+      const summary = await syncNflWeek(store, {
+        season: dashboard.week.season,
+        week: dashboard.week.week,
+        leagueId: dashboard.league.id,
+        asOf: new Date(),
+      });
+      lastAutoSyncAt.set(key, Date.now());
+      return summary;
+    } catch {
+      // Never break page loads if sync fails
+      return null;
+    } finally {
+      inFlightAutoSync.delete(key);
+    }
+  })();
+
+  inFlightAutoSync.set(key, run);
+  return run;
+}
 
 /**
  * Refresh NFL game statuses for a week and resolve pick TD / no-TD results.
