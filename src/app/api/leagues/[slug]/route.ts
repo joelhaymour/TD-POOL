@@ -4,6 +4,9 @@ import { storeErrorResponse } from "@/lib/api/store-error";
 import { loadLeagueDashboard } from "@/lib/league/load-dashboard";
 import type { UpdateLeagueSettingsInput } from "@/lib/types";
 
+/** Board materialize + odds sync can exceed the default hobby timeout. */
+export const maxDuration = 300;
+
 type PatchBody = UpdateLeagueSettingsInput & { admin_pin?: string };
 
 export async function GET(

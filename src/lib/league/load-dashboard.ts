@@ -65,6 +65,37 @@ export async function loadLeagueDashboard(
     console.error("alignLeagueActiveWeek failed", err);
   }
 
+  // If the stored board never got the TD engine (or has no market at all), force rebuild.
+  try {
+    const weekId = (await store.getLeagueBySlug(slug))?.active_week_id;
+    if (weekId) {
+      const pwd = await store.getPlayerWeekData(weekId);
+      const hasEngine = pwd.some((row) => Boolean(row.research_json?.td_model?.version));
+      const anyMarket = pwd.some((row) => row.market_probability > 0.01);
+      const flatScores =
+        pwd.length >= 10 &&
+        new Set(pwd.map((r) => Math.round(r.our_probability * 100))).size <= 3;
+      if (!hasEngine || (!anyMarket && flatScores)) {
+        const weeks = await store.listWeeks();
+        const week = weeks.find((w) => w.id === weekId);
+        if (week) {
+          const { ensureNflWeekMaterialized } = await import(
+            "@/lib/services/ensure-nfl-week"
+          );
+          await ensureNflWeekMaterialized(store, week.season, week.week, {
+            force: true,
+          });
+          const { invalidateOddsSyncThrottle } = await import(
+            "@/lib/services/odds-throttle"
+          );
+          invalidateOddsSyncThrottle();
+        }
+      }
+    }
+  } catch (err) {
+    console.error("stale board force-rebuild failed", err);
+  }
+
   // 2) Grade games/picks + refresh odds for the active week.
   await Promise.all([autoSyncLeagueWeek(slug), autoSyncLeagueOdds(slug)]);
 
