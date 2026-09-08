@@ -22,12 +22,13 @@ export type OddsSyncSummary = {
  * exhausted the entire 500/month allowance in about fifteen refreshes and is
  * why the board went to "Unavailable".
  *
- * A full slate costs ~16 credits, so the free tier affords roughly one refresh
- * per day and no more. The daily cron already forces one; this TTL exists to
- * stop on-demand page loads from spending a second. Raise it only alongside a
- * paid plan.
+ * A measured full-slate sync cost 32 credits, not the 16 a one-credit-per-game
+ * estimate predicted. At 500/month that makes a daily refresh (~960) impossible
+ * and every-other-day (~480) the most the free tier can carry. 40h rather than
+ * 48h so a fixed-time daily cron reliably lands on alternate days instead of
+ * drifting into a skipped third day.
  */
-export const ODDS_SYNC_TTL_MS = 24 * 60 * 60_000;
+export const ODDS_SYNC_TTL_MS = 40 * 60 * 60_000;
 const inFlightOddsSync = new Map<string, Promise<OddsSyncSummary | null>>();
 
 export { getConfiguredOddsSource };
