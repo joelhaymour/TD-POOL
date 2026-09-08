@@ -2,12 +2,25 @@ import type { PlayerCardData } from "@/components/players/player-card";
 import type { PlayerDetailData } from "@/components/players/player-detail";
 import type { BetSlipLeg } from "@/components/picks/bet-slip";
 import { displayOurProbability, hasMarketOdds } from "@/lib/scoring/rank";
-import type { LeagueDashboard, MemberPickStatus } from "@/lib/types";
+import type {
+  LeagueDashboard,
+  MemberPickStatus,
+  ResearchGameLog,
+} from "@/lib/types";
 
 type RankedPlayer = LeagueDashboard["ranked_players"][number];
 
 function pctLabel(share: number): string {
   return `${Math.round(share * 100)}%`;
+}
+
+function perGame(
+  games: readonly ResearchGameLog[] | undefined,
+  pick: (game: ResearchGameLog) => number,
+): string {
+  if (!games?.length) return "—";
+  const total = games.reduce((sum, game) => sum + pick(game), 0);
+  return total > 0 ? (total / games.length).toFixed(1) : "—";
 }
 
 export function toPlayerCard(
@@ -113,12 +126,21 @@ export function toPlayerDetail(
         label: "Snap share",
         value: r.usage.snap_share > 0 ? pctLabel(r.usage.snap_share) : "—",
       },
+      // Sleeper's `targets` field is inconsistently populated, but receptions
+      // always are, so fall back to the game logs rather than showing a dash.
       {
-        label: "Targets / game",
+        label:
+          r.usage.targets_per_game != null && r.usage.targets_per_game > 0
+            ? "Targets / game"
+            : "Catches / game",
         value:
           r.usage.targets_per_game != null && r.usage.targets_per_game > 0
             ? r.usage.targets_per_game.toFixed(1)
-            : "—",
+            : perGame(r.history?.last_5, (g) => g.receptions),
+      },
+      {
+        label: "Carries / game",
+        value: perGame(r.history?.last_5, (g) => g.carries),
       },
       { label: "Role trend", value: r.usage.recent_trend },
     ],

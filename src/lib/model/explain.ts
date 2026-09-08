@@ -84,14 +84,6 @@ export function buildDeterministicAnalysis(
     concerns.push(formatContributionBullet(features, c, model));
   }
   if (
-    model.marketProbability != null &&
-    model.tdPoolProbability - model.marketProbability >= 0.05
-  ) {
-    concerns.push(
-      `We're ${Math.round((model.tdPoolProbability - model.marketProbability) * 100)} pts above market (${pct(model.marketProbability)}) — expect some disagreement.`,
-    );
-  }
-  if (
     features.opponentPositionTdRank != null &&
     features.opponentPositionTdRank <= 10 &&
     concerns.length < 3
