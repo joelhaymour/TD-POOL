@@ -4,8 +4,10 @@
  */
 
 import {
+  getSleeperPlayersMap,
   getSleeperSchedule,
   getSleeperWeekStats,
+  opponentFromSchedule,
   touchdownsFromStat,
   type SleeperWeekStat,
 } from "@/lib/providers/sleeper/client";
@@ -41,6 +43,7 @@ async function accumulateSeason(
 ): Promise<Map<string, TeamDefenseProfile>> {
   const label = String(season);
   const schedule = await getSleeperSchedule(season);
+  const players = await getSleeperPlayersMap();
   const profiles = new Map<string, TeamDefenseProfile>();
 
   const weeks = Array.from({ length: Math.max(0, maxWeek) }, (_, i) => i + 1);
@@ -64,13 +67,26 @@ async function accumulateSeason(
     }
   }
 
-  for (const { stats } of statsByWeek) {
-    for (const stat of stats.values()) {
-      const opp = String(stat.opponent ?? "");
+  // Sleeper week stats often omit `opponent` / `team` — resolve via roster map + schedule.
+  for (const { week, stats } of statsByWeek) {
+    for (const [playerId, stat] of stats) {
+      const rushTd = Number(stat.rush_td ?? 0);
+      const recTd = Number(stat.rec_td ?? 0);
+      if (rushTd <= 0 && recTd <= 0) continue;
+
+      let opp = String(stat.opponent ?? "").trim();
+      if (!opp) {
+        const team =
+          String(stat.team ?? "").trim() ||
+          String(players.get(playerId)?.team ?? "").trim();
+        if (!team) continue;
+        opp = opponentFromSchedule(schedule, team, week)?.opponent ?? "";
+      }
       if (!opp) continue;
+
       const p = profiles.get(opp) ?? emptyProfile(opp, label);
-      p.rushTdAllowed += Number(stat.rush_td ?? 0);
-      p.recTdAllowed += Number(stat.rec_td ?? 0);
+      p.rushTdAllowed += rushTd;
+      p.recTdAllowed += recTd;
       profiles.set(opp, p);
     }
   }

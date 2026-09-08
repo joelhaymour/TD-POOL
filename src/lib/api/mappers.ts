@@ -55,9 +55,15 @@ export function toPlayerDetail(
       ? ("locked" as const)
       : row.availability;
   const marketOk = hasMarketOdds(row);
+  const featureLabel = (
+    r.td_model?.features as { opponentDataLabel?: string } | undefined
+  )?.opponentDataLabel;
   const notes = r.matchup.notes || "";
   const dataLabelMatch = notes.match(/^(.*?)(?:\.|$)/);
-  const opponentDataLabel = dataLabelMatch?.[1]?.trim() || "Opponent data";
+  const opponentDataLabel =
+    featureLabel?.trim() ||
+    dataLabelMatch?.[1]?.trim() ||
+    "Opponent data";
 
   return {
     id: row.player.id,

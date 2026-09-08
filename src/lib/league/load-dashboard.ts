@@ -71,11 +71,17 @@ export async function loadLeagueDashboard(
     if (weekId) {
       const pwd = await store.getPlayerWeekData(weekId);
       const hasEngine = pwd.some((row) => Boolean(row.research_json?.td_model?.version));
+      const { TD_POOL_MODEL_VERSION } = await import("@/lib/model/version");
+      const staleEngine = pwd.some(
+        (row) =>
+          Boolean(row.research_json?.td_model?.version) &&
+          row.research_json?.td_model?.version !== TD_POOL_MODEL_VERSION,
+      );
       const anyMarket = pwd.some((row) => row.market_probability > 0.01);
       const flatScores =
         pwd.length >= 10 &&
         new Set(pwd.map((r) => Math.round(r.our_probability * 100))).size <= 3;
-      if (!hasEngine || (!anyMarket && flatScores)) {
+      if (!hasEngine || staleEngine || (!anyMarket && flatScores)) {
         const weeks = await store.listWeeks();
         const week = weeks.find((w) => w.id === weekId);
         if (week) {

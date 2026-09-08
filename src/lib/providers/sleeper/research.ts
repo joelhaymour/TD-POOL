@@ -93,8 +93,9 @@ export async function prefetchHistoryContext(args: {
     schedules.set(season, await getSleeperSchedule(season));
     const maxWeek =
       season === args.beforeSeason ? Math.max(0, args.beforeWeek - 1) : 18;
-    // Last ~8 completed weeks is enough for last-5 + vs-opp hits.
-    for (let week = maxWeek; week >= Math.max(1, maxWeek - 7); week -= 1) {
+    // Scan all completed weeks so vs-opponent H2H (e.g. SF–LAR in weeks 5/10)
+    // is not missed. last_5 still takes the most recent five from this ordered list.
+    for (let week = maxWeek; week >= 1; week -= 1) {
       weeksToScan.push({ season, week });
     }
   }

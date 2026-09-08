@@ -53,10 +53,7 @@ export async function GET(
             recent_trend: history.recent_trend,
             last_games_summary: history.last_5_summary,
           },
-          matchup: {
-            ...row.research_json.matchup,
-            notes: history.vs_opponent_summary,
-          },
+          // Keep matchup.notes (opponent defense data label) — vs-opp copy lives on history.
         };
       } catch {
         // keep stored research

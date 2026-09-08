@@ -14,8 +14,9 @@ export function buildDeterministicAnalysis(
   concerns: string[];
   verdict: string;
 } {
+  // Injury never belongs in "why we like" — even if a contribution sign is wrong.
   const positives = [...model.contributions]
-    .filter((c) => c.key !== "market" && c.delta > 0.008)
+    .filter((c) => c.key !== "market" && c.key !== "injury" && c.delta > 0.008)
     .sort((a, b) => b.delta - a.delta);
 
   const negatives = [...model.contributions]
@@ -25,6 +26,35 @@ export function buildDeterministicAnalysis(
   const whyWeLike: string[] = [];
   for (const c of positives.slice(0, 4)) {
     whyWeLike.push(formatContributionBullet(features, c, model));
+  }
+
+  // Feature-backed fillers when contribution list is thin (common early season).
+  if (
+    whyWeLike.length < 2 &&
+    features.inside5TeamShare != null &&
+    features.inside5TeamShare >= 0.25
+  ) {
+    whyWeLike.push(
+      `${Math.round(features.inside5TeamShare * 100)}% estimated inside-5 share (${Math.round(model.goalLinePercentile * 100)}th pct goal-line).`,
+    );
+  }
+  if (
+    whyWeLike.length < 2 &&
+    features.teamImpliedPoints != null &&
+    features.teamImpliedPoints >= 21
+  ) {
+    whyWeLike.push(
+      `${features.team} implied for ${features.teamImpliedPoints.toFixed(1)} points — elevated scoring environment.`,
+    );
+  }
+  if (
+    whyWeLike.length < 2 &&
+    features.opponentPositionTdRank != null &&
+    features.opponentPositionTdRank >= 20
+  ) {
+    whyWeLike.push(
+      `${features.opponent} ranks #${features.opponentPositionTdRank} vs ${features.position} TDs (${features.opponentDataLabel}).`,
+    );
   }
   if (features.marketConsensusProbability != null && whyWeLike.length < 2) {
     whyWeLike.push(
@@ -36,7 +66,26 @@ export function buildDeterministicAnalysis(
   }
 
   const concerns: string[] = [];
+
+  if (
+    features.playerInjuryStatus === "questionable" ||
+    features.playerInjuryStatus === "doubtful" ||
+    features.playerInjuryStatus === "out" ||
+    features.playerInjuryStatus === "injured_reserve"
+  ) {
+    const label =
+      features.playerInjuryStatus === "questionable"
+        ? "Questionable — monitor availability before lock"
+        : features.playerInjuryStatus === "doubtful"
+          ? "Doubtful — elevated risk of sitting"
+          : "Ruled out / IR — not a viable pick";
+    concerns.push(label);
+  }
+
   for (const c of negatives.slice(0, 3)) {
+    if (c.key === "injury" && concerns.some((x) => /questionable|doubtful|ruled out/i.test(x))) {
+      continue;
+    }
     concerns.push(formatContributionBullet(features, c, model));
   }
   if (
@@ -44,11 +93,20 @@ export function buildDeterministicAnalysis(
     model.tdPoolProbability - model.marketProbability >= 0.05
   ) {
     concerns.push(
-      `Market probability is ${pct(model.marketProbability)} — ${Math.round((model.tdPoolProbability - model.marketProbability) * 100)} pts below our TD Pool estimate.`,
+      `We're ${Math.round((model.tdPoolProbability - model.marketProbability) * 100)} pts above market (${pct(model.marketProbability)}) — expect some disagreement.`,
+    );
+  }
+  if (
+    features.opponentPositionTdRank != null &&
+    features.opponentPositionTdRank <= 10 &&
+    concerns.length < 3
+  ) {
+    concerns.push(
+      `Tough matchup: ${features.opponent} ranks #${features.opponentPositionTdRank} vs ${features.position} TDs.`,
     );
   }
   if (!concerns.length) {
-    concerns.push("No major usage or matchup concerns.");
+    concerns.push("No major usage or matchup red flags in the model this week.");
   }
 
   const overview =
@@ -85,6 +143,8 @@ function formatContributionBullet(
         : c.detail;
     case "recentUsage":
       return `Recent role trend: ${features.recentTouchTrend} · ${c.detail}`;
+    case "injury":
+      return c.detail;
     default:
       return c.detail;
   }

@@ -267,10 +267,18 @@ export function computeTdPoolFromFeatures(
     );
   }
 
-  const injuryDelta =
-    inj.deltaScale *
-    TD_MODEL_ADJUSTMENT_SCALE.injury *
-    (inj.score >= 0.55 ? inj.score - 0.55 : inj.score - 0.7);
+  // deltaScale < 0 = player injury risk (always a penalty).
+  // deltaScale > 0 = teammate absence boost.
+  // Do not multiply negative scale by (score - 0.7) — that flipped Q tags into "why we like".
+  let injuryDelta = 0;
+  if (inj.deltaScale < 0) {
+    injuryDelta = inj.deltaScale * TD_MODEL_ADJUSTMENT_SCALE.injury;
+  } else if (inj.deltaScale > 0) {
+    injuryDelta =
+      inj.deltaScale *
+      TD_MODEL_ADJUSTMENT_SCALE.injury *
+      Math.max(0, inj.score - 0.55);
+  }
   contributions.push({
     key: "injury",
     label: "Injury / depth context",
