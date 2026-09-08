@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { cn } from "@/lib/utils/cn";
-import { BottomNav, type BottomNavItem } from "@/components/layout/bottom-nav";
+import { BottomNav } from "@/components/layout/bottom-nav";
+import type { BottomNavItem } from "@/components/layout/nav-items";
 
 export type AppShellProps = {
   children: ReactNode;

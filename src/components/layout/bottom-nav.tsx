@@ -10,13 +10,10 @@ import {
   Trophy,
 } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
-
-export type BottomNavItem = {
-  href: string;
-  label: string;
-  icon: "picks" | "league" | "slip" | "history" | "board";
-  badge?: number;
-};
+import {
+  leagueNavItems,
+  type BottomNavItem,
+} from "@/components/layout/nav-items";
 
 export type BottomNavProps = {
   basePath: string;
@@ -31,16 +28,6 @@ const iconMap = {
   history: History,
   board: Trophy,
 };
-
-/** Single source of truth for league bottom nav (avoids SSR/client label drift). */
-export function leagueNavItems(basePath: string): BottomNavItem[] {
-  return [
-    { href: basePath, label: "Picks", icon: "picks" },
-    { href: `${basePath}/bet-slip`, label: "Slip", icon: "slip" },
-    { href: `${basePath}/history`, label: "History", icon: "history" },
-    { href: `${basePath}/leaderboard`, label: "Board", icon: "board" },
-  ];
-}
 
 export function BottomNav({
   basePath,
