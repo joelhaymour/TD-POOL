@@ -188,5 +188,9 @@ export function buildPlayerHistory(args: {
     last_5_summary: summarizeLast5(last_5, recentTrend),
     vs_opponent_summary: summarizeVsOpp(vs_opponent, opponent),
     recent_trend: recentTrend,
+    scoring_sample: {
+      games: last_5.length,
+      touchdowns: last_5.reduce((s, g) => s + g.touchdowns, 0),
+    },
   };
 }

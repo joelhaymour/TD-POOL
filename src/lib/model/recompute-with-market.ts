@@ -65,6 +65,7 @@ export function recomputePlayerAgainstCohort(args: {
       last_5_summary: "",
       vs_opponent_summary: "",
       recent_trend: "stable",
+      scoring_sample: { games: 0, touchdowns: 0 },
     },
     model,
     analysis: refreshed,

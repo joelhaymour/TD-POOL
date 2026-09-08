@@ -18,6 +18,9 @@ import {
 } from "@/lib/providers/sleeper/client";
 import { mapWithConcurrency } from "@/lib/concurrency";
 
+/** Rolling window used to rate scoring ability. One season of games. */
+export const SCORING_SAMPLE_GAMES = 17;
+
 function emptyHistory(): ResearchHistory {
   return {
     last_5: [],
@@ -25,6 +28,7 @@ function emptyHistory(): ResearchHistory {
     last_5_summary: "No recent game logs yet.",
     vs_opponent_summary: "No prior meetings found.",
     recent_trend: "stable",
+    scoring_sample: { games: 0, touchdowns: 0 },
   };
 }
 
@@ -133,6 +137,8 @@ export function buildLivePlayerHistoryFromContext(args: {
   try {
     const last5: ResearchGameLog[] = [];
     const vsOpp: ResearchGameLog[] = [];
+    let sampleGames = 0;
+    let sampleTds = 0;
 
     for (const { season, week } of args.ctx.weeksToScan) {
       const stats = args.ctx.weekStats.get(`${season}-${week}`);
@@ -150,10 +156,20 @@ export function buildLivePlayerHistoryFromContext(args: {
 
       const log = toLog(week, matchup.opponent, matchup.home, stat);
       if (last5.length < 5) last5.push(log);
+      if (sampleGames < SCORING_SAMPLE_GAMES) {
+        sampleGames += 1;
+        sampleTds += log.touchdowns;
+      }
       if (matchup.opponent === args.opponent && vsOpp.length < 5) {
         vsOpp.push(log);
       }
-      if (last5.length >= 5 && vsOpp.length >= 3) break;
+      if (
+        last5.length >= 5 &&
+        vsOpp.length >= 3 &&
+        sampleGames >= SCORING_SAMPLE_GAMES
+      ) {
+        break;
+      }
     }
 
     return {
@@ -162,6 +178,7 @@ export function buildLivePlayerHistoryFromContext(args: {
       last_5_summary: summarizeLast5(last5),
       vs_opponent_summary: summarizeVs(vsOpp, args.opponent),
       recent_trend: trendFromLogs(last5),
+      scoring_sample: { games: sampleGames, touchdowns: sampleTds },
     };
   } catch {
     return emptyHistory();

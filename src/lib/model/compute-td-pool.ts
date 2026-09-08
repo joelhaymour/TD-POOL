@@ -36,8 +36,8 @@ const SCORING_PRIOR_WEIGHT = 6;
  * prior by sample size. A back with 4 scores in 5 games is not a 0.8/game back.
  */
 function baseTouchdownRate(features: PlayerWeekFeatures): number {
-  const games = Math.max(0, Math.min(5, features.scoringSampleGames));
-  const tds = Math.max(0, features.touchdownsLast5);
+  const games = Math.max(0, features.scoringSampleGames);
+  const tds = Math.max(0, features.touchdownsInSample);
   const prior = POSITION_TD_RATE_PRIOR[features.position] ?? 0.25;
 
   const depth =

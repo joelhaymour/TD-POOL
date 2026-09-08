@@ -45,8 +45,9 @@ export type PlayerWeekFeatures = {
   // scoring history
   touchdownsLast3: number;
   touchdownsLast5: number;
-  /** Games behind touchdownsLast5, so the rate can be shrunk by sample size. */
+  /** Rolling season-length scoring sample, shrunk by size in the rate model. */
   scoringSampleGames: number;
+  touchdownsInSample: number;
 
   // opponent (may be prior-season labeled)
   opponentDataLabel: string;

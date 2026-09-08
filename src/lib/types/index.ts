@@ -134,6 +134,12 @@ export interface ResearchHistory {
   last_5_summary: string;
   vs_opponent_summary: string;
   recent_trend: TrendDirection;
+  /**
+   * Rolling season-length scoring sample (up to 17 games). The model rates on
+   * this rather than last_5, because in Week 1 the five most recent games are
+   * weeks 14-18, when contenders rest starters and reserves absorb the volume.
+   */
+  scoring_sample: { games: number; touchdowns: number };
 }
 
 export interface ResearchJson {
