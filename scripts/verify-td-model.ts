@@ -255,7 +255,44 @@ assert.ok(
   `bellcow back out of range: ${henry.tdPoolProbability}`,
 );
 
+// Measured goal-line tiers must separate two backs that a flat red-zone count
+// treats alike. These are the real 2025 lines: Gibbs took 22 carries inside the
+// 10 but only 10 inside the 5; Henry turned 40 into 27.
+const gibbsLike = computeTdPoolFromFeatures(
+  baseFeatures({
+    playerName: "Gibbs-like",
+    goalLineMeasured: true,
+    scoringSampleGames: 16,
+    touchdownsInSample: 12,
+    redZoneTouchesPerGame: 3.19,
+    inside10TouchesPerGame: 22 / 16,
+    inside5TouchesPerGame: 10 / 16,
+    inside5TeamShare: 0.45,
+  }),
+  [baseFeatures()],
+);
+const henryLike = computeTdPoolFromFeatures(
+  baseFeatures({
+    playerName: "Henry-like",
+    goalLineMeasured: true,
+    scoringSampleGames: 17,
+    touchdownsInSample: 16,
+    redZoneTouchesPerGame: 3.76,
+    inside10TouchesPerGame: 40 / 17,
+    inside5TouchesPerGame: 27 / 17,
+    inside5TeamShare: 0.84,
+  }),
+  [baseFeatures()],
+);
+assert.ok(
+  henryLike.tdPoolProbability > gibbsLike.tdPoolProbability + 0.04,
+  `measured goal-line tiers failed to separate backs: henry ${henryLike.tdPoolProbability} vs gibbs ${gibbsLike.tdPoolProbability}`,
+);
+
 console.log("verify-td-model: all checks passed");
+console.log(
+  `  measured goal-line: henry-like ${(henryLike.tdPoolProbability * 100).toFixed(1)}% vs gibbs-like ${(gibbsLike.tdPoolProbability * 100).toFixed(1)}%`,
+);
 console.log(
   `  bellcow back (16 TD/17 g) ${(henry.tdPoolProbability * 100).toFixed(1)}%`,
 );

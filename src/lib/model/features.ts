@@ -35,6 +35,8 @@ export type PlayerWeekFeatures = {
   inside5TouchesPerGame: number | null;
   inside5TeamShare: number | null;
   inside10TeamShare: number | null;
+  /** True when inside-5/inside-10 counts came from play-by-play, not a proxy. */
+  goalLineMeasured?: boolean;
 
   // trends
   recentSnapTrend: TrendDirection;

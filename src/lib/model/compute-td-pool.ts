@@ -75,6 +75,19 @@ function opportunityTouchdownRate(
 ): number | null {
   const rz = features.redZoneTouchesPerGame;
   if (rz == null || rz <= 0) return null;
+
+  // With measured play-by-play we can price each field-position tier at its own
+  // conversion rate. A carry from the 3 is worth many times one from the 18,
+  // and collapsing them into a single red-zone count is what made Gibbs and
+  // Henry look alike despite Henry taking 2.7x the inside-5 work.
+  if (features.goalLineMeasured) {
+    const inside5 = Math.max(0, features.inside5TouchesPerGame ?? 0);
+    const inside10 = Math.max(inside5, features.inside10TouchesPerGame ?? 0);
+    const between5And10 = inside10 - inside5;
+    const outside10 = Math.max(0, rz - inside10);
+    return inside5 * 0.34 + between5And10 * 0.11 + outside10 * 0.045;
+  }
+
   return rz * (RED_ZONE_CONVERSION[features.position] ?? 0.18);
 }
 

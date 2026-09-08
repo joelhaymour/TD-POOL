@@ -177,7 +177,12 @@ export function buildPlayerWeekFeatures(args: {
   // flattened the spread that matters: Gibbs took 22 carries inside the 10 but
   // only 10 inside the 5, while Henry turned 40 into 27.
   const measured = args.ctx.goalLine?.get(sleeperId) ?? null;
-  const measuredGames = measured && measured.gamesPlayed > 0 ? measured.gamesPlayed : null;
+  // Divide by games actually played, not by weeks that happened to contain a
+  // goal-line touch — Henry appears in 12 such weeks but played 17 games, and
+  // the narrower denominator would inflate every per-game rate by ~40%.
+  const measuredGames = measured
+    ? Math.max(history.scoring_sample.games, measured.gamesPlayed)
+    : null;
 
   // QBs share the rushing formula — their goal-line value is carries, not targets.
   const isRusher = args.position === "RB" || args.position === "QB";
@@ -272,6 +277,7 @@ export function buildPlayerWeekFeatures(args: {
     inside5TouchesPerGame: inside5PerGame,
     inside5TeamShare: inside5Share,
     inside10TeamShare: Math.min(0.9, inside5Share * 1.1),
+    goalLineMeasured: measuredGames != null,
 
     recentSnapTrend: trendFromRates(snapRate ?? 0, priorSnap ?? snapRate ?? 0),
     recentTouchTrend,
