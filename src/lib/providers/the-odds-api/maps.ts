@@ -59,14 +59,16 @@ export function normalizePlayerName(name: string): string {
 /** Map Odds API bookmaker keys to our display sportsbooks. */
 export const BOOKMAKER_KEY_MAP: Record<
   string,
-  "FanDuel" | "DraftKings" | "Bet365" | "BetMGM" | "Caesars" | "Fanatics" | "BetRivers"
+  "FanDuel" | "DraftKings" | "Bet365" | "BetMGM" | "Caesars" | "Fanatics"
 > = {
   fanduel: "FanDuel",
   draftkings: "DraftKings",
+  // The API has no bet365 for NFL in any region — the sole listing is
+  // bet365_au, which is paid-only and covers AFL and NRL. Kept mapped so the
+  // odds appear automatically if that ever changes.
   bet365: "Bet365",
   betmgm: "BetMGM",
   williamhill_us: "Caesars",
   caesars: "Caesars",
   fanatics: "Fanatics",
-  betrivers: "BetRivers",
 };
