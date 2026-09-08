@@ -6,11 +6,13 @@ import { MemberPickStatus } from "@/components/league/member-pick-status";
 import { WeeklyResults } from "@/components/league/weekly-results";
 import { PlayerList } from "@/components/players/player-list";
 import type { PlayerFiltersValue } from "@/components/players/player-filters";
+import { GameBoard, type GameGroup } from "@/components/games/game-board";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/components/ui/toast";
 import { useLeagueRealtime } from "@/hooks/use-league-realtime";
 import { toPlayerCard } from "@/lib/api/mappers";
 import type { LeagueDashboard } from "@/lib/types";
+import { cn } from "@/lib/utils/cn";
 
 export function DashboardClient({
   slug,
@@ -33,6 +35,7 @@ export function DashboardClient({
     sort: "rank",
   });
   const [selecting, setSelecting] = useState(false);
+  const [board, setBoard] = useState<"players" | "games">("players");
 
   const refresh = useCallback(async (silent = false) => {
     if (!silent) setLoading(true);
@@ -78,6 +81,18 @@ export function DashboardClient({
       toPlayerCard(row, slug, dashboard.picks_locked),
     );
   }, [dashboard, slug]);
+
+  // Same rows the player board renders, regrouped by the game they play in.
+  const games = useMemo<GameGroup[]>(() => {
+    if (!dashboard) return [];
+    const byGame = new Map<string, GameGroup>();
+    dashboard.ranked_players.forEach((row, i) => {
+      const group = byGame.get(row.game.id);
+      if (group) group.players.push(players[i]);
+      else byGame.set(row.game.id, { game: row.game, players: [players[i]] });
+    });
+    return [...byGame.values()];
+  }, [dashboard, players]);
 
   const memberRows = useMemo(() => {
     if (!dashboard) return [];
@@ -181,16 +196,50 @@ export function DashboardClient({
       />
 
       <div>
-        <h2 className="mb-2 font-display text-lg font-bold uppercase tracking-wide text-ink">
-          Player board
-        </h2>
-        <PlayerList
-          players={players}
-          filters={filters}
-          onFiltersChange={setFilters}
-          onSelect={onSelect}
-          selectDisabled={selecting || dashboard.picks_locked}
-        />
+        <div
+          role="tablist"
+          aria-label="Board view"
+          className="mb-3 grid grid-cols-2 gap-1.5 rounded-xl bg-field p-1"
+        >
+          {(
+            [
+              ["players", "Player board"],
+              ["games", "Game board"],
+            ] as const
+          ).map(([key, label]) => (
+            <button
+              key={key}
+              role="tab"
+              type="button"
+              aria-selected={board === key}
+              onClick={() => setBoard(key)}
+              className={cn(
+                "rounded-lg px-3 py-2 font-display text-sm font-bold uppercase tracking-wide transition",
+                board === key
+                  ? "bg-ink text-lime shadow-card"
+                  : "text-ink-muted hover:text-ink",
+              )}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+
+        {board === "players" ? (
+          <PlayerList
+            players={players}
+            filters={filters}
+            onFiltersChange={setFilters}
+            onSelect={onSelect}
+            selectDisabled={selecting || dashboard.picks_locked}
+          />
+        ) : (
+          <GameBoard
+            games={games}
+            onSelect={onSelect}
+            selectDisabled={selecting || dashboard.picks_locked}
+          />
+        )}
       </div>
     </div>
   );
