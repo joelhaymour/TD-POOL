@@ -121,8 +121,16 @@ export function toPlayerDetail(
             ? r.red_zone.touches_per_game.toFixed(1)
             : "—",
       },
-      { label: "RZ carries", value: r.red_zone.carries || "—" },
-      { label: "RZ targets", value: r.red_zone.targets || "—" },
+      // These are per-game rates, so rounding to whole numbers collapsed the
+      // gap the measured data exists to show: 1.4 and 2.4 both read as "2".
+      {
+        label: "RZ carries / game",
+        value: r.red_zone.carries ? r.red_zone.carries.toFixed(1) : "—",
+      },
+      {
+        label: "RZ targets / game",
+        value: r.red_zone.targets ? r.red_zone.targets.toFixed(1) : "—",
+      },
       {
         label: "Snap share",
         value: r.usage.snap_share > 0 ? pctLabel(r.usage.snap_share) : "—",
