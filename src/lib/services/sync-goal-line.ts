@@ -11,7 +11,7 @@ import { chunk } from "@/lib/concurrency";
  * degrades to the last good copy — losing the crosswalk would silently drop
  * every measured goal-line number back to the old estimate.
  */
-async function loadCrosswalkWithFallback(): Promise<Map<string, string>> {
+export async function loadCrosswalkWithFallback(): Promise<Map<string, string>> {
   const db = createAdminClient();
   try {
     const fresh = await loadSleeperGsisCrosswalk();

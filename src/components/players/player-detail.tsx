@@ -149,6 +149,9 @@ function GameLogTable({
   const totalReceptions = games.reduce((s, g) => s + g.receptions, 0);
   const showRush = totalCarries > 0;
   const showRec = totalReceptions > 0;
+  // Prior meetings can span years, so a bare week number would be ambiguous.
+  const seasons = new Set(games.map((g) => g.season).filter(Boolean));
+  const showSeason = seasons.size > 1;
 
   return (
     <div className="overflow-hidden rounded-xl border border-border">
@@ -175,8 +178,13 @@ function GameLogTable({
         </thead>
         <tbody className="divide-y divide-border">
           {games.map((g) => (
-            <tr key={`${g.week}-${g.opponent}-${g.home ? "h" : "a"}`}>
-              <td className="px-2 py-2 font-medium text-ink-muted">{g.week}</td>
+            <tr
+              key={`${g.season ?? "?"}-${g.week}-${g.opponent}-${g.home ? "h" : "a"}`}
+            >
+              <td className="whitespace-nowrap px-2 py-2 font-medium text-ink-muted">
+                {showSeason && g.season ? `'${String(g.season).slice(2)} ` : ""}
+                W{g.week}
+              </td>
               <td className="px-2 py-2 font-semibold text-ink">
                 {g.home ? "vs" : "@"} {g.opponent}
               </td>
@@ -270,7 +278,7 @@ function HistorySection({
             </>
           ) : (
             <p className="text-sm text-ink-muted">
-              No recent meetings vs {opponent}.
+              No prior meetings vs {opponent}.
             </p>
           )}
         </div>

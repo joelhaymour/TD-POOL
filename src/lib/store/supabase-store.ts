@@ -44,6 +44,11 @@ import type {
   UpdateLeagueSettingsInput,
 } from "@/lib/types";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import {
+  availabilityForLeague,
+  availabilityFromInjury,
+  takenByActiveMembers,
+} from "@/lib/league/availability";
 
 function nowIso(): string {
   return new Date().toISOString();
@@ -84,12 +89,6 @@ function injuryFromDb(status: string | null | undefined): InjuryStatus {
     return status;
   }
   return "healthy";
-}
-
-function availabilityFromInjury(status: InjuryStatus): PlayerAvailability {
-  if (status === "out" || status === "injured_reserve") return "injured";
-  if (status === "questionable" || status === "doubtful") return "questionable";
-  return "available";
 }
 
 type DbLeague = Record<string, unknown>;
@@ -797,28 +796,10 @@ export class SupabaseStore implements Store {
         .select("*")
         .single();
       if (updErr) throw updErr;
-      await this.client
-        .from("player_week_data")
-        .update({ availability: "taken" })
-        .eq("id", pwd.id);
       return mapPick(updated);
     }
 
-    // Release previous player availability when changing / overriding.
     if (existingMemberPick) {
-      const { data: previousPwd } = await this.client
-        .from("player_week_data")
-        .select("*")
-        .eq("player_id", existingMemberPick.player_id)
-        .eq("week_id", input.week_id)
-        .maybeSingle();
-      if (previousPwd && previousPwd.availability === "taken") {
-        const prevInjury = injuryFromDb(String(previousPwd.injury_status));
-        await this.client
-          .from("player_week_data")
-          .update({ availability: availabilityFromInjury(prevInjury) })
-          .eq("id", previousPwd.id);
-      }
       const { error: delErr } = await this.client
         .from("picks")
         .delete()
@@ -858,11 +839,6 @@ export class SupabaseStore implements Store {
       }
       throw insertErr;
     }
-
-    await this.client
-      .from("player_week_data")
-      .update({ availability: "taken" })
-      .eq("id", pwd.id);
 
     return mapPick(inserted);
   }
@@ -1496,14 +1472,11 @@ export class SupabaseStore implements Store {
       a.display_name.localeCompare(b.display_name),
     );
 
-    const picks = await this.getPicksForWeek(league.id, week.id);
-    const pickByMember = new Map(picks.map((p) => [p.member_id, p]));
-    const takenByPlayer = new Map(
-      picks.map((p) => {
-        const member = members.find((m) => m.id === p.member_id);
-        return [p.player_id, member?.display_name ?? "Unknown"] as const;
-      }),
+    const picks = (await this.getPicksForWeek(league.id, week.id)).filter(
+      (p) => members.some((m) => m.id === p.member_id),
     );
+    const pickByMember = new Map(picks.map((p) => [p.member_id, p]));
+    const takenByPlayer = takenByActiveMembers(picks, members);
 
     const { data: playerRows, error: playersErr } = await this.client
       .from("nfl_players")
@@ -1571,16 +1544,17 @@ export class SupabaseStore implements Store {
         if (!player || !game) return null;
         const gameStarted =
           game.status === "in_progress" || game.status === "final";
-        let availability = takenByPlayer.has(pwd.player_id)
-          ? ("taken" as const)
-          : pwd.availability;
-        if (
-          availability !== "taken" &&
-          league.pick_lock_type === "individual_game" &&
-          gameStarted
-        ) {
-          availability = "locked";
-        }
+        // player_week_data is keyed by (player, week) with no league, so every
+        // league shares the row. Taken-ness is per-league and can only come
+        // from this league's picks — a stored "taken" is another league's.
+        const takenHere = takenByPlayer.has(pwd.player_id);
+        const availability = availabilityForLeague({
+          takenHere,
+          stored: pwd.availability,
+          injury: pwd.injury_status,
+          gameStarted,
+          lockStartedGames: league.pick_lock_type === "individual_game",
+        });
         return {
           ...pwd,
           availability,

@@ -40,7 +40,22 @@ export const TEAM_ABBR_TO_FULL: Record<string, string> = {
  * word is enough. Unknown abbreviations fall back to themselves.
  */
 export function teamNickname(abbr: string): string {
-  const full = TEAM_ABBR_TO_FULL[abbr?.toUpperCase()];
+  const full = TEAM_ABBR_TO_FULL[normalizeTeamAbbr(abbr)];
   if (!full) return abbr;
   return full.slice(full.lastIndexOf(" ") + 1);
+}
+
+/** Relocations and alternate codes so "OAK vs LV" still counts as the same team. */
+const TEAM_ALIASES: Record<string, string> = {
+  OAK: "LV",
+  SD: "LAC",
+  STL: "LAR",
+  LA: "LAR",
+  WSH: "WAS",
+  JAC: "JAX",
+};
+
+export function normalizeTeamAbbr(abbr: string | null | undefined): string {
+  const raw = (abbr ?? "").trim().toUpperCase();
+  return TEAM_ALIASES[raw] ?? raw;
 }

@@ -9,6 +9,8 @@ import {
   buildLivePlayerHistoryFromContext,
   prefetchHistoryContext,
 } from "@/lib/providers/sleeper/research";
+import { collectNflverseVsOpponent } from "@/lib/providers/nflverse/vs-opponent";
+import { loadCrosswalkWithFallback } from "@/lib/services/sync-goal-line";
 import { fetchGameWeather } from "@/lib/providers/weather/open-meteo";
 import {
   fetchSdioDepthChartsActive,
@@ -174,6 +176,24 @@ export async function ensureNflWeekMaterialized(
 
     const playerIdByExternal = await store.upsertPlayers(weekPlayers);
     const sleeperMeta = await getSleeperPlayersMap();
+
+    // Career H2H: nflverse weekly box scores back to 2014, up to 5 meetings.
+    // The two-season Sleeper window only catches 0–2 games and the old deep
+    // scan died on a 90s budget before it reached a player's previous team.
+    const crosswalk = await loadCrosswalkWithFallback();
+    historyCtx.deepVsOpponent = await collectNflverseVsOpponent({
+      targets: weekPlayers.flatMap((p) => {
+        const sleeperId = parseSleeperExternalId(p.external_player_id);
+        const game = gamesByTeam.get(p.team);
+        if (!sleeperId || !game) return [];
+        const opponent =
+          game.home_team === p.team ? game.away_team : game.home_team;
+        return [{ sleeperId, opponent }];
+      }),
+      crosswalk,
+      beforeSeason: season,
+      beforeWeek: week,
+    });
 
     const { profiles: defense, label: defenseLabel } = await loadDefenseProfiles({
       season,

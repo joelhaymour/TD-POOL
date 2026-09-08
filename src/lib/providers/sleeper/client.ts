@@ -129,7 +129,14 @@ export async function getSleeperSkillPlayers(): Promise<ProviderPlayer[]> {
 export async function getSleeperWeekStats(
   season: number,
   week: number,
+  /**
+   * Deep history scans read a hundred-plus weeks once and never revisit them.
+   * Each week is ~500KB, so retaining them would cost more memory than the
+   * whole board; those callers pass `cache: false` and let the data go.
+   */
+  opts?: { cache?: boolean },
 ): Promise<Map<string, SleeperWeekStat>> {
+  const useCache = opts?.cache !== false;
   const key = `${season}-${week}`;
   const cached = weekStatCache.get(key);
   if (cached && Date.now() - cached.at < 30 * 60_000) return cached.stats;
@@ -143,7 +150,7 @@ export async function getSleeperWeekStats(
       stats.set(id, { ...row, player_id: id });
     }
   }
-  weekStatCache.set(key, { at: Date.now(), stats });
+  if (useCache) weekStatCache.set(key, { at: Date.now(), stats });
   return stats;
 }
 

@@ -83,7 +83,7 @@ function splitCsvLine(line: string): string[] {
   return out;
 }
 
-async function* streamCsvRows(
+export async function* streamCsvRows(
   url: string,
   signal?: AbortSignal,
 ): AsyncGenerator<{ header: Map<string, number>; row: string[] }> {

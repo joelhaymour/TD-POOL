@@ -123,14 +123,8 @@ export async function seedSupabaseFromLocalPayload(): Promise<{
     if (picksErr) throw picksErr;
   }
 
-  // Mark taken availability for seeded picks
-  for (const pick of pickRows) {
-    await client
-      .from("player_week_data")
-      .update({ availability: "taken" })
-      .eq("week_id", pick.week_id)
-      .eq("player_id", pick.player_id);
-  }
+  // No availability write: player_week_data is shared by every league in the
+  // week, so taken-ness is derived from each league's own picks at read time.
 
   return {
     slug: DEMO_SLUG,

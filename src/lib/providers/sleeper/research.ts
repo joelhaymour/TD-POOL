@@ -59,9 +59,24 @@ function summarizeLast5(logs: ResearchGameLog[]): string {
 }
 
 function summarizeVs(logs: ResearchGameLog[], opponent: string): string {
-  if (!logs.length) return `No recent games vs ${opponent}.`;
+  if (!logs.length) return `No prior meetings vs ${opponent}.`;
   const tds = logs.reduce((s, g) => s + g.touchdowns, 0);
-  return `Vs ${opponent} (last ${logs.length}): ${tds} TD · avg RZ ${((logs.reduce((s, g) => s + g.rz_touches, 0) / logs.length) || 0).toFixed(1)}`;
+  const seasons = logs
+    .map((g) => g.season)
+    .filter((s): s is number => typeof s === "number");
+  // Meetings can span many years, so say when they were rather than implying
+  // these are recent games.
+  const span =
+    seasons.length && Math.min(...seasons) !== Math.max(...seasons)
+      ? ` since ${Math.min(...seasons)}`
+      : seasons.length
+        ? ` in ${seasons[0]}`
+        : "";
+  const label = logs.length === 1 ? "1 meeting" : `last ${logs.length} meetings`;
+  const rz = logs.reduce((s, g) => s + g.rz_touches, 0);
+  const rzBit =
+    rz > 0 ? ` · avg RZ ${(rz / logs.length).toFixed(1)}` : "";
+  return `Vs ${opponent} (${label}${span}): ${tds} TD${rzBit}`;
 }
 
 function toLog(
@@ -69,9 +84,11 @@ function toLog(
   opponent: string,
   home: boolean,
   stat: SleeperWeekStat,
+  season?: number,
 ): ResearchGameLog {
   return {
     week,
+    season,
     opponent,
     home,
     touchdowns: touchdownsFromStat(stat),
@@ -92,7 +109,14 @@ export type HistoryContext = {
   /** key `${season}-${week}` → stats by sleeper player id */
   weekStats: Map<string, Map<string, SleeperWeekStat>>;
   weeksToScan: Array<{ season: number; week: number }>;
+  /** Older meetings vs this week's opponent, by sleeper id, newest first. */
+  deepVsOpponent?: DeepVsOpponentIndex;
 };
+
+/** Most prior meetings shown for a matchup. */
+export const VS_OPPONENT_MAX = 5;
+
+export type DeepVsOpponentIndex = Map<string, ResearchGameLog[]>;
 
 /** Prefetch schedules + weekly stats used for last-5 / vs-opp research. */
 export async function prefetchHistoryContext(args: {
@@ -154,22 +178,48 @@ export function buildLivePlayerHistoryFromContext(args: {
           : null);
       if (!matchup) continue;
 
-      const log = toLog(week, matchup.opponent, matchup.home, stat);
+      const log = toLog(week, matchup.opponent, matchup.home, stat, season);
       if (last5.length < 5) last5.push(log);
       if (sampleGames < SCORING_SAMPLE_GAMES) {
         sampleGames += 1;
         sampleTds += log.touchdowns;
       }
-      if (matchup.opponent === args.opponent && vsOpp.length < 5) {
+      if (matchup.opponent === args.opponent && vsOpp.length < VS_OPPONENT_MAX) {
         vsOpp.push(log);
       }
+      // Meetings are scattered across the whole window, so keep scanning until
+      // the quota is filled even after last-5 and the scoring sample are done.
+      // This is Map lookups over ~35 prefetched weeks, so it costs no requests.
       if (
         last5.length >= 5 &&
-        vsOpp.length >= 3 &&
-        sampleGames >= SCORING_SAMPLE_GAMES
+        sampleGames >= SCORING_SAMPLE_GAMES &&
+        vsOpp.length >= VS_OPPONENT_MAX
       ) {
         break;
       }
+    }
+
+    // Career meetings from nflverse, merged with Sleeper rows so recency
+    // order is global. Keep the Sleeper copy of a week when both exist —
+    // those have red-zone touches.
+    {
+      const byWeek = new Map<string, ResearchGameLog>();
+      const deeper = args.ctx.deepVsOpponent?.get(args.sleeperPlayerId) ?? [];
+      for (const log of deeper) {
+        byWeek.set(`${log.season ?? ""}-${log.week}-${log.opponent}`, log);
+      }
+      for (const log of vsOpp) {
+        byWeek.set(`${log.season ?? ""}-${log.week}-${log.opponent}`, log);
+      }
+      vsOpp.length = 0;
+      vsOpp.push(
+        ...[...byWeek.values()]
+          .sort((a, b) => {
+            const season = (b.season ?? 0) - (a.season ?? 0);
+            return season !== 0 ? season : b.week - a.week;
+          })
+          .slice(0, VS_OPPONENT_MAX),
+      );
     }
 
     return {

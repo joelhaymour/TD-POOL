@@ -34,6 +34,11 @@ import type {
   UpdateLeagueSettingsInput,
 } from "@/lib/types";
 
+import {
+  availabilityForLeague,
+  takenByActiveMembers,
+} from "@/lib/league/availability";
+
 const STORE_PATH = path.join(process.cwd(), ".data", "store.json");
 
 type StoreData = SeedPayload;
@@ -493,23 +498,7 @@ export class LocalFileStore implements Store {
       );
     }
 
-    // Release previous player if changing / overriding.
     if (existingMemberPick && existingMemberPick.player_id !== input.player_id) {
-      const previousPwd = data.player_week_data.find(
-        (p) =>
-          p.player_id === existingMemberPick.player_id &&
-          p.week_id === input.week_id,
-      );
-      if (previousPwd && previousPwd.availability === "taken") {
-        previousPwd.availability =
-          previousPwd.injury_status === "questionable" ||
-          previousPwd.injury_status === "doubtful"
-            ? "questionable"
-            : previousPwd.injury_status === "out" ||
-                previousPwd.injury_status === "injured_reserve"
-              ? "injured"
-              : "available";
-      }
       const idx = data.picks.findIndex((p) => p.id === existingMemberPick.id);
       if (idx >= 0) data.picks.splice(idx, 1);
     }
@@ -521,8 +510,6 @@ export class LocalFileStore implements Store {
     ) {
       return existingMemberPick;
     }
-
-    pwd.availability = "taken";
 
     const pick: Pick = {
       id: existingMemberPick?.id ?? newId("pick"),
@@ -997,15 +984,13 @@ export class LocalFileStore implements Store {
         .sort((a, b) => a.display_name.localeCompare(b.display_name));
 
       const picks = data.picks.filter(
-        (p) => p.league_id === league.id && p.week_id === week.id,
+        (p) =>
+          p.league_id === league.id &&
+          p.week_id === week.id &&
+          members.some((m) => m.id === p.member_id),
       );
       const pickByMember = new Map(picks.map((p) => [p.member_id, p]));
-      const takenByPlayer = new Map(
-        picks.map((p) => {
-          const member = members.find((m) => m.id === p.member_id);
-          return [p.player_id, member?.display_name ?? "Unknown"] as const;
-        }),
-      );
+      const takenByPlayer = takenByActiveMembers(picks, members);
 
       const playersById = new Map(data.players.map((p) => [p.id, p]));
       const gamesById = new Map(data.games.map((g) => [g.id, g]));
@@ -1071,18 +1056,16 @@ export class LocalFileStore implements Store {
           if (!player || !game) return null;
           const gameStarted =
             game.status === "in_progress" || game.status === "final";
-          let availability = takenByPlayer.has(pwd.player_id)
-            ? ("taken" as const)
-            : pwd.availability;
-          // Individual-game lock: once a player's game has started (after sync),
-          // mark remaining open slots as locked so they can't be newly picked.
-          if (
-            availability !== "taken" &&
-            league.pick_lock_type === "individual_game" &&
-            gameStarted
-          ) {
-            availability = "locked";
-          }
+          // player_week_data is shared by every league in the week, so a stored
+          // "taken" belongs to some other league. Only this league's picks count.
+          const takenHere = takenByPlayer.has(pwd.player_id);
+          const availability = availabilityForLeague({
+            takenHere,
+            stored: pwd.availability,
+            injury: pwd.injury_status,
+            gameStarted,
+            lockStartedGames: league.pick_lock_type === "individual_game",
+          });
           return {
             ...pwd,
             td_pool_rank: index + 1,

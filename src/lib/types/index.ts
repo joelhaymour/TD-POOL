@@ -109,6 +109,8 @@ export interface NflPlayer {
 /** Compact per-game log for TD Pool research. */
 export interface ResearchGameLog {
   week: number;
+  /** Season the game was played. Prior meetings can be many years old. */
+  season?: number;
   opponent: string;
   home: boolean;
   touchdowns: number;
