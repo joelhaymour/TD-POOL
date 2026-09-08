@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { getStore } from "@/lib/store";
 import { autoSyncLeagueWeek } from "@/lib/services/sync-nfl-week";
 import {
@@ -5,6 +6,8 @@ import {
   getConfiguredOddsSource,
 } from "@/lib/services/sync-odds";
 import { alignLeagueActiveWeek } from "@/lib/services/align-league-week";
+import { readBoardHealth } from "@/lib/services/ensure-nfl-week";
+import type { Store } from "@/lib/store/types";
 import type { LeagueDashboard } from "@/lib/types";
 
 /** Strip heavy research blobs from list payloads. */
@@ -33,90 +36,108 @@ export function slimDashboard(dashboard: LeagueDashboard): LeagueDashboard {
   };
 }
 
+/**
+ * The board now carries every skill player, so list payloads keep only what the
+ * cards render. Full research is read per player on the analysis route.
+ */
 function emptyResearch(r: LeagueDashboard["ranked_players"][number]["research_json"]) {
   return {
     ...r,
-    why_we_like: r.why_we_like?.slice(0, 4) ?? [],
-    concerns: r.concerns?.slice(0, 3) ?? [],
-    verdict: r.verdict ?? "",
+    why_we_like: [],
+    concerns: [],
+    verdict: "",
     market: { ...r.market, books: [] },
-    // Keep model meta for debugging/recompute, but drop bulky feature snapshots from list payloads.
+    history: undefined,
     td_model: r.td_model
       ? {
           ...r.td_model,
           features: {},
-          contributions: r.td_model.contributions?.slice(0, 8) ?? [],
+          contributions: [],
         }
       : undefined,
   };
 }
 
-export async function loadLeagueDashboard(
+/**
+ * Read-only dashboard load.
+ *
+ * Provider work never runs here: the board is materialized by the cron job and
+ * by `refreshLeagueData`, which callers schedule with `after()` so it cannot
+ * delay the response. The one exception is a league with no usable board yet,
+ * which must build inline or the page has nothing to show.
+ */
+export const loadLeagueDashboard = cache(async function loadLeagueDashboard(
   slug: string,
 ): Promise<LeagueDashboard | null> {
   const store = getStore();
   const league = await store.getLeagueBySlug(slug);
   if (!league) return null;
 
-  // 1) Make sure we have a board for the league's current pointer (or pool week).
-  try {
-    await alignLeagueActiveWeek(store, league);
-  } catch (err) {
-    console.error("alignLeagueActiveWeek failed", err);
-  }
-
-  // If the stored board never got the TD engine (or has no market at all), force rebuild.
-  try {
-    const weekId = (await store.getLeagueBySlug(slug))?.active_week_id;
-    if (weekId) {
-      const pwd = await store.getPlayerWeekData(weekId);
-      const hasEngine = pwd.some((row) => Boolean(row.research_json?.td_model?.version));
-      const { TD_POOL_MODEL_VERSION } = await import("@/lib/model/version");
-      const staleEngine = pwd.some(
-        (row) =>
-          Boolean(row.research_json?.td_model?.version) &&
-          row.research_json?.td_model?.version !== TD_POOL_MODEL_VERSION,
-      );
-      const anyMarket = pwd.some((row) => row.market_probability > 0.01);
-      const flatScores =
-        pwd.length >= 10 &&
-        new Set(pwd.map((r) => Math.round(r.our_probability * 100))).size <= 3;
-      if (!hasEngine || staleEngine || (!anyMarket && flatScores)) {
-        const weeks = await store.listWeeks();
-        const week = weeks.find((w) => w.id === weekId);
-        if (week) {
-          const { ensureNflWeekMaterialized } = await import(
-            "@/lib/services/ensure-nfl-week"
-          );
-          await ensureNflWeekMaterialized(store, week.season, week.week, {
-            force: true,
-          });
-          const { invalidateOddsSyncThrottle } = await import(
-            "@/lib/services/odds-throttle"
-          );
-          invalidateOddsSyncThrottle();
-        }
-      }
+  if (!(await hasServableBoard(store, league.active_week_id))) {
+    try {
+      await alignLeagueActiveWeek(store, league);
+    } catch (err) {
+      console.error("initial board materialize failed", err);
     }
-  } catch (err) {
-    console.error("stale board force-rebuild failed", err);
-  }
-
-  // 2) Grade games/picks + refresh odds for the active week.
-  await Promise.all([autoSyncLeagueWeek(slug), autoSyncLeagueOdds(slug)]);
-
-  // 3) If that grading finished the week, advance and materialize next.
-  try {
-    const fresh = await store.getLeagueBySlug(slug);
-    if (fresh) await alignLeagueActiveWeek(store, fresh);
-  } catch (err) {
-    console.error("alignLeagueActiveWeek (post-sync) failed", err);
   }
 
   const dashboard = await store.getDashboard(slug);
   if (!dashboard) return null;
+
   return {
     ...slimDashboard(dashboard),
     odds_source: getConfiguredOddsSource(),
   };
+});
+
+async function hasServableBoard(
+  store: Store,
+  activeWeekId: string | null,
+): Promise<boolean> {
+  if (!activeWeekId) return false;
+  try {
+    const pwd = await store.getPlayerWeekData(activeWeekId);
+    return pwd.length > 0;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Background refresh. Every step is individually throttled through
+ * `sync_state`, so calling this on each request is safe: at most one instance
+ * does real provider work per TTL window.
+ */
+export async function refreshLeagueData(slug: string): Promise<void> {
+  const store = getStore();
+  try {
+    // Outer gate keeps repeated polls from even reaching the inner checks.
+    if (!(await store.claimSyncSlot(`refresh:${slug}`, 60_000))) return;
+
+    const league = await store.getLeagueBySlug(slug);
+    if (!league) return;
+
+    // Advance to the right week / rebuild a stale board.
+    await alignLeagueActiveWeek(store, league);
+
+    await Promise.all([
+      autoSyncLeagueWeek(slug).catch(() => null),
+      autoSyncLeagueOdds(slug).catch(() => null),
+    ]);
+
+    await store.completeSyncSlot(`refresh:${slug}`, "ok");
+  } catch (err) {
+    console.error("refreshLeagueData failed", err);
+    await store.completeSyncSlot(`refresh:${slug}`, "error").catch(() => {});
+  }
+}
+
+/** True when the stored board is missing, truncated, or on an old model. */
+export async function isBoardStale(
+  store: Store,
+  season: number,
+  week: number,
+): Promise<boolean> {
+  const health = await readBoardHealth(store, season, week);
+  return !health.healthy;
 }

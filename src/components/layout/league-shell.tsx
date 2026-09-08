@@ -25,29 +25,8 @@ export function LeagueShell({
     setWeekNumber(initialWeek);
   }, [initialName, initialWeek]);
 
-  useEffect(() => {
-    let cancelled = false;
-    async function load() {
-      try {
-        const res = await fetch(`/api/leagues/${slug}`, { cache: "no-store" });
-        if (!res.ok) return;
-        const data = (await res.json()) as {
-          league: { name: string };
-          week: { week: number };
-        };
-        if (!cancelled) {
-          setLeagueName(data.league.name);
-          setWeekNumber(data.week.week);
-        }
-      } catch {
-        // keep SSR values
-      }
-    }
-    void load();
-    return () => {
-      cancelled = true;
-    };
-  }, [slug]);
+  // Name and week come from the server render. Re-fetching the whole dashboard
+  // here just to read two fields tripled the work of every page load.
 
   return (
     <AppShell

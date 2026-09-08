@@ -162,13 +162,45 @@ function weatherFactor(f: PlayerWeekFeatures): { score: number; detail: string }
  * Market-anchored TD Pool probability with explainable factor contributions.
  * Rank by `tdPoolProbability` descending.
  */
+type PeerSamples = { gl: number[]; match: number[]; usage: number[] };
+
+/**
+ * Peer distributions are identical for every player of a position, so cache
+ * them per cohort. Recomputing inline made a full board O(n²).
+ */
+const peerSampleCache = new WeakMap<
+  PlayerWeekFeatures[],
+  Map<string, PeerSamples>
+>();
+
+function getPeerSamples(
+  cohort: PlayerWeekFeatures[],
+  position: string,
+): PeerSamples {
+  let byPosition = peerSampleCache.get(cohort);
+  if (!byPosition) {
+    byPosition = new Map();
+    peerSampleCache.set(cohort, byPosition);
+  }
+
+  const cached = byPosition.get(position);
+  if (cached) return cached;
+
+  const samePos = cohort.filter((c) => c.position === position);
+  const peer = samePos.length >= 8 ? samePos : cohort;
+  const samples: PeerSamples = {
+    gl: peer.map(goalLineRawScore),
+    match: peer.map(matchupRawScore),
+    usage: peer.map(usageRawScore),
+  };
+  byPosition.set(position, samples);
+  return samples;
+}
+
 export function computeTdPoolFromFeatures(
   features: PlayerWeekFeatures,
   cohort: PlayerWeekFeatures[],
 ): TdPoolModelOutput {
-  const samePos = cohort.filter((c) => c.position === features.position);
-  const peer = samePos.length >= 8 ? samePos : cohort;
-
   const glRaw = goalLineRawScore(features);
   const matchRaw = matchupRawScore(features);
   const usageRaw = usageRawScore(features);
@@ -177,13 +209,11 @@ export function computeTdPoolFromFeatures(
   const wx = weatherFactor(features);
   const proj = features.externalProjectionScore;
 
-  const glSample = peer.map(goalLineRawScore);
-  const matchSample = peer.map(matchupRawScore);
-  const usageSample = peer.map(usageRawScore);
+  const samples = getPeerSamples(cohort, features.position);
 
-  const goalLinePercentile = percentileRank(glRaw, glSample);
-  const matchupPercentile = percentileRank(matchRaw, matchSample);
-  const usagePercentile = percentileRank(usageRaw, usageSample);
+  const goalLinePercentile = percentileRank(glRaw, samples.gl);
+  const matchupPercentile = percentileRank(matchRaw, samples.match);
+  const usagePercentile = percentileRank(usageRaw, samples.usage);
 
   const market = features.marketConsensusProbability;
   const hasMarket = market != null && market > 0;

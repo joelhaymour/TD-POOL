@@ -11,6 +11,7 @@ import {
   touchdownsFromStat,
   type SleeperWeekStat,
 } from "@/lib/providers/sleeper/client";
+import { mapWithConcurrency } from "@/lib/concurrency";
 
 export type TeamDefenseProfile = {
   team: string;
@@ -47,12 +48,10 @@ async function accumulateSeason(
   const profiles = new Map<string, TeamDefenseProfile>();
 
   const weeks = Array.from({ length: Math.max(0, maxWeek) }, (_, i) => i + 1);
-  const statsByWeek = await Promise.all(
-    weeks.map(async (week) => ({
-      week,
-      stats: await getSleeperWeekStats(season, week),
-    })),
-  );
+  const statsByWeek = await mapWithConcurrency(weeks, 6, async (week) => ({
+    week,
+    stats: await getSleeperWeekStats(season, week),
+  }));
 
   // Games played per team from schedule
   for (const g of schedule) {

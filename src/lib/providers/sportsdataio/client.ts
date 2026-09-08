@@ -4,6 +4,8 @@
  * Docs: https://sportsdata.io/developers/api-documentation/nfl
  */
 
+import { fetchWithTimeout } from "@/lib/concurrency";
+
 const BASE = "https://api.sportsdata.io/v3/nfl";
 
 export function isSportsDataIoConfigured(): boolean {
@@ -15,9 +17,10 @@ async function sdioFetch<T>(path: string): Promise<T | null> {
   if (!key) return null;
   const url = `${BASE}${path}${path.includes("?") ? "&" : "?"}key=${encodeURIComponent(key)}`;
   try {
-    const res = await fetch(url, {
+    const res = await fetchWithTimeout(url, {
       headers: { Accept: "application/json" },
       cache: "no-store",
+      timeoutMs: 12_000,
     });
     if (!res.ok) return null;
     return (await res.json()) as T;

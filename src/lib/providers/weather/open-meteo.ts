@@ -1,6 +1,7 @@
 /** Open-Meteo weather for NFL stadiums (no API key). */
 
 import type { WeatherReport } from "@/lib/providers/types";
+import { fetchWithTimeout } from "@/lib/concurrency";
 
 /** Approximate stadium coordinates by home team abbreviation. */
 const STADIUM_COORDS: Record<
@@ -87,9 +88,10 @@ export async function fetchGameWeather(args: {
     url.searchParams.set("timezone", "UTC");
     url.searchParams.set("forecast_days", "16");
 
-    const res = await fetch(url.toString(), {
+    const res = await fetchWithTimeout(url.toString(), {
       headers: { Accept: "application/json" },
       cache: "no-store",
+      timeoutMs: 10_000,
     });
     if (!res.ok) throw new Error("weather fetch failed");
     const json = (await res.json()) as {

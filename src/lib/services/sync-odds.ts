@@ -2,11 +2,6 @@ import { getConfiguredOddsSource, getOddsProvider } from "@/lib/providers";
 import { getStore } from "@/lib/store";
 import type { Store } from "@/lib/store/types";
 import type { ConsensusOdds, OddsQuote } from "@/lib/providers/types";
-import {
-  getLastOddsSyncAt,
-  invalidateOddsSyncThrottle,
-  setLastOddsSyncAt,
-} from "@/lib/services/odds-throttle";
 
 export type OddsSyncSummary = {
   source: "live" | "mock";
@@ -18,32 +13,33 @@ export type OddsSyncSummary = {
   error?: string;
 };
 
-const ODDS_SYNC_TTL_MS = 5 * 60_000;
+export const ODDS_SYNC_TTL_MS = 10 * 60_000;
 const inFlightOddsSync = new Map<string, Promise<OddsSyncSummary | null>>();
 
-export { getConfiguredOddsSource, invalidateOddsSyncThrottle };
+export { getConfiguredOddsSource };
 
 /**
  * Refresh anytime TD odds for a league active week.
- * Uses The Odds API when ODDS_API_KEY is set; otherwise mock provider.
- * Throttled (5 min) — safe on dashboard load.
+ * Uses The Odds API when ODDS_API_KEY is set; otherwise synthetic fallback.
+ * Throttled through `sync_state` so every serverless instance shares the TTL.
  */
 export async function autoSyncLeagueOdds(
   slug: string,
   options: { force?: boolean } = {},
 ): Promise<OddsSyncSummary | null> {
-  const now = Date.now();
-  const last = getLastOddsSyncAt(slug);
-  if (!options.force && now - last < ODDS_SYNC_TTL_MS) {
-    return null;
-  }
-
   const existing = inFlightOddsSync.get(slug);
   if (existing) return existing;
 
   const run = (async () => {
+    const store = getStore();
+    const key = `odds:${slug}`;
     try {
-      const store = getStore();
+      const claimed = await store.claimSyncSlot(
+        key,
+        options.force ? 0 : ODDS_SYNC_TTL_MS,
+      );
+      if (!claimed) return null;
+
       const dashboard = await store.getDashboard(slug);
       if (!dashboard) return null;
 
@@ -52,9 +48,18 @@ export async function autoSyncLeagueOdds(
         week: dashboard.week.week,
         weekId: dashboard.week.id,
       });
-      setLastOddsSyncAt(slug, Date.now());
+      await store.completeSyncSlot(key, "ok", {
+        source: summary.source,
+        quotes: summary.quotes,
+        playersUpdated: summary.playersUpdated,
+      });
       return summary;
     } catch (err) {
+      await store
+        .completeSyncSlot(key, "error", {
+          message: err instanceof Error ? err.message : "Odds sync failed",
+        })
+        .catch(() => {});
       return {
         source: getConfiguredOddsSource(),
         season: 0,

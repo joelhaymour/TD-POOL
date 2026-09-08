@@ -37,7 +37,7 @@ export default function BetSlipPage() {
       }
     }
     void load();
-    const id = window.setInterval(() => void load(), 3000);
+    const id = window.setInterval(() => void load(), 20_000);
     return () => {
       cancelled = true;
       window.clearInterval(id);

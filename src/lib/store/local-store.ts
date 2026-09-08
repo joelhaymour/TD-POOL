@@ -16,7 +16,7 @@ import {
   featuresFromResearch,
   recomputePlayerAgainstCohort,
 } from "@/lib/model/recompute-with-market";
-import { StoreError, type Store, type GameStatusUpdate, type PickResultUpdate, type ApplyOddsRefreshInput, type JoinLeagueInput, type JoinLeagueResult } from "@/lib/store/types";
+import { StoreError, type Store, type GameStatusUpdate, type PickResultUpdate, type ApplyOddsRefreshInput, type JoinLeagueInput, type JoinLeagueResult, type SyncStateRow, effectiveSyncTtl } from "@/lib/store/types";
 import type {
   CreateLeagueInput,
   League,
@@ -77,6 +77,8 @@ class Mutex {
 export class LocalFileStore implements Store {
   private mutex = new Mutex();
   private initialized = false;
+  /** Dev store runs in a single process, so in-memory sync state is enough. */
+  private syncState = new Map<string, SyncStateRow>();
 
   private async ensureReady(): Promise<void> {
     if (this.initialized) return;
@@ -855,6 +857,50 @@ export class LocalFileStore implements Store {
         });
       }
       return rows.length;
+    });
+  }
+
+  async countPlayerWeekRows(weekId: string): Promise<number> {
+    return this.withRead(
+      (data) =>
+        data.player_week_data.filter((p) => p.week_id === weekId).length,
+    );
+  }
+
+  async getSyncState(key: string): Promise<SyncStateRow | null> {
+    return this.syncState.get(key) ?? null;
+  }
+
+  async claimSyncSlot(key: string, ttlMs: number): Promise<boolean> {
+    const existing = this.syncState.get(key);
+    if (existing) {
+      const age = Date.now() - new Date(existing.last_run_at).getTime();
+      if (Number.isFinite(age) && age < effectiveSyncTtl(existing, ttlMs)) {
+        return false;
+      }
+    }
+    this.syncState.set(key, {
+      key,
+      last_run_at: nowIso(),
+      last_ok_at: existing?.last_ok_at ?? null,
+      status: "running",
+      detail: {},
+    });
+    return true;
+  }
+
+  async completeSyncSlot(
+    key: string,
+    status: "ok" | "error",
+    detail: Record<string, unknown> = {},
+  ): Promise<void> {
+    const existing = this.syncState.get(key);
+    this.syncState.set(key, {
+      key,
+      last_run_at: nowIso(),
+      last_ok_at: status === "ok" ? nowIso() : (existing?.last_ok_at ?? null),
+      status,
+      detail,
     });
   }
 

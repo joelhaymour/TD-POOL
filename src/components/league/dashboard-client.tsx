@@ -64,8 +64,10 @@ export function DashboardClient({
     if (!initialDashboard) void refresh();
   }, [slug, initialDashboard, refresh]);
 
+  // Picks arrive over Supabase realtime; polling is only a fallback, so it can
+  // be slow. Tight intervals used to trigger a provider refresh per request.
   useEffect(() => {
-    const ms = realtimeConnected ? 15_000 : 4_000;
+    const ms = realtimeConnected ? 120_000 : 30_000;
     const id = window.setInterval(() => void refresh(true), ms);
     return () => window.clearInterval(id);
   }, [slug, realtimeConnected, refresh]);

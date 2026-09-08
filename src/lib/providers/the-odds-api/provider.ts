@@ -91,10 +91,18 @@ export class TheOddsApiProvider implements OddsProvider {
   }
 
   private async getJson<T>(url: string): Promise<T> {
-    const res = await this.fetchImpl(url, {
-      headers: { Accept: "application/json" },
-      cache: "no-store",
-    });
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 12_000);
+    let res: Response;
+    try {
+      res = await this.fetchImpl(url, {
+        headers: { Accept: "application/json" },
+        cache: "no-store",
+        signal: controller.signal,
+      });
+    } finally {
+      clearTimeout(timer);
+    }
     if (!res.ok) {
       const body = await res.text().catch(() => "");
       throw new Error(

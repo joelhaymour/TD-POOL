@@ -16,6 +16,7 @@ import {
   type SleeperScheduleGame,
   type SleeperWeekStat,
 } from "@/lib/providers/sleeper/client";
+import { mapWithConcurrency } from "@/lib/concurrency";
 
 function emptyHistory(): ResearchHistory {
   return {
@@ -100,13 +101,11 @@ export async function prefetchHistoryContext(args: {
     }
   }
 
+  // Bounded: a full-season scan is 18–35 weeks and Sleeper rate-limits bursts.
   const weekStats = new Map<string, Map<string, SleeperWeekStat>>();
-  await Promise.all(
-    weeksToScan.map(async ({ season, week }) => {
-      const key = `${season}-${week}`;
-      weekStats.set(key, await getSleeperWeekStats(season, week));
-    }),
-  );
+  await mapWithConcurrency(weeksToScan, 6, async ({ season, week }) => {
+    weekStats.set(`${season}-${week}`, await getSleeperWeekStats(season, week));
+  });
 
   return { schedules, weekStats, weeksToScan };
 }

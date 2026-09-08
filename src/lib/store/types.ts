@@ -45,6 +45,28 @@ export type JoinLeagueResult = {
   member: LeagueMember;
 };
 
+/** Cross-instance refresh coordination (serverless has no shared memory). */
+export type SyncStateRow = {
+  key: string;
+  last_run_at: string;
+  last_ok_at: string | null;
+  status: string;
+  detail: Record<string, unknown>;
+};
+
+/** Failed and abandoned runs must not hold a refresh slot for the full TTL. */
+const SYNC_ERROR_RETRY_MS = 5 * 60_000;
+const SYNC_RUNNING_STALE_MS = 10 * 60_000;
+
+export function effectiveSyncTtl(
+  state: { status: string },
+  ttlMs: number,
+): number {
+  if (state.status === "error") return Math.min(ttlMs, SYNC_ERROR_RETRY_MS);
+  if (state.status === "running") return Math.min(ttlMs, SYNC_RUNNING_STALE_MS);
+  return ttlMs;
+}
+
 export interface Store {
   getLeagueBySlug(slug: string): Promise<League | null>;
   createLeague(input: CreateLeagueInput): Promise<League>;
@@ -134,6 +156,28 @@ export interface Store {
       consensus_decimal_odds: number;
     }>,
   ): Promise<number>;
+
+  /**
+   * Board size without loading research payloads. Read on every request to
+   * decide whether a rebuild is needed, so it must stay cheap.
+   */
+  countPlayerWeekRows(weekId: string): Promise<number>;
+
+  /** Read a shared refresh timestamp. Null when the job has never run. */
+  getSyncState(key: string): Promise<SyncStateRow | null>;
+
+  /**
+   * Claim a refresh slot. Returns false when another instance ran the job
+   * within `ttlMs`, so callers can skip duplicate provider work.
+   */
+  claimSyncSlot(key: string, ttlMs: number): Promise<boolean>;
+
+  /** Record the outcome of a refresh so other instances can throttle on it. */
+  completeSyncSlot(
+    key: string,
+    status: "ok" | "error",
+    detail?: Record<string, unknown>,
+  ): Promise<void>;
 }
 
 export class StoreError extends Error {

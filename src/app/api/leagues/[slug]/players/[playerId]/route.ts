@@ -2,8 +2,6 @@ import { NextResponse } from "next/server";
 import { getStore } from "@/lib/store";
 import { storeErrorResponse } from "@/lib/api/store-error";
 import { toPlayerDetail } from "@/lib/api/mappers";
-import { parseSleeperExternalId } from "@/lib/providers/sleeper/client";
-import { buildLivePlayerHistory } from "@/lib/providers/sleeper/research";
 import { generatePlayerAnalysisCopy } from "@/lib/model/explain-ai";
 import type { PlayerWeekFeatures } from "@/lib/model/features";
 
@@ -30,34 +28,8 @@ export async function GET(
       );
     }
 
-    const sleeperId = parseSleeperExternalId(row.player.external_player_id);
-    if (sleeperId) {
-      const opponent =
-        row.game.home_team === row.player.team
-          ? row.game.away_team
-          : row.game.home_team;
-      try {
-        const history = await buildLivePlayerHistory({
-          sleeperPlayerId: sleeperId,
-          team: row.player.team,
-          opponent,
-          beforeSeason: dashboard.week.season,
-          beforeWeek: dashboard.week.week,
-        });
-        row.research_json = {
-          ...row.research_json,
-          history,
-          usage: {
-            ...row.research_json.usage,
-            recent_trend: history.recent_trend,
-            last_games_summary: history.last_5_summary,
-          },
-          // Keep matchup.notes (opponent defense data label) — vs-opp copy lives on history.
-        };
-      } catch {
-        // keep stored research
-      }
-    }
+    // History is materialized with the board, so the detail view reads it from
+    // the database. Rebuilding it here cost ~35 Sleeper requests per page view.
 
     // Lazy analysis copy — use stored board model (do not recompute with a 1-player peer set).
     try {

@@ -15,14 +15,13 @@ export function clamp01(n: number): number {
 /** Percentile rank of value within sample (0–1). Ties get mid-rank. */
 export function percentileRank(value: number, sample: number[]): number {
   if (!sample.length) return 0.5;
-  const sorted = [...sample].sort((a, b) => a - b);
   let below = 0;
   let equal = 0;
-  for (const x of sorted) {
+  for (const x of sample) {
     if (x < value) below += 1;
     else if (x === value) equal += 1;
   }
-  return (below + equal * 0.5) / sorted.length;
+  return (below + equal * 0.5) / sample.length;
 }
 
 /**

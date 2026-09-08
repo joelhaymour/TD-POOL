@@ -1,10 +1,13 @@
-import { NextResponse } from "next/server";
+import { NextResponse, after } from "next/server";
 import { getStore } from "@/lib/store";
 import { storeErrorResponse } from "@/lib/api/store-error";
-import { loadLeagueDashboard } from "@/lib/league/load-dashboard";
+import {
+  loadLeagueDashboard,
+  refreshLeagueData,
+} from "@/lib/league/load-dashboard";
 import type { UpdateLeagueSettingsInput } from "@/lib/types";
 
-/** Board materialize + odds sync can exceed the default hobby timeout. */
+/** First-run board materialize can exceed the default timeout. */
 export const maxDuration = 300;
 
 type PatchBody = UpdateLeagueSettingsInput & { admin_pin?: string };
@@ -22,6 +25,11 @@ export async function GET(
         { status: 404 },
       );
     }
+
+    // Provider refresh happens after the response is sent; each step is
+    // throttled in `sync_state` so polling clients cannot stack up work.
+    after(() => refreshLeagueData(slug));
+
     return NextResponse.json(dashboard);
   } catch (err) {
     return storeErrorResponse(err);

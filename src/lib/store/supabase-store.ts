@@ -8,7 +8,10 @@ import {
   type JoinLeagueResult,
   type PickResultUpdate,
   type Store,
+  type SyncStateRow,
+  effectiveSyncTtl,
 } from "@/lib/store/types";
+import { chunk } from "@/lib/concurrency";
 import {
   americanToDecimal,
   calculateWeeklyStake,
@@ -43,6 +46,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 function nowIso(): string {
   return new Date().toISOString();
 }
+
 
 function num(value: unknown, fallback = 0): number {
   if (value == null || value === "") return fallback;
@@ -892,21 +896,25 @@ export class SupabaseStore implements Store {
     const mappedGames = (games ?? []).map(mapGame);
     const gamesById = new Map(mappedGames.map((g) => [g.id, g]));
 
+    // One lookup for quote→game fallback instead of a query per unmatched quote.
+    const { data: pwdLinks } = await this.client
+      .from("player_week_data")
+      .select("player_id, game_id")
+      .eq("week_id", input.weekId);
+    const gameIdByPlayerId = new Map(
+      (pwdLinks ?? []).map(
+        (row) => [String(row.player_id), String(row.game_id)] as const,
+      ),
+    );
+
     const oddsRows: Record<string, unknown>[] = [];
     for (const quote of input.quotes) {
       const player = playersByExternal.get(quote.external_player_id);
       if (!player) continue;
       let game = gamesByExternal.get(quote.external_game_id);
       if (!game) {
-        const { data: pwdLink } = await this.client
-          .from("player_week_data")
-          .select("game_id")
-          .eq("week_id", input.weekId)
-          .eq("player_id", player.id)
-          .maybeSingle();
-        if (pwdLink?.game_id) {
-          game = gamesById.get(String(pwdLink.game_id));
-        }
+        const linkedGameId = gameIdByPlayerId.get(player.id);
+        if (linkedGameId) game = gamesById.get(linkedGameId);
       }
       if (!game) continue;
 
@@ -924,10 +932,10 @@ export class SupabaseStore implements Store {
       });
     }
 
-    if (oddsRows.length > 0) {
+    for (const batch of chunk(oddsRows, 300)) {
       const { error: oddsErr } = await this.client
         .from("player_odds")
-        .insert(oddsRows);
+        .insert(batch);
       if (oddsErr) throw oddsErr;
     }
 
@@ -985,6 +993,10 @@ export class SupabaseStore implements Store {
       (f): f is NonNullable<typeof f> => f != null,
     );
 
+    // Build every row first, then write in batches. A per-row UPDATE loop was
+    // ~700 sequential round-trips once the board covered the full player pool.
+    const updatedRows: Record<string, unknown>[] = [];
+
     for (const pwdRow of weekRows ?? []) {
       const market = marketByPlayerId.get(String(pwdRow.player_id));
       const research = {
@@ -1019,31 +1031,35 @@ export class SupabaseStore implements Store {
         });
       }
 
+      updatedRows.push({
+        ...pwdRow,
+        ...(market
+          ? {
+              consensus_american_odds: market.american_odds,
+              consensus_decimal_odds: market.decimal_odds,
+              market_probability: market.implied_probability,
+            }
+          : {}),
+        research_json: recomputed?.research_json ?? research,
+        ...(recomputed
+          ? {
+              our_probability: recomputed.our_probability,
+              td_pool_score: recomputed.td_pool_score,
+              matchup_rating: recomputed.matchup_rating,
+              goal_line_rating: recomputed.goal_line_rating,
+              tier: recomputed.tier,
+            }
+          : {}),
+        updated_at: fetchedAt,
+      });
+      if (market) playersUpdated += 1;
+    }
+
+    for (const batch of chunk(updatedRows, 150)) {
       const { error: updErr } = await this.client
         .from("player_week_data")
-        .update({
-          ...(market
-            ? {
-                consensus_american_odds: market.american_odds,
-                consensus_decimal_odds: market.decimal_odds,
-                market_probability: market.implied_probability,
-              }
-            : {}),
-          research_json: recomputed?.research_json ?? research,
-          ...(recomputed
-            ? {
-                our_probability: recomputed.our_probability,
-                td_pool_score: recomputed.td_pool_score,
-                matchup_rating: recomputed.matchup_rating,
-                goal_line_rating: recomputed.goal_line_rating,
-                tier: recomputed.tier,
-              }
-            : {}),
-          updated_at: fetchedAt,
-        })
-        .eq("id", pwdRow.id);
+        .upsert(batch, { onConflict: "id" });
       if (updErr) throw updErr;
-      if (market) playersUpdated += 1;
     }
 
     // Persist ranks by TD Pool %.
@@ -1189,62 +1205,110 @@ export class SupabaseStore implements Store {
     players: import("@/lib/providers/types").ProviderPlayer[],
   ): Promise<Map<string, string>> {
     const map = new Map<string, string>();
-    const concurrency = 8;
-    let cursor = 0;
+    if (players.length === 0) return map;
 
-    const workers = Array.from({ length: concurrency }, async () => {
-      while (cursor < players.length) {
-        const i = cursor;
-        cursor += 1;
-        const p = players[i]!;
+    // One read for the whole roster instead of 2 round-trips per player.
+    const { data: existingRows, error: existingErr } = await this.client
+      .from("nfl_players")
+      .select("id, external_player_id");
+    if (existingErr) throw existingErr;
 
-        const { data: byExternal } = await this.client
-          .from("nfl_players")
-          .select("id")
-          .eq("external_player_id", p.external_player_id)
-          .maybeSingle();
+    const idByExternal = new Map<string, string>();
+    for (const row of existingRows ?? []) {
+      const ext = row.external_player_id ? String(row.external_player_id) : null;
+      if (ext) idByExternal.set(ext, String(row.id));
+    }
 
-        let existingId = byExternal?.id ? String(byExternal.id) : null;
-        if (!existingId) {
-          const { data: byName } = await this.client
-            .from("nfl_players")
-            .select("id")
-            .ilike("name", p.name)
-            .eq("team", p.team)
-            .maybeSingle();
-          existingId = byName?.id ? String(byName.id) : null;
-        }
+    const payload = players.map((p) => ({
+      id: idByExternal.get(p.external_player_id) ?? randomUUID(),
+      external_player_id: p.external_player_id,
+      name: p.name,
+      team: p.team,
+      position: p.position,
+      active: p.active,
+      jersey_number: p.jersey_number,
+      headshot_url: p.headshot_url,
+    }));
 
-        const fields = {
-          external_player_id: p.external_player_id,
-          name: p.name,
-          team: p.team,
-          position: p.position,
-          active: p.active,
-          jersey_number: p.jersey_number,
-          headshot_url: p.headshot_url,
-        };
+    for (const batch of chunk(payload, 200)) {
+      const { error } = await this.client
+        .from("nfl_players")
+        .upsert(batch, { onConflict: "external_player_id" });
+      if (error) throw error;
+    }
 
-        if (existingId) {
-          const { error } = await this.client
-            .from("nfl_players")
-            .update(fields)
-            .eq("id", existingId);
-          if (error) throw error;
-          map.set(p.external_player_id, existingId);
-        } else {
-          const id = randomUUID();
-          const { error } = await this.client
-            .from("nfl_players")
-            .insert({ id, ...fields });
-          if (error) throw error;
-          map.set(p.external_player_id, id);
-        }
-      }
-    });
-
-    await Promise.all(workers);
+    for (const row of payload) map.set(row.external_player_id, row.id);
     return map;
+  }
+
+  async countPlayerWeekRows(weekId: string): Promise<number> {
+    const { count, error } = await this.client
+      .from("player_week_data")
+      .select("id", { count: "exact", head: true })
+      .eq("week_id", weekId);
+    if (error) throw error;
+    return count ?? 0;
+  }
+
+  async getSyncState(key: string): Promise<SyncStateRow | null> {
+    const { data, error } = await this.client
+      .from("sync_state")
+      .select("*")
+      .eq("key", key)
+      .maybeSingle();
+    if (error) throw error;
+    if (!data) return null;
+    return {
+      key: String(data.key),
+      last_run_at: String(data.last_run_at),
+      last_ok_at: data.last_ok_at ? String(data.last_ok_at) : null,
+      status: String(data.status ?? "ok"),
+      detail: (data.detail ?? {}) as Record<string, unknown>,
+    };
+  }
+
+  async claimSyncSlot(key: string, ttlMs: number): Promise<boolean> {
+    const existing = await this.getSyncState(key);
+    if (existing) {
+      const age = Date.now() - new Date(existing.last_run_at).getTime();
+      if (Number.isFinite(age) && age < effectiveSyncTtl(existing, ttlMs)) {
+        return false;
+      }
+    }
+
+    // Marking last_run_at now means a concurrent instance that reads after this
+    // write sees a fresh timestamp and backs off.
+    const { error } = await this.client.from("sync_state").upsert(
+      {
+        key,
+        last_run_at: nowIso(),
+        status: "running",
+        updated_at: nowIso(),
+      },
+      { onConflict: "key" },
+    );
+    if (error) throw error;
+    return true;
+  }
+
+  async completeSyncSlot(
+    key: string,
+    status: "ok" | "error",
+    detail: Record<string, unknown> = {},
+  ): Promise<void> {
+    const fields: Record<string, unknown> = {
+      key,
+      last_run_at: nowIso(),
+      status,
+      detail,
+      updated_at: nowIso(),
+    };
+    if (status === "ok") fields.last_ok_at = nowIso();
+
+    const { error } = await this.client
+      .from("sync_state")
+      .upsert(fields, { onConflict: "key" });
+    if (error) throw error;
   }
 
   async replacePlayerWeekBoard(
@@ -1295,8 +1359,11 @@ export class SupabaseStore implements Store {
       updated_at: now,
     }));
 
-    const { error } = await this.client.from("player_week_data").insert(payload);
-    if (error) throw error;
+    // Full boards are ~700 rows with research blobs — insert in batches.
+    for (const batch of chunk(payload, 150)) {
+      const { error } = await this.client.from("player_week_data").insert(batch);
+      if (error) throw error;
+    }
     return payload.length;
   }
 

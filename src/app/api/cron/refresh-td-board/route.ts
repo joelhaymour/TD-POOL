@@ -4,6 +4,9 @@ import { ensureNflWeekMaterialized } from "@/lib/services/ensure-nfl-week";
 import { syncWeekOdds } from "@/lib/services/sync-odds";
 import { resolvePoolWeek } from "@/lib/nfl/calendar";
 
+/** Full board rebuild — the slowest job in the app. */
+export const maxDuration = 300;
+
 /**
  * Vercel Cron / manual refresh endpoint.
  * Secure with CRON_SECRET bearer token when deployed.

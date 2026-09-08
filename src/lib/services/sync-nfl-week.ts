@@ -21,32 +21,34 @@ export type SyncNflWeekSummary = {
   pending: number;
 };
 
-/** Avoid hammering sync on every 3–4s client poll. */
-const AUTO_SYNC_TTL_MS = 60_000;
-const lastAutoSyncAt = new Map<string, number>();
+/**
+ * Game statuses only move during game windows, so a short shared TTL is enough.
+ * Stored in `sync_state` so all serverless instances honour it.
+ */
+export const AUTO_SYNC_TTL_MS = 90_000;
 const inFlightAutoSync = new Map<string, Promise<SyncNflWeekSummary | null>>();
 
 /**
- * Automatically refresh game status + pick results for a league's active week.
- * Throttled — safe to call on every dashboard / history load.
+ * Refresh game status + pick results for a league's active week.
+ * Safe to call from background refresh paths; never throws.
  */
 export async function autoSyncLeagueWeek(
   slug: string,
   options: { force?: boolean } = {},
 ): Promise<SyncNflWeekSummary | null> {
-  const key = slug;
-  const now = Date.now();
-  const last = lastAutoSyncAt.get(key) ?? 0;
-  if (!options.force && now - last < AUTO_SYNC_TTL_MS) {
-    return null;
-  }
-
-  const existing = inFlightAutoSync.get(key);
+  const existing = inFlightAutoSync.get(slug);
   if (existing) return existing;
 
   const run = (async () => {
+    const store = getStore();
+    const key = `games:${slug}`;
     try {
-      const store = getStore();
+      const claimed = await store.claimSyncSlot(
+        key,
+        options.force ? 0 : AUTO_SYNC_TTL_MS,
+      );
+      if (!claimed) return null;
+
       const dashboard = await store.getDashboard(slug);
       if (!dashboard) return null;
 
@@ -56,17 +58,25 @@ export async function autoSyncLeagueWeek(
         leagueId: dashboard.league.id,
         asOf: new Date(),
       });
-      lastAutoSyncAt.set(key, Date.now());
+      await store.completeSyncSlot(key, "ok", {
+        gamesUpdated: summary.gamesUpdated,
+        picksResolved: summary.picksResolved,
+      });
       return summary;
-    } catch {
-      // Never break page loads if sync fails
+    } catch (err) {
+      // Never break page loads if sync fails.
+      await store
+        .completeSyncSlot(key, "error", {
+          message: err instanceof Error ? err.message : "Game sync failed",
+        })
+        .catch(() => {});
       return null;
     } finally {
-      inFlightAutoSync.delete(key);
+      inFlightAutoSync.delete(slug);
     }
   })();
 
-  inFlightAutoSync.set(key, run);
+  inFlightAutoSync.set(slug, run);
   return run;
 }
 

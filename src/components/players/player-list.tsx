@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { Users } from "lucide-react";
 import {
   PlayerCard,
@@ -11,7 +11,11 @@ import {
   type PlayerFiltersValue,
 } from "@/components/players/player-filters";
 import { EmptyState } from "@/components/ui/empty-state";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils/cn";
+
+/** The board carries every skill player, so render it in pages. */
+const PAGE_SIZE = 50;
 
 export type PlayerListProps = {
   players: PlayerCardData[];
@@ -55,7 +59,7 @@ export function PlayerList({
 }: PlayerListProps) {
   const filtered = useMemo(() => {
     const q = filters.query.trim().toLowerCase();
-    let list = players.filter((p) => {
+    const list = players.filter((p) => {
       if (filters.availableOnly && p.availability !== "available") return false;
       if (filters.position !== "ALL" && p.position !== filters.position) {
         return false;
@@ -69,6 +73,13 @@ export function PlayerList({
     });
     return sortPlayers(list, filters.sort);
   }, [players, filters]);
+
+  // Paging resets whenever the filters change, without an effect round-trip.
+  const filterKey = `${filters.query}|${filters.position}|${filters.availableOnly}|${filters.sort}`;
+  const [page, setPage] = useState({ key: filterKey, visible: PAGE_SIZE });
+  const visible = page.key === filterKey ? page.visible : PAGE_SIZE;
+
+  const shown = filtered.slice(0, visible);
 
   return (
     <div className={cn("space-y-3", className)}>
@@ -90,17 +101,35 @@ export function PlayerList({
           }
         />
       ) : (
-        <ul className="space-y-3">
-          {filtered.map((player) => (
-            <li key={player.id}>
-              <PlayerCard
-                player={player}
-                onSelect={onSelect}
-                selectDisabled={selectDisabled}
-              />
-            </li>
-          ))}
-        </ul>
+        <>
+          <ul className="space-y-3">
+            {shown.map((player) => (
+              <li key={player.id}>
+                <PlayerCard
+                  player={player}
+                  onSelect={onSelect}
+                  selectDisabled={selectDisabled}
+                />
+              </li>
+            ))}
+          </ul>
+
+          {visible < filtered.length ? (
+            <Button
+              variant="secondary"
+              fullWidth
+              onClick={() =>
+                setPage({ key: filterKey, visible: visible + PAGE_SIZE })
+              }
+            >
+              Show more ({filtered.length - visible} left)
+            </Button>
+          ) : (
+            <p className="pb-2 text-center text-xs text-ink-faint">
+              {filtered.length} players
+            </p>
+          )}
+        </>
       )}
     </div>
   );

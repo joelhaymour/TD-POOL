@@ -20,7 +20,7 @@ import {
   rankTeamsByTdAllowed,
 } from "@/lib/providers/team-defense/from-sleeper";
 import { getWeeklyTdProjectionScores } from "@/lib/providers/projections";
-import { invalidateOddsSyncThrottle } from "@/lib/services/odds-throttle";
+import { mapWithConcurrency } from "@/lib/concurrency";
 import {
   buildPlayerWeekFeatures,
   collectPlayerSeasonStats,
@@ -32,13 +32,45 @@ import { buildDeterministicAnalysis } from "@/lib/model/explain";
 import { attachModelMeta } from "@/lib/model/recompute-with-market";
 import { TD_POOL_MODEL_VERSION } from "@/lib/model/version";
 import type { Store } from "@/lib/store/types";
-import type { InjuryStatus, NflWeek, ResearchJson } from "@/lib/types";
+import type { InjuryStatus, NflWeek } from "@/lib/types";
 
+/** Dedupes concurrent calls inside one instance; DB state dedupes across them. */
 const materializeInFlight = new Map<string, Promise<NflWeek>>();
-const materializeDoneAt = new Map<string, number>();
 /** Bump when scoring / feature pipeline changes so boards rebuild. */
 const BOARD_VERSION = `td-engine-${TD_POOL_MODEL_VERSION}-no-ai-board`;
-const MATERIALIZE_TTL_MS = 10 * 60_000;
+/** How long a persisted board is trusted before a rebuild is allowed. */
+export const MATERIALIZE_TTL_MS = 6 * 60 * 60_000;
+/** A board smaller than this means the build was truncated or failed. */
+const MIN_HEALTHY_BOARD = 120;
+
+/**
+ * Is the board already in Supabase good enough to serve?
+ * This is checked before any provider work so a cold serverless instance
+ * reuses the stored board instead of rebuilding it.
+ */
+export async function readBoardHealth(
+  store: Store,
+  season: number,
+  week: number,
+): Promise<{ week: NflWeek | null; healthy: boolean; rows: number }> {
+  const existing = await store.getWeekBySeasonWeek(season, week);
+  if (!existing) return { week: null, healthy: false, rows: 0 };
+
+  const rows = await store.countPlayerWeekRows(existing.id);
+  if (rows < MIN_HEALTHY_BOARD) return { week: existing, healthy: false, rows };
+
+  // The sync key embeds BOARD_VERSION, so a successful record for this key
+  // means the stored rows were produced by the engine we are running now.
+  const state = await store.getSyncState(materializeKey(season, week));
+  const healthy =
+    state?.status === "ok" && Number(state.detail.players ?? 0) === rows;
+
+  return { week: existing, healthy, rows };
+}
+
+function materializeKey(season: number, week: number): string {
+  return `materialize:${BOARD_VERSION}:${season}-${week}`;
+}
 
 function mapInjury(raw: string | null | undefined): InjuryStatus {
   const s = (raw ?? "").toLowerCase();
@@ -62,24 +94,28 @@ export async function ensureNflWeekMaterialized(
   options: { force?: boolean } = {},
 ): Promise<NflWeek> {
   const key = `${BOARD_VERSION}:${season}-${week}`;
-  const last = materializeDoneAt.get(key) ?? 0;
-  if (!options.force && Date.now() - last < MATERIALIZE_TTL_MS) {
-    const existing = await store.getWeekBySeasonWeek(season, week);
-    if (existing) {
-      const pwd = await store.getPlayerWeekData(existing.id);
-      if (pwd.length > 0) {
-        const hasEngine = pwd.some(
-          (row) =>
-            (row.research_json as ResearchJson & { td_model?: { version?: string } })
-              ?.td_model?.version === TD_POOL_MODEL_VERSION,
-        );
-        if (hasEngine) return existing;
-      }
-    }
+  const syncKey = materializeKey(season, week);
+
+  // 1) Trust the database first. A persisted, current-version board is served
+  //    as-is, which is what makes cold starts cheap.
+  if (!options.force) {
+    const health = await readBoardHealth(store, season, week);
+    if (health.week && health.healthy) return health.week;
   }
 
   const inflight = materializeInFlight.get(key);
   if (inflight) return inflight;
+
+  // 2) Only one instance may rebuild within the TTL. Losers serve whatever the
+  //    database currently holds rather than duplicating provider work.
+  const claimed = await store.claimSyncSlot(
+    syncKey,
+    options.force ? 60_000 : MATERIALIZE_TTL_MS,
+  );
+  if (!claimed) {
+    const existing = await store.getWeekBySeasonWeek(season, week);
+    if (existing) return existing;
+  }
 
   const run = (async () => {
     const window = weekWindow(season, week);
@@ -94,7 +130,9 @@ export async function ensureNflWeekMaterialized(
     const provider = getNFLProvider();
     const games = await provider.getWeekSchedule(season, week);
     if (!games.length) {
-      materializeDoneAt.set(key, Date.now());
+      await store.completeSyncSlot(syncKey, "error", {
+        message: "Schedule provider returned no games",
+      });
       return nflWeek;
     }
 
@@ -192,26 +230,17 @@ export async function ensureNflWeekMaterialized(
     for (const [id, row] of projections) projectionScores.set(id, row.score);
 
     const weatherByGame = new Map<string, Awaited<ReturnType<typeof fetchGameWeather>>>();
-    {
-      let cursor = 0;
-      const workers = Array.from({ length: 4 }, async () => {
-        while (cursor < games.length) {
-          const i = cursor;
-          cursor += 1;
-          const g = games[i]!;
-          weatherByGame.set(
-            g.external_game_id,
-            await fetchGameWeather({
-              externalGameId: g.external_game_id,
-              homeTeam: g.home_team,
-              kickoffAt: g.kickoff_at,
-              isDome: g.is_dome,
-            }),
-          );
-        }
-      });
-      await Promise.all(workers);
-    }
+    await mapWithConcurrency(games, 4, async (g) => {
+      weatherByGame.set(
+        g.external_game_id,
+        await fetchGameWeather({
+          externalGameId: g.external_game_id,
+          homeTeam: g.home_team,
+          kickoffAt: g.kickoff_at,
+          isDome: g.is_dome,
+        }),
+      );
+    });
 
     const priorSeasonStats = new Map<string, Awaited<ReturnType<typeof collectPlayerSeasonStats>>>();
     const currentSeasonStats = new Map<string, Awaited<ReturnType<typeof collectPlayerSeasonStats>>>();
@@ -446,15 +475,39 @@ export async function ensureNflWeekMaterialized(
       row.td_pool_rank = idx + 1;
     });
 
-    const trimmed = scored.slice(0, 60);
-    await store.replacePlayerWeekBoard(nflWeek.id, trimmed);
-    invalidateOddsSyncThrottle();
+    // Persist the whole weekly pool. Capping the board hid real starters
+    // (a top-60 cut dropped players like Ashton Jeanty and Justin Jefferson);
+    // the UI filters and ranks instead.
+    await store.replacePlayerWeekBoard(nflWeek.id, scored);
 
-    materializeDoneAt.set(key, Date.now());
+    // The board replace wiped market columns, so re-price immediately rather
+    // than waiting for a client request to notice.
+    try {
+      const { syncWeekOdds } = await import("@/lib/services/sync-odds");
+      await syncWeekOdds(store, { season, week, weekId: nflWeek.id });
+    } catch (err) {
+      console.error("post-materialize odds sync failed", err);
+    }
+
+    await store.completeSyncSlot(syncKey, "ok", {
+      season,
+      week,
+      players: scored.length,
+      model: TD_POOL_MODEL_VERSION,
+    });
     return nflWeek;
-  })().finally(() => {
-    materializeInFlight.delete(key);
-  });
+  })()
+    .catch(async (err) => {
+      await store
+        .completeSyncSlot(syncKey, "error", {
+          message: err instanceof Error ? err.message : String(err),
+        })
+        .catch(() => {});
+      throw err;
+    })
+    .finally(() => {
+      materializeInFlight.delete(key);
+    });
 
   materializeInFlight.set(key, run);
   return run;
