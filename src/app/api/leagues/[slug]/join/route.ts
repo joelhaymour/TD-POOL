@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { getStore } from "@/lib/store";
 import { storeErrorResponse } from "@/lib/api/store-error";
+import { requireApiUser } from "@/lib/auth/api";
+import { accountDisplayName } from "@/lib/auth/session";
 
 type JoinBody = {
   displayName?: string;
@@ -12,14 +14,18 @@ export async function POST(
   context: { params: Promise<{ slug: string }> },
 ) {
   try {
+    const auth = await requireApiUser();
+    if (!auth.ok) return auth.response;
+
     const { slug } = await context.params;
     const body = (await request.json()) as JoinBody;
     const store = getStore();
 
     const result = await store.joinLeague({
       slug,
-      display_name: body.displayName ?? "",
+      display_name: body.displayName?.trim() || accountDisplayName(auth.user),
       join_pin: body.joinPin ?? "",
+      user_id: auth.user.id,
     });
 
     return NextResponse.json(

@@ -4,6 +4,7 @@ import {
   loadLeagueDashboard,
   refreshLeagueData,
 } from "@/lib/league/load-dashboard";
+import { requireViewerMembership } from "@/lib/auth/league";
 
 /** A first-run board build happens inline; background refresh also runs here. */
 export const maxDuration = 300;
@@ -12,9 +13,16 @@ export default async function LeagueDashboardPage({
   params,
 }: LayoutProps<"/[slug]">) {
   const { slug } = await params;
+  const member = await requireViewerMembership(slug);
   const dashboard = await loadLeagueDashboard(slug);
 
   after(() => refreshLeagueData(slug));
 
-  return <DashboardClient slug={slug} initialDashboard={dashboard} />;
+  return (
+    <DashboardClient
+      slug={slug}
+      initialDashboard={dashboard}
+      viewer={{ memberId: member.id }}
+    />
+  );
 }

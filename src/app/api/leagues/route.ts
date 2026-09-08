@@ -1,10 +1,14 @@
 import { NextResponse } from "next/server";
 import { getStore } from "@/lib/store";
 import { storeErrorResponse } from "@/lib/api/store-error";
+import { requireApiUser } from "@/lib/auth/api";
 import type { CreateLeagueInput } from "@/lib/types";
 
 export async function POST(request: Request) {
   try {
+    const auth = await requireApiUser();
+    if (!auth.ok) return auth.response;
+
     const body = (await request.json()) as Partial<CreateLeagueInput>;
 
     if (!body.name?.trim()) {
@@ -25,6 +29,7 @@ export async function POST(request: Request) {
       name: body.name.trim(),
       slug: body.slug,
       admin_display_name: body.admin_display_name.trim(),
+      admin_user_id: auth.user.id,
       admin_pin: body.admin_pin ?? "1234",
       join_pin: body.join_pin ?? "0000",
       currency: body.currency,

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getStore } from "@/lib/store";
 import { storeErrorResponse } from "@/lib/api/store-error";
+import { requireApiMembership } from "@/lib/auth/api";
 import { autoSyncLeagueWeek } from "@/lib/services/sync-nfl-week";
 import {
   americanToDecimal,
@@ -20,6 +21,9 @@ export async function GET(
 ) {
   try {
     const { slug } = await context.params;
+    const access = await requireApiMembership(slug);
+    if (!access.ok) return access.response;
+
     await autoSyncLeagueWeek(slug);
     const store = getStore();
     const league = await store.getLeagueBySlug(slug);

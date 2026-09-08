@@ -321,6 +321,8 @@ export interface CreateLeagueInput {
   admin_pin: string;
   join_pin: string;
   admin_display_name: string;
+  /** Auth user who owns the league and takes the admin seat. */
+  admin_user_id?: string | null;
   member_names?: string[];
   member_count?: number;
   logo_url?: string | null;

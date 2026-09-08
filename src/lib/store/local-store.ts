@@ -16,7 +16,7 @@ import {
   featuresFromResearch,
   recomputePlayerAgainstCohort,
 } from "@/lib/model/recompute-with-market";
-import { StoreError, type Store, type GameStatusUpdate, type PickResultUpdate, type ApplyOddsRefreshInput, type JoinLeagueInput, type JoinLeagueResult, type SyncStateRow, effectiveSyncTtl } from "@/lib/store/types";
+import { StoreError, type Store, type GameStatusUpdate, type PickResultUpdate, type ApplyOddsRefreshInput, type JoinLeagueInput, type JoinLeagueResult, type SyncStateRow, type UserLeague, effectiveSyncTtl } from "@/lib/store/types";
 import type {
   CreateLeagueInput,
   League,
@@ -189,7 +189,7 @@ export class LocalFileStore implements Store {
         id: newId("league"),
         name: input.name.trim(),
         slug,
-        admin_user_id: null,
+        admin_user_id: input.admin_user_id ?? null,
         currency: input.currency ?? "USD",
         betting_mode: input.betting_mode ?? "individual",
         contribution_per_member: input.contribution_per_member ?? 10,
@@ -215,7 +215,10 @@ export class LocalFileStore implements Store {
         const member: LeagueMember = {
           id: newId("member"),
           league_id: league.id,
-          user_id: null,
+          user_id:
+            name === input.admin_display_name
+              ? (input.admin_user_id ?? null)
+              : null,
           display_name: name,
           role: name === input.admin_display_name ? "admin" : "member",
           active: true,
@@ -248,6 +251,14 @@ export class LocalFileStore implements Store {
         throw new StoreError("Invalid join PIN", "FORBIDDEN");
       }
 
+      const userId = input.user_id ?? null;
+      if (userId) {
+        const owned = data.members.find(
+          (m) => m.league_id === league.id && m.user_id === userId && m.active,
+        );
+        if (owned) return { league, member: owned };
+      }
+
       const existing = data.members.find(
         (m) =>
           m.league_id === league.id &&
@@ -255,20 +266,21 @@ export class LocalFileStore implements Store {
       );
 
       if (existing) {
-        if (existing.active) {
+        if (existing.active && existing.user_id) {
           throw new StoreError(
             "That display name is already taken in this league",
             "CONFLICT",
           );
         }
         existing.active = true;
+        existing.user_id = userId;
         return { league, member: existing };
       }
 
       const member: LeagueMember = {
         id: newId("member"),
         league_id: league.id,
-        user_id: null,
+        user_id: userId,
         display_name: displayName,
         role: "member",
         active: true,
@@ -326,6 +338,30 @@ export class LocalFileStore implements Store {
   async listMembers(leagueId: string): Promise<LeagueMember[]> {
     return this.withRead((data) =>
       data.members.filter((m) => m.league_id === leagueId && m.active),
+    );
+  }
+
+  async listLeaguesForUser(userId: string): Promise<UserLeague[]> {
+    return this.withRead((data) =>
+      data.members
+        .filter((m) => m.user_id === userId && m.active)
+        .flatMap((member) => {
+          const league = data.leagues.find((l) => l.id === member.league_id);
+          return league ? [{ league, member }] : [];
+        })
+        .sort((a, b) => a.league.name.localeCompare(b.league.name)),
+    );
+  }
+
+  async getMemberForUser(
+    leagueId: string,
+    userId: string,
+  ): Promise<LeagueMember | null> {
+    return this.withRead(
+      (data) =>
+        data.members.find(
+          (m) => m.league_id === leagueId && m.user_id === userId && m.active,
+        ) ?? null,
     );
   }
 

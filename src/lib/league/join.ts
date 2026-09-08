@@ -1,13 +1,9 @@
-/** localStorage key for “who am I” in a league (shared across join + dashboard). */
-export function memberStorageKey(slug: string): string {
-  return `tdpool:member:${slug}`;
-}
-
 /** Random 4-digit join PIN (1000–9999). */
 export function generateJoinPin(): string {
   return String(1000 + Math.floor(Math.random() * 9000));
 }
 
+/** Accepts a bare slug, a pasted invite URL, or a slug with stray slashes. */
 export function normalizeJoinSlug(raw: string): string {
   return raw
     .trim()

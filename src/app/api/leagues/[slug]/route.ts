@@ -1,6 +1,7 @@
 import { NextResponse, after } from "next/server";
 import { getStore } from "@/lib/store";
 import { storeErrorResponse } from "@/lib/api/store-error";
+import { requireApiMembership } from "@/lib/auth/api";
 import {
   loadLeagueDashboard,
   refreshLeagueData,
@@ -18,6 +19,9 @@ export async function GET(
 ) {
   try {
     const { slug } = await context.params;
+    const access = await requireApiMembership(slug);
+    if (!access.ok) return access.response;
+
     const dashboard = await loadLeagueDashboard(slug);
     if (!dashboard) {
       return NextResponse.json(

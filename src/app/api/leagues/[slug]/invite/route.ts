@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getStore } from "@/lib/store";
 import { storeErrorResponse } from "@/lib/api/store-error";
-import { generateJoinPin } from "@/lib/league/member-storage";
+import { generateJoinPin } from "@/lib/league/join";
 
 type InviteBody = {
   adminPin?: string;

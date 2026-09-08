@@ -9,6 +9,7 @@ import {
   type PickResultUpdate,
   type Store,
   type SyncStateRow,
+  type UserLeague,
   effectiveSyncTtl,
 } from "@/lib/store/types";
 import { chunk } from "@/lib/concurrency";
@@ -349,7 +350,7 @@ export class SupabaseStore implements Store {
         id: leagueId,
         name: input.name.trim(),
         slug,
-        admin_user_id: null,
+        admin_user_id: input.admin_user_id ?? null,
         currency: input.currency ?? "USD",
         betting_mode: input.betting_mode ?? "individual",
         contribution_per_member: input.contribution_per_member ?? 10,
@@ -380,7 +381,10 @@ export class SupabaseStore implements Store {
     const members = memberNames.map((name) => ({
       id: randomUUID(),
       league_id: leagueId,
-      user_id: null,
+      // Only the creator's seat is claimed; the rest stay open until each
+      // person joins with the PIN under their own account.
+      user_id:
+        name === input.admin_display_name ? (input.admin_user_id ?? null) : null,
       display_name: name,
       role: name === input.admin_display_name ? "admin" : "member",
       active: true,
@@ -414,6 +418,15 @@ export class SupabaseStore implements Store {
       throw new StoreError("Invalid join PIN", "FORBIDDEN");
     }
 
+    const userId = input.user_id ?? null;
+
+    // Rejoining a league you are already in is a no-op rather than an error, so
+    // tapping an old invite link never strands anyone behind a name collision.
+    if (userId) {
+      const owned = await this.getMemberForUser(league.id, userId);
+      if (owned) return { league, member: owned };
+    }
+
     const { data: existingRows, error: existingErr } = await this.client
       .from("league_members")
       .select("*")
@@ -427,15 +440,17 @@ export class SupabaseStore implements Store {
     );
 
     if (existing) {
-      if (existing.active) {
+      if (existing.active && existing.user_id) {
         throw new StoreError(
           "That display name is already taken in this league",
           "CONFLICT",
         );
       }
+      // An unclaimed seat — either pre-created by the league admin or left
+      // behind by a removed member — gets handed to whoever knows the PIN.
       const { data: reactivated, error: reactivateErr } = await this.client
         .from("league_members")
-        .update({ active: true })
+        .update({ active: true, user_id: userId })
         .eq("id", existing.id)
         .select("*")
         .single();
@@ -456,7 +471,7 @@ export class SupabaseStore implements Store {
       .insert({
         id: randomUUID(),
         league_id: league.id,
-        user_id: null,
+        user_id: userId,
         display_name: displayName,
         role: "member",
         active: true,
@@ -547,6 +562,53 @@ export class SupabaseStore implements Store {
       .eq("active", true);
     if (error) throw error;
     return (data ?? []).map(mapMember);
+  }
+
+  async listLeaguesForUser(userId: string): Promise<UserLeague[]> {
+    const { data: memberRows, error: memberErr } = await this.client
+      .from("league_members")
+      .select("*")
+      .eq("user_id", userId)
+      .eq("active", true);
+    if (memberErr) throw memberErr;
+
+    const members = (memberRows ?? []).map(mapMember);
+    if (members.length === 0) return [];
+
+    const { data: leagueRows, error: leagueErr } = await this.client
+      .from("leagues")
+      .select("*")
+      .in(
+        "id",
+        members.map((m) => m.league_id),
+      );
+    if (leagueErr) throw leagueErr;
+
+    const leaguesById = new Map(
+      (leagueRows ?? []).map((row) => [String(row.id), mapLeague(row)]),
+    );
+
+    return members
+      .flatMap((member) => {
+        const league = leaguesById.get(member.league_id);
+        return league ? [{ league, member }] : [];
+      })
+      .sort((a, b) => a.league.name.localeCompare(b.league.name));
+  }
+
+  async getMemberForUser(
+    leagueId: string,
+    userId: string,
+  ): Promise<LeagueMember | null> {
+    const { data, error } = await this.client
+      .from("league_members")
+      .select("*")
+      .eq("league_id", leagueId)
+      .eq("user_id", userId)
+      .eq("active", true)
+      .maybeSingle();
+    if (error) throw error;
+    return data ? mapMember(data) : null;
   }
 
   async getPicksForWeek(leagueId: string, weekId: string): Promise<Pick[]> {

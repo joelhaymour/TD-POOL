@@ -4,9 +4,17 @@ import { storeErrorResponse } from "@/lib/api/store-error";
 
 /**
  * Bootstrap helper: seed demo league into Supabase from mock payload.
- * Only enabled when USE_SUPABASE=true. Open for local/bootstrap; protect in prod.
+ * Development only — in production this would let anyone drop a demo league
+ * into the live project.
  */
 export async function POST() {
+  if (process.env.NODE_ENV === "production") {
+    return NextResponse.json(
+      { error: "Seeding is disabled in production", code: "FORBIDDEN" },
+      { status: 403 },
+    );
+  }
+
   if (process.env.USE_SUPABASE !== "true") {
     return NextResponse.json(
       {

@@ -9,23 +9,23 @@ import type { PlayerFiltersValue } from "@/components/players/player-filters";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/components/ui/toast";
 import { useLeagueRealtime } from "@/hooks/use-league-realtime";
-import { memberStorageKey } from "@/lib/league/member-storage";
 import { toPlayerCard } from "@/lib/api/mappers";
 import type { LeagueDashboard } from "@/lib/types";
 
 export function DashboardClient({
   slug,
   initialDashboard,
+  viewer,
 }: {
   slug: string;
   initialDashboard: LeagueDashboard | null;
+  viewer: { memberId: string };
 }) {
   const { toast } = useToast();
   const [dashboard, setDashboard] = useState<LeagueDashboard | null>(
     initialDashboard,
   );
   const [loading, setLoading] = useState(!initialDashboard);
-  const [memberId, setMemberId] = useState<string | null>(null);
   const [filters, setFilters] = useState<PlayerFiltersValue>({
     query: "",
     position: "ALL",
@@ -71,20 +71,6 @@ export function DashboardClient({
     const id = window.setInterval(() => void refresh(true), ms);
     return () => window.clearInterval(id);
   }, [slug, realtimeConnected, refresh]);
-  useEffect(() => {
-    const saved = window.localStorage.getItem(memberStorageKey(slug));
-    if (saved) setMemberId(saved);
-  }, [slug]);
-
-  useEffect(() => {
-    if (!dashboard || memberId) return;
-    const admin = dashboard.members.find((m) => m.member.role === "admin");
-    const first = admin ?? dashboard.members[0];
-    if (first) {
-      setMemberId(first.member.id);
-      window.localStorage.setItem(memberStorageKey(slug), first.member.id);
-    }
-  }, [dashboard, memberId, slug]);
 
   const players = useMemo(() => {
     if (!dashboard) return [];
@@ -106,28 +92,19 @@ export function DashboardClient({
   }, [dashboard, slug]);
 
   async function onSelect(playerId: string) {
-    if (!memberId || !dashboard) {
-      toast({
-        title: "Pick who you are first",
-        description: "Select your name above before locking a player.",
-        tone: "error",
-      });
-      return;
-    }
+    if (!dashboard) return;
 
     const existing = dashboard.members.find(
-      (m) => m.member.id === memberId && m.pick,
+      (m) => m.member.id === viewer.memberId && m.pick,
     );
-    const method = existing ? "PATCH" : "POST";
 
     setSelecting(true);
     try {
       const res = await fetch("/api/picks", {
-        method,
+        method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           leagueSlug: slug,
-          memberId,
           playerId,
           weekId: dashboard.week.id,
         }),
@@ -197,29 +174,11 @@ export function DashboardClient({
         showMoney={dashboard.league.betting_mode !== "none"}
       />
 
-      <label className="block rounded-2xl border border-border bg-chalk px-4 py-3 shadow-card">
-        <span className="text-[10px] font-bold uppercase tracking-[0.1em] text-ink-faint">
-          I am
-        </span>
-        <select
-          className="mt-1.5 h-10 w-full rounded-xl border border-border-strong bg-field px-3 text-sm font-semibold text-ink outline-none focus:border-turf focus:ring-2 focus:ring-turf/20"
-          value={memberId ?? ""}
-          onChange={(e) => {
-            const id = e.target.value;
-            setMemberId(id);
-            window.localStorage.setItem(memberStorageKey(slug), id);
-          }}
-        >
-          {dashboard.members.map((m) => (
-            <option key={m.member.id} value={m.member.id}>
-              {m.member.display_name}
-              {m.member.role === "admin" ? " (admin)" : ""}
-            </option>
-          ))}
-        </select>
-      </label>
-
-      <MemberPickStatus members={memberRows} defaultOpen />
+      <MemberPickStatus
+        members={memberRows}
+        defaultOpen
+        highlightMemberId={viewer.memberId}
+      />
 
       <div>
         <h2 className="mb-2 font-display text-lg font-bold uppercase tracking-wide text-ink">

@@ -38,6 +38,14 @@ export type JoinLeagueInput = {
   slug: string;
   display_name: string;
   join_pin: string;
+  /** Auth user claiming the membership, so the seat survives a sign-out. */
+  user_id?: string | null;
+};
+
+/** A league the signed-in user belongs to, paired with their seat in it. */
+export type UserLeague = {
+  league: League;
+  member: LeagueMember;
 };
 
 export type JoinLeagueResult = {
@@ -73,6 +81,13 @@ export interface Store {
   /** Join via slug + join PIN; creates (or reactivates) a member row. */
   joinLeague(input: JoinLeagueInput): Promise<JoinLeagueResult>;
   listMembers(leagueId: string): Promise<LeagueMember[]>;
+  /** Every league the user holds an active seat in. */
+  listLeaguesForUser(userId: string): Promise<UserLeague[]>;
+  /** The user's seat in one league, or null when they are not a member. */
+  getMemberForUser(
+    leagueId: string,
+    userId: string,
+  ): Promise<LeagueMember | null>;
   /** Soft-deactivate or reactivate a member. Blocks deactivating the last admin. */
   setMemberActive(
     leagueId: string,

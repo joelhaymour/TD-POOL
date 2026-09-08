@@ -1,32 +1,24 @@
-"use client";
-
-import { useEffect, useState, type ReactNode } from "react";
+import type { ReactNode } from "react";
 import { AppShell } from "@/components/layout/app-shell";
 import { LeagueHeader } from "@/components/layout/league-header";
 import { leagueNavItems } from "@/components/layout/bottom-nav";
 
+// Name, week and viewer all come from the server render. Re-fetching the
+// dashboard here just to read them tripled the work of every page load.
 export function LeagueShell({
   slug,
-  leagueName: initialName,
-  weekNumber: initialWeek,
+  leagueName,
+  weekNumber,
+  viewerName,
   children,
 }: {
   slug: string;
   leagueName: string;
   weekNumber: number;
+  viewerName: string;
   children: ReactNode;
 }) {
   const basePath = `/${slug}`;
-  const [leagueName, setLeagueName] = useState(initialName);
-  const [weekNumber, setWeekNumber] = useState(initialWeek);
-
-  useEffect(() => {
-    setLeagueName(initialName);
-    setWeekNumber(initialWeek);
-  }, [initialName, initialWeek]);
-
-  // Name and week come from the server render. Re-fetching the whole dashboard
-  // here just to read two fields tripled the work of every page load.
 
   return (
     <AppShell
@@ -36,6 +28,7 @@ export function LeagueShell({
         <LeagueHeader
           leagueName={leagueName}
           weekNumber={weekNumber || 1}
+          subtitle={viewerName}
           settingsHref={`${basePath}/settings`}
         />
       }

@@ -10,7 +10,6 @@ import {
 } from "@/components/players/player-detail";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/components/ui/toast";
-import { memberStorageKey } from "@/lib/league/member-storage";
 
 type DetailResponse = {
   player: PlayerDetailData;
@@ -46,35 +45,15 @@ export default function PlayerDetailPage() {
   }, [refresh]);
 
   async function onSelect(id: string) {
-    const memberId = window.localStorage.getItem(memberStorageKey(slug));
-    if (!memberId || !data) {
-      toast({
-        title: "Pick who you are first",
-        description: "Go back to Picks and select your name.",
-        tone: "error",
-      });
-      return;
-    }
+    if (!data) return;
 
     setSelecting(true);
     try {
-      const check = await fetch(`/api/leagues/${slug}`);
-      const dash = check.ok
-        ? ((await check.json()) as {
-            members: Array<{ member: { id: string }; pick: unknown }>;
-          })
-        : null;
-      const hasPick = dash?.members.some(
-        (m) => m.member.id === memberId && m.pick,
-      );
-      const method = hasPick ? "PATCH" : "POST";
-
       const res = await fetch("/api/picks", {
-        method,
+        method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           leagueSlug: slug,
-          memberId,
           playerId: id,
           weekId: data.week.id,
         }),

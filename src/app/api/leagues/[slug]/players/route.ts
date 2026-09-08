@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getStore } from "@/lib/store";
 import { storeErrorResponse } from "@/lib/api/store-error";
+import { requireApiMembership } from "@/lib/auth/api";
 import { toPlayerCard } from "@/lib/api/mappers";
 import type { PlayerPosition } from "@/lib/types";
 
@@ -10,6 +11,9 @@ export async function GET(
 ) {
   try {
     const { slug } = await context.params;
+    const access = await requireApiMembership(slug);
+    if (!access.ok) return access.response;
+
     const { searchParams } = new URL(request.url);
     const search = searchParams.get("search")?.trim().toLowerCase() ?? "";
     const position = searchParams.get("position");

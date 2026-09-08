@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getStore } from "@/lib/store";
 import { storeErrorResponse } from "@/lib/api/store-error";
+import { requireApiMembership } from "@/lib/auth/api";
 import { toPlayerDetail } from "@/lib/api/mappers";
 import { generatePlayerAnalysisCopy } from "@/lib/model/explain-ai";
 import type { PlayerWeekFeatures } from "@/lib/model/features";
@@ -11,6 +12,9 @@ export async function GET(
 ) {
   try {
     const { slug, playerId } = await context.params;
+    const access = await requireApiMembership(slug);
+    if (!access.ok) return access.response;
+
     const store = getStore();
     const dashboard = await store.getDashboard(slug);
     if (!dashboard) {

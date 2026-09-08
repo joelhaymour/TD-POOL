@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Settings } from "lucide-react";
+import { ChevronLeft, Settings } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import { Badge } from "@/components/ui/badge";
 
@@ -21,9 +21,15 @@ export function LeagueHeader({
   return (
     <div className={cn("flex items-start justify-between gap-3", className)}>
       <div className="min-w-0">
-        <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-turf">
-          Anytime TD Pool
-        </p>
+        {/* The only way out of a league once you are in one, for anybody who
+            runs more than one pool. */}
+        <Link
+          href="/"
+          className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-[0.14em] text-turf hover:text-ink"
+        >
+          <ChevronLeft className="h-3 w-3" />
+          All leagues
+        </Link>
         <h1 className="font-display truncate text-2xl font-extrabold uppercase leading-tight tracking-wide text-ink">
           {leagueName}
         </h1>

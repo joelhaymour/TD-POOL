@@ -18,12 +18,15 @@ export type MemberPickStatusProps = {
   members: MemberPickRow[];
   defaultOpen?: boolean;
   className?: string;
+  /** The viewer's own row, marked so they can find themselves in a long list. */
+  highlightMemberId?: string;
 };
 
 export function MemberPickStatus({
   members,
   defaultOpen = true,
   className,
+  highlightMemberId,
 }: MemberPickStatusProps) {
   const [open, setOpen] = useState(defaultOpen);
   const submitted = members.filter((m) => Boolean(m.playerName)).length;
@@ -61,16 +64,25 @@ export function MemberPickStatus({
         <ul className="divide-y divide-border border-t border-border">
           {members.map((m) => {
             const hasPick = Boolean(m.playerName);
+            const isViewer = m.memberId === highlightMemberId;
             return (
               <li
                 key={m.memberId}
-                className="flex items-center gap-2.5 px-4 py-2.5 text-sm"
+                className={cn(
+                  "flex items-center gap-2.5 px-4 py-2.5 text-sm",
+                  isViewer && "bg-turf/5",
+                )}
               >
                 <span aria-hidden className="text-base leading-none">
                   {hasPick ? "✅" : "⏳"}
                 </span>
                 <span className="min-w-0 flex-1 truncate font-semibold text-ink">
                   {m.memberName}
+                  {isViewer ? (
+                    <span className="ml-1.5 text-[10px] font-bold uppercase tracking-wider text-turf">
+                      You
+                    </span>
+                  ) : null}
                 </span>
                 <span className="text-ink-faint">—</span>
                 {hasPick && m.playerHref ? (
