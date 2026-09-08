@@ -26,15 +26,16 @@ export type PlayerDetailData = {
   opponentFullName?: string;
   rank: number;
   ourProbability: number;
-  marketProbability: number;
-  americanOdds: number;
-  consensusOdds?: number;
+  marketProbability: number | null;
+  americanOdds: number | null;
+  consensusOdds?: number | null;
   bookOdds?: SportsbookQuote[];
   matchupStars: number;
   goalLineStars: number;
   availability: BadgeStatus;
   injuryNote?: string | null;
   takenByName?: string | null;
+  limitedData?: boolean;
 
   overview?: {
     whyWeLike?: string[];
@@ -55,7 +56,8 @@ export type PlayerDetailProps = {
   className?: string;
 };
 
-function pct(n: number) {
+function pct(n: number | null | undefined) {
+  if (n == null || !Number.isFinite(n)) return "Unavailable";
   return `${Math.round(n * 100)}%`;
 }
 
@@ -281,7 +283,7 @@ export function PlayerDetail({
           </div>
           <div className="rounded-xl bg-field px-3 py-2.5">
             <p className="text-[10px] font-bold uppercase tracking-wider text-ink-faint">
-              Our TD %
+              TD Pool %
             </p>
             <p className="font-display text-3xl font-extrabold text-ink">
               {pct(player.ourProbability)}
@@ -304,6 +306,12 @@ export function PlayerDetail({
             </p>
           </div>
         </div>
+
+        {player.limitedData ? (
+          <p className="mt-2 text-[10px] font-semibold uppercase tracking-wider text-warning">
+            Limited data — lower confidence estimate
+          </p>
+        ) : null}
 
         <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1">
           <StarRating value={player.matchupStars} label="Matchup" />

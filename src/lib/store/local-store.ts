@@ -12,6 +12,10 @@ import {
 import { slugify } from "@/lib/utils/slug";
 import { resolvePoolWeek, weekWindow } from "@/lib/nfl/calendar";
 import { playerWeekRankKey } from "@/lib/scoring/rank";
+import {
+  featuresFromResearch,
+  recomputePlayerAgainstCohort,
+} from "@/lib/model/recompute-with-market";
 import { StoreError, type Store, type GameStatusUpdate, type PickResultUpdate, type ApplyOddsRefreshInput, type JoinLeagueInput, type JoinLeagueResult } from "@/lib/store/types";
 import type {
   CreateLeagueInput,
@@ -602,33 +606,93 @@ export class LocalFileStore implements Store {
       }
 
       let playersUpdated = 0;
+      const marketByPlayerId = new Map<
+        string,
+        {
+          american_odds: number;
+          decimal_odds: number;
+          implied_probability: number;
+          books: Array<{ sportsbook: string; american_odds: number }>;
+        }
+      >();
+
       for (const row of input.consensus) {
         const player = playersByExternal.get(row.external_player_id);
         if (!player) continue;
-        const pwd = data.player_week_data.find(
-          (p) => p.week_id === input.weekId && p.player_id === player.id,
-        );
-        if (!pwd) continue;
-
-        pwd.consensus_american_odds = row.american_odds;
-        pwd.consensus_decimal_odds = row.decimal_odds;
-        pwd.market_probability = row.implied_probability;
-        pwd.research_json = {
-          ...pwd.research_json,
-          market: {
-            consensus_american: row.american_odds,
-            consensus_implied: row.implied_probability,
-            books: row.books.map((b) => ({
-              sportsbook: b.sportsbook,
-              american_odds: b.american_odds,
-            })),
-          },
-        };
-        pwd.updated_at = fetchedAt;
-        playersUpdated += 1;
+        marketByPlayerId.set(player.id, {
+          american_odds: row.american_odds,
+          decimal_odds: row.decimal_odds,
+          implied_probability: row.implied_probability,
+          books: row.books.map((b) => ({
+            sportsbook: b.sportsbook,
+            american_odds: b.american_odds,
+          })),
+        });
       }
 
-      // Re-rank so market favorites (e.g. Gibbs) rise above long shots.
+      const weekRows = data.player_week_data.filter(
+        (p) => p.week_id === input.weekId,
+      );
+
+      const cohort = weekRows
+        .map((pwd) => {
+          const base = featuresFromResearch(pwd.research_json);
+          if (!base) return null;
+          const market = marketByPlayerId.get(pwd.player_id);
+          if (!market) return base;
+          return {
+            ...base,
+            marketConsensusProbability: market.implied_probability,
+            consensusAnytimeTdOdds: market.american_odds,
+            bestAnytimeTdOdds: market.american_odds,
+            marketBooks: market.books.length,
+          };
+        })
+        .filter((f): f is NonNullable<typeof f> => f != null);
+
+      for (const pwd of weekRows) {
+        const market = marketByPlayerId.get(pwd.player_id);
+        if (market) {
+          pwd.consensus_american_odds = market.american_odds;
+          pwd.consensus_decimal_odds = market.decimal_odds;
+          pwd.market_probability = market.implied_probability;
+          pwd.research_json = {
+            ...pwd.research_json,
+            market: {
+              consensus_american: market.american_odds,
+              consensus_implied: market.implied_probability,
+              books: market.books,
+            },
+          };
+          playersUpdated += 1;
+        }
+
+        const base = featuresFromResearch(pwd.research_json);
+        if (!base || !cohort.length) continue;
+        const features = market
+          ? {
+              ...base,
+              marketConsensusProbability: market.implied_probability,
+              consensusAnytimeTdOdds: market.american_odds,
+              bestAnytimeTdOdds: market.american_odds,
+              marketBooks: market.books.length,
+            }
+          : base;
+        const recomputed = recomputePlayerAgainstCohort({
+          research: pwd.research_json,
+          features,
+          cohort,
+        });
+        pwd.our_probability = recomputed.our_probability;
+        pwd.td_pool_score = recomputed.td_pool_score;
+        pwd.matchup_rating = recomputed.matchup_rating;
+        pwd.goal_line_rating = recomputed.goal_line_rating;
+        pwd.tier = recomputed.tier;
+        pwd.research_json = recomputed.research_json;
+        pwd.updated_at = fetchedAt;
+      }
+
+      // Re-rank so market favorites rise by TD Pool %.
       data.player_week_data
         .filter((p) => p.week_id === input.weekId)
         .sort((a, b) => playerWeekRankKey(b) - playerWeekRankKey(a))

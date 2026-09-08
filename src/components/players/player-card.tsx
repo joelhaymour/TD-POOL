@@ -21,13 +21,14 @@ export type PlayerCardData = {
   position: string;
   opponent: string;
   ourProbability: number;
-  marketProbability: number;
-  americanOdds: number;
+  marketProbability: number | null;
+  americanOdds: number | null;
   matchupStars: number;
   goalLineStars: number;
   availability: PlayerCardAvailability;
   takenByName?: string | null;
   analysisHref: string;
+  limitedData?: boolean;
 };
 
 export type PlayerCardProps = {
@@ -37,7 +38,8 @@ export type PlayerCardProps = {
   className?: string;
 };
 
-function pct(n: number) {
+function pct(n: number | null | undefined) {
+  if (n == null || !Number.isFinite(n)) return "Unavailable";
   return `${Math.round(n * 100)}%`;
 }
 
@@ -101,7 +103,7 @@ export function PlayerCard({
       <div className="mt-3 grid grid-cols-3 gap-2">
         <div className="rounded-xl bg-field px-2.5 py-2">
           <p className="text-[9px] font-bold uppercase tracking-wider text-ink-faint">
-            Our %
+            TD Pool %
           </p>
           <p className="font-display text-xl font-extrabold text-ink">
             {pct(player.ourProbability)}
@@ -124,6 +126,12 @@ export function PlayerCard({
           </p>
         </div>
       </div>
+
+      {player.limitedData ? (
+        <p className="mt-2 text-[10px] font-semibold uppercase tracking-wider text-warning">
+          Limited data
+        </p>
+      ) : null}
 
       <div className="mt-2.5 flex flex-wrap items-center gap-x-3 gap-y-1">
         <StarRating value={player.matchupStars} size="sm" label="Matchup" />

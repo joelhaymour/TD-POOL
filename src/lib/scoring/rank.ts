@@ -1,28 +1,28 @@
 import type { PlayerWeekData } from "@/lib/types";
-import { blendModelWithMarket } from "@/lib/providers/sleeper/research";
 
-/** Higher = better anytime-TD pool rank. Market dominates when present. */
+/** Higher = better. Rank by proprietary TD Pool % (our_probability). */
 export function playerWeekRankKey(pwd: Pick<
   PlayerWeekData,
-  "market_probability" | "td_pool_score" | "our_probability" | "consensus_american_odds"
+  "our_probability" | "td_pool_score" | "market_probability" | "consensus_american_odds"
 >): number {
-  const market =
-    pwd.market_probability > 0.01 && pwd.consensus_american_odds !== 0
-      ? pwd.market_probability
-      : 0;
-  return market * 100_000 + pwd.td_pool_score;
+  return pwd.our_probability * 1_000_000 + pwd.td_pool_score;
 }
 
+/** Display TD Pool % — already the calibrated model output. */
 export function displayOurProbability(pwd: Pick<
   PlayerWeekData,
-  "market_probability" | "td_pool_score" | "our_probability" | "consensus_american_odds"
+  "our_probability"
 >): number {
-  return blendModelWithMarket({
-    modelProbability: pwd.our_probability,
-    modelScore: pwd.td_pool_score,
-    marketProbability:
-      pwd.market_probability > 0.01 ? pwd.market_probability : null,
-    marketAmerican:
-      pwd.consensus_american_odds !== 0 ? pwd.consensus_american_odds : null,
-  }).our_probability;
+  return pwd.our_probability;
+}
+
+export function hasMarketOdds(pwd: Pick<
+  PlayerWeekData,
+  "market_probability" | "consensus_american_odds"
+>): boolean {
+  return (
+    pwd.consensus_american_odds !== 0 &&
+    Number.isFinite(pwd.consensus_american_odds) &&
+    pwd.market_probability > 0.01
+  );
 }

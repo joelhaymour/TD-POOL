@@ -932,54 +932,130 @@ export class SupabaseStore implements Store {
     }
 
     let playersUpdated = 0;
+    const marketByPlayerId = new Map<
+      string,
+      {
+        american_odds: number;
+        decimal_odds: number;
+        implied_probability: number;
+        books: Array<{ sportsbook: string; american_odds: number }>;
+      }
+    >();
+
     for (const row of input.consensus) {
       const player = playersByExternal.get(row.external_player_id);
       if (!player) continue;
+      marketByPlayerId.set(player.id, {
+        american_odds: row.american_odds,
+        decimal_odds: row.decimal_odds,
+        implied_probability: row.implied_probability,
+        books: row.books.map((b) => ({
+          sportsbook: b.sportsbook,
+          american_odds: b.american_odds,
+        })),
+      });
+    }
 
-      const { data: pwdRow } = await this.client
-        .from("player_week_data")
-        .select("*")
-        .eq("week_id", input.weekId)
-        .eq("player_id", player.id)
-        .maybeSingle();
-      if (!pwdRow) continue;
+    const { data: weekRows, error: weekRowsErr } = await this.client
+      .from("player_week_data")
+      .select("*")
+      .eq("week_id", input.weekId);
+    if (weekRowsErr) throw weekRowsErr;
 
+    const { featuresFromResearch, recomputePlayerAgainstCohort } = await import(
+      "@/lib/model/recompute-with-market"
+    );
+
+    const patchedFeatures = (weekRows ?? []).map((pwdRow) => {
+      const research = (pwdRow.research_json as ResearchJson) ?? null;
+      if (!research) return null;
+      const base = featuresFromResearch(research);
+      if (!base) return null;
+      const market = marketByPlayerId.get(String(pwdRow.player_id));
+      if (!market) return base;
+      return {
+        ...base,
+        marketConsensusProbability: market.implied_probability,
+        consensusAnytimeTdOdds: market.american_odds,
+        bestAnytimeTdOdds: market.american_odds,
+        marketBooks: market.books.length,
+      };
+    });
+    const cohort = patchedFeatures.filter(
+      (f): f is NonNullable<typeof f> => f != null,
+    );
+
+    for (const pwdRow of weekRows ?? []) {
+      const market = marketByPlayerId.get(String(pwdRow.player_id));
       const research = {
         ...((pwdRow.research_json as ResearchJson) ?? {}),
-        market: {
-          consensus_american: row.american_odds,
-          consensus_implied: row.implied_probability,
-          books: row.books.map((b) => ({
-            sportsbook: b.sportsbook,
-            american_odds: b.american_odds,
-          })),
-        },
-      };
+        ...(market
+          ? {
+              market: {
+                consensus_american: market.american_odds,
+                consensus_implied: market.implied_probability,
+                books: market.books,
+              },
+            }
+          : {}),
+      } as ResearchJson;
+
+      const base = featuresFromResearch(research);
+      let recomputed = null;
+      if (base && cohort.length) {
+        const features = market
+          ? {
+              ...base,
+              marketConsensusProbability: market.implied_probability,
+              consensusAnytimeTdOdds: market.american_odds,
+              bestAnytimeTdOdds: market.american_odds,
+              marketBooks: market.books.length,
+            }
+          : base;
+        recomputed = recomputePlayerAgainstCohort({
+          research,
+          features,
+          cohort,
+        });
+      }
 
       const { error: updErr } = await this.client
         .from("player_week_data")
         .update({
-          consensus_american_odds: row.american_odds,
-          consensus_decimal_odds: row.decimal_odds,
-          market_probability: row.implied_probability,
-          research_json: research,
+          ...(market
+            ? {
+                consensus_american_odds: market.american_odds,
+                consensus_decimal_odds: market.decimal_odds,
+                market_probability: market.implied_probability,
+              }
+            : {}),
+          research_json: recomputed?.research_json ?? research,
+          ...(recomputed
+            ? {
+                our_probability: recomputed.our_probability,
+                td_pool_score: recomputed.td_pool_score,
+                matchup_rating: recomputed.matchup_rating,
+                goal_line_rating: recomputed.goal_line_rating,
+                tier: recomputed.tier,
+              }
+            : {}),
           updated_at: fetchedAt,
         })
         .eq("id", pwdRow.id);
       if (updErr) throw updErr;
-      playersUpdated += 1;
+      if (market) playersUpdated += 1;
     }
 
-    // Persist fresh ranks after market quotes land.
-    const { data: weekRows, error: weekRowsErr } = await this.client
+    // Persist ranks by TD Pool %.
+    const { data: rankedRows, error: rankedErr } = await this.client
       .from("player_week_data")
       .select(
         "id, market_probability, td_pool_score, our_probability, consensus_american_odds",
       )
       .eq("week_id", input.weekId);
-    if (weekRowsErr) throw weekRowsErr;
+    if (rankedErr) throw rankedErr;
 
-    const ordered = [...(weekRows ?? [])].sort(
+    const ordered = [...(rankedRows ?? [])].sort(
       (a, b) =>
         playerWeekRankKey({
           market_probability: num(b.market_probability),

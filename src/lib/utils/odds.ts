@@ -36,7 +36,7 @@ export function impliedProbabilityFromAmerican(american: number): number {
 /** Format American odds for display, e.g. +150 or -110. */
 export function formatAmerican(american: number | null | undefined): string {
   if (american == null || !Number.isFinite(american) || american === 0) {
-    return "—";
+    return "Unavailable";
   }
   const rounded = Math.round(american);
   if (rounded > 0) {

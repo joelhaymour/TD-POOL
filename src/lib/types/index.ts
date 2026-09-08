@@ -188,6 +188,23 @@ export interface ResearchJson {
     consensus_implied: number;
     books: Array<{ sportsbook: string; american_odds: number }>;
   };
+  /** Structured TD Pool engine payload (features + contributions). */
+  td_model?: {
+    version: string;
+    data_completeness: number;
+    limited_data: boolean;
+    contributions: Array<{
+      key: string;
+      label: string;
+      delta: number;
+      factorScore: number;
+      detail: string;
+    }>;
+    goal_line_percentile: number;
+    matchup_percentile: number;
+    features: Record<string, unknown>;
+    calculated_at: string;
+  };
 }
 
 export interface PlayerWeekData {

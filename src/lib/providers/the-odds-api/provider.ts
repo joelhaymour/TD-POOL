@@ -2,6 +2,7 @@ import {
   americanToDecimal,
   impliedProbabilityFromAmerican,
 } from "@/lib/utils/odds";
+import { consensusImpliedFromAmericans } from "@/lib/model/math";
 import {
   BOOKMAKER_KEY_MAP,
   normalizePlayerName,
@@ -242,23 +243,15 @@ export class TheOddsApiProvider implements OddsProvider {
     const fetchedAt = nowIso();
     const consensus: ConsensusOdds[] = [];
     for (const [playerId, playerBooks] of byPlayer) {
-      // Prefer median of decimal odds then convert back for stability
-      const decimals = playerBooks
-        .map((q) => q.decimal_odds)
-        .sort((a, b) => a - b);
-      const mid = decimals[Math.floor(decimals.length / 2)]!;
-      const avgAmerican = Math.round(
-        playerBooks.reduce((s, q) => s + q.american_odds, 0) /
-          playerBooks.length,
-      );
+      const americans = playerBooks.map((q) => q.american_odds);
+      const agg = consensusImpliedFromAmericans(americans);
+      if (!agg) continue;
       consensus.push({
         external_player_id: playerId,
         external_game_id: playerBooks[0]!.external_game_id,
-        american_odds: avgAmerican,
-        decimal_odds: Number(mid.toFixed(4)),
-        implied_probability: Number(
-          impliedProbabilityFromAmerican(avgAmerican).toFixed(4),
-        ),
+        american_odds: agg.american,
+        decimal_odds: agg.decimal,
+        implied_probability: agg.implied,
         books: playerBooks,
         fetched_at: fetchedAt,
       });

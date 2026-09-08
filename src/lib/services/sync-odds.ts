@@ -2,6 +2,11 @@ import { getConfiguredOddsSource, getOddsProvider } from "@/lib/providers";
 import { getStore } from "@/lib/store";
 import type { Store } from "@/lib/store/types";
 import type { ConsensusOdds, OddsQuote } from "@/lib/providers/types";
+import {
+  getLastOddsSyncAt,
+  invalidateOddsSyncThrottle,
+  setLastOddsSyncAt,
+} from "@/lib/services/odds-throttle";
 
 export type OddsSyncSummary = {
   source: "live" | "mock";
@@ -14,15 +19,9 @@ export type OddsSyncSummary = {
 };
 
 const ODDS_SYNC_TTL_MS = 5 * 60_000;
-const lastOddsSyncAt = new Map<string, number>();
 const inFlightOddsSync = new Map<string, Promise<OddsSyncSummary | null>>();
 
-export { getConfiguredOddsSource };
-
-/** Call after rematerializing a player board so the next dashboard load re-pulls quotes. */
-export function invalidateOddsSyncThrottle(): void {
-  lastOddsSyncAt.clear();
-}
+export { getConfiguredOddsSource, invalidateOddsSyncThrottle };
 
 /**
  * Refresh anytime TD odds for a league active week.
@@ -34,7 +33,7 @@ export async function autoSyncLeagueOdds(
   options: { force?: boolean } = {},
 ): Promise<OddsSyncSummary | null> {
   const now = Date.now();
-  const last = lastOddsSyncAt.get(slug) ?? 0;
+  const last = getLastOddsSyncAt(slug);
   if (!options.force && now - last < ODDS_SYNC_TTL_MS) {
     return null;
   }
@@ -53,7 +52,7 @@ export async function autoSyncLeagueOdds(
         week: dashboard.week.week,
         weekId: dashboard.week.id,
       });
-      lastOddsSyncAt.set(slug, Date.now());
+      setLastOddsSyncAt(slug, Date.now());
       return summary;
     } catch (err) {
       return {

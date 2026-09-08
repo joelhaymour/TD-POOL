@@ -2,7 +2,7 @@ import type { PlayerCardData } from "@/components/players/player-card";
 import type { PlayerDetailData } from "@/components/players/player-detail";
 import type { BetSlipLeg } from "@/components/picks/bet-slip";
 import { buildPlayerHistory } from "@/lib/providers/mock/mock-history";
-import { displayOurProbability } from "@/lib/scoring/rank";
+import { displayOurProbability, hasMarketOdds } from "@/lib/scoring/rank";
 import type { LeagueDashboard, MemberPickStatus } from "@/lib/types";
 
 type RankedPlayer = LeagueDashboard["ranked_players"][number];
@@ -16,6 +16,7 @@ export function toPlayerCard(
     picksLocked && row.availability === "available"
       ? ("locked" as const)
       : row.availability;
+  const marketOk = hasMarketOdds(row);
 
   return {
     id: row.player.id,
@@ -28,13 +29,14 @@ export function toPlayerCard(
         ? row.game.away_team
         : row.game.home_team,
     ourProbability: displayOurProbability(row),
-    marketProbability: row.market_probability,
-    americanOdds: row.consensus_american_odds,
+    marketProbability: marketOk ? row.market_probability : null,
+    americanOdds: marketOk ? row.consensus_american_odds : null,
     matchupStars: row.matchup_rating,
     goalLineStars: row.goal_line_rating,
     availability,
     takenByName: row.taken_by,
     analysisHref: `/${slug}/players/${row.player.id}`,
+    limitedData: Boolean(row.research_json.td_model?.limited_data),
   };
 }
 
@@ -52,6 +54,10 @@ export function toPlayerDetail(
     picksLocked && row.availability === "available"
       ? ("locked" as const)
       : row.availability;
+  const marketOk = hasMarketOdds(row);
+  const notes = r.matchup.notes || "";
+  const dataLabelMatch = notes.match(/^(.*?)(?:\.|$)/);
+  const opponentDataLabel = dataLabelMatch?.[1]?.trim() || "Opponent data";
 
   return {
     id: row.player.id,
@@ -61,9 +67,9 @@ export function toPlayerDetail(
     opponent,
     rank: row.td_pool_rank,
     ourProbability: displayOurProbability(row),
-    marketProbability: row.market_probability,
-    americanOdds: row.consensus_american_odds,
-    consensusOdds: row.consensus_american_odds,
+    marketProbability: marketOk ? row.market_probability : null,
+    americanOdds: marketOk ? row.consensus_american_odds : null,
+    consensusOdds: marketOk ? row.consensus_american_odds : null,
     bookOdds: r.market.books.map((b) => ({
       book: b.sportsbook,
       americanOdds: b.american_odds,
@@ -73,6 +79,7 @@ export function toPlayerDetail(
     availability,
     injuryNote: r.injuries.player_detail,
     takenByName: row.taken_by,
+    limitedData: Boolean(r.td_model?.limited_data),
     overview: {
       whyWeLike: r.why_we_like,
       concerns: r.concerns,
@@ -89,22 +96,59 @@ export function toPlayerDetail(
       }),
     matchup: [
       { label: "Opponent", value: r.matchup.opponent },
-      { label: "TDs allowed", value: r.matchup.tds_allowed },
-      { label: "RZ TD rate", value: `${Math.round(r.matchup.red_zone_td_rate * 100)}%` },
-      { label: "Rush TDs all.", value: r.matchup.rushing_tds_allowed },
-      { label: "Rec TDs all.", value: r.matchup.receiving_tds_allowed },
-      { label: "Pos rank all.", value: `#${r.matchup.position_rank_allowed}` },
+      {
+        label: "Data source",
+        value: opponentDataLabel,
+      },
+      {
+        label: "RZ TD rate",
+        value: `${Math.round(r.matchup.red_zone_td_rate * 100)}%`,
+      },
+      {
+        label: "Rush TDs allowed",
+        value: r.matchup.rushing_tds_allowed,
+      },
+      {
+        label: "Rec TDs allowed",
+        value: r.matchup.receiving_tds_allowed,
+      },
+      {
+        label: `Pos TD rank vs ${row.player.position}`,
+        value: `#${r.matchup.position_rank_allowed}`,
+      },
+      {
+        label: "GL percentile",
+        value:
+          r.td_model?.goal_line_percentile != null
+            ? `${Math.round(r.td_model.goal_line_percentile * 100)}th`
+            : "—",
+      },
+      {
+        label: "Matchup percentile",
+        value:
+          r.td_model?.matchup_percentile != null
+            ? `${Math.round(r.td_model.matchup_percentile * 100)}th`
+            : "—",
+      },
     ],
     gameEnvironment: [
       { label: "Spread", value: r.game_environment.spread ?? "—" },
       { label: "Total", value: r.game_environment.total ?? "—" },
       {
         label: "Implied pts",
-        value: r.game_environment.team_implied_points ?? "—",
+        value:
+          r.game_environment.team_implied_points != null
+            ? Number(r.game_environment.team_implied_points).toFixed(1)
+            : "—",
       },
       {
         label: "Weather",
-        value: r.game_environment.weather.notes || r.game_environment.weather.severity,
+        value:
+          r.game_environment.weather.notes?.toLowerCase().includes("indoor") ||
+          r.game_environment.weather.severity === "none"
+            ? r.game_environment.weather.notes || "Indoor / calm"
+            : r.game_environment.weather.notes ||
+              r.game_environment.weather.severity,
       },
     ],
     availabilityNotes: [
@@ -113,7 +157,12 @@ export function toPlayerDetail(
         (x) => `${x.name}: ${x.status}${x.note ? ` — ${x.note}` : ""}`,
       ),
     ].filter((x): x is string => Boolean(x)),
-    analysisNotes: [r.matchup.notes].filter(Boolean),
+    analysisNotes: [
+      r.td_model
+        ? `Model ${r.td_model.version} · completeness ${Math.round(r.td_model.data_completeness * 100)}%`
+        : null,
+      r.matchup.notes,
+    ].filter((x): x is string => Boolean(x)),
   };
 }
 

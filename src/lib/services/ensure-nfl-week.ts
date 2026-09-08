@@ -7,19 +7,37 @@ import {
 } from "@/lib/providers/sleeper/client";
 import {
   buildLivePlayerHistoryFromContext,
-  buildResearchFromLive,
   prefetchHistoryContext,
-  scoreTdPoolFromResearch,
 } from "@/lib/providers/sleeper/research";
 import { fetchGameWeather } from "@/lib/providers/weather/open-meteo";
+import {
+  fetchSdioDepthChartsActive,
+  fetchSdioInjuriesByWeek,
+  isSportsDataIoConfigured,
+} from "@/lib/providers/sportsdataio/client";
+import {
+  loadDefenseProfiles,
+  rankTeamsByTdAllowed,
+} from "@/lib/providers/team-defense/from-sleeper";
+import { getWeeklyTdProjectionScores } from "@/lib/providers/projections";
+import { invalidateOddsSyncThrottle } from "@/lib/services/odds-throttle";
+import {
+  buildPlayerWeekFeatures,
+  collectPlayerSeasonStats,
+  featuresToResearchJson,
+  type FeatureBuildContext,
+} from "@/lib/model/build-features";
+import { computeTdPoolFromFeatures } from "@/lib/model/compute-td-pool";
+import { generatePlayerAnalysisCopy } from "@/lib/model/explain-ai";
+import { attachModelMeta } from "@/lib/model/recompute-with-market";
+import { TD_POOL_MODEL_VERSION } from "@/lib/model/version";
 import type { Store } from "@/lib/store/types";
-import type { InjuryStatus, NflWeek } from "@/lib/types";
-import { invalidateOddsSyncThrottle } from "@/lib/services/sync-odds";
+import type { InjuryStatus, NflWeek, ResearchJson } from "@/lib/types";
 
 const materializeInFlight = new Map<string, Promise<NflWeek>>();
 const materializeDoneAt = new Map<string, number>();
-/** Bump when scoring rules change so boards rebuild. */
-const BOARD_VERSION = "anytime-rush-rec-v3-discriminative";
+/** Bump when scoring / feature pipeline changes so boards rebuild. */
+const BOARD_VERSION = `td-engine-${TD_POOL_MODEL_VERSION}`;
 const MATERIALIZE_TTL_MS = 10 * 60_000;
 
 function mapInjury(raw: string | null | undefined): InjuryStatus {
@@ -33,8 +51,9 @@ function mapInjury(raw: string | null | undefined): InjuryStatus {
 }
 
 /**
- * Ensure schedule + skill-position board + live research exist for a season/week.
- * Uses ESPN (games) + Sleeper (roster/history) + Open-Meteo (weather).
+ * Ensure schedule + skill-position board + TD Pool engine exist for a season/week.
+ * Providers: ESPN schedule, Sleeper usage/history, Open-Meteo weather,
+ * optional SportsDataIO depth/injuries, The Odds API (separate sync).
  */
 export async function ensureNflWeekMaterialized(
   store: Store,
@@ -44,21 +63,20 @@ export async function ensureNflWeekMaterialized(
 ): Promise<NflWeek> {
   const key = `${BOARD_VERSION}:${season}-${week}`;
   const last = materializeDoneAt.get(key) ?? 0;
-    if (!options.force && Date.now() - last < MATERIALIZE_TTL_MS) {
-      const existing = await store.getWeekBySeasonWeek(season, week);
-      if (existing) {
-        const pwd = await store.getPlayerWeekData(existing.id);
-        if (pwd.length > 0) {
-          const players = await store.listPlayers();
-          const byId = new Map(players.map((p) => [p.id, p]));
-          const hasStaleQb = pwd.some((row) => {
-            const p = byId.get(row.player_id);
-            return p?.position === "QB" && row.td_pool_rank <= 10;
-          });
-          if (!hasStaleQb) return existing;
-        }
+  if (!options.force && Date.now() - last < MATERIALIZE_TTL_MS) {
+    const existing = await store.getWeekBySeasonWeek(season, week);
+    if (existing) {
+      const pwd = await store.getPlayerWeekData(existing.id);
+      if (pwd.length > 0) {
+        const hasEngine = pwd.some(
+          (row) =>
+            (row.research_json as ResearchJson & { td_model?: { version?: string } })
+              ?.td_model?.version === TD_POOL_MODEL_VERSION,
+        );
+        if (hasEngine) return existing;
       }
     }
+  }
 
   const inflight = materializeInFlight.get(key);
   if (inflight) return inflight;
@@ -88,22 +106,91 @@ export async function ensureNflWeekMaterialized(
       gamesByTeam.set(g.away_team, g);
     }
 
-    // Prefetch Sleeper history for RB/WR/TE research.
     const historyCtx = await prefetchHistoryContext({
       beforeSeason: season,
       beforeWeek: week,
     });
 
+    // Also pull prior-season weeks for early-season blending when needed.
+    const priorCtx =
+      week <= 5
+        ? await prefetchHistoryContext({
+            beforeSeason: season - 1,
+            beforeWeek: 19,
+          })
+        : null;
+
     const weekPlayers = sleeperPlayers.filter((p) => {
       if (!gamesByTeam.has(p.team)) return false;
-      // Anytime TD = rush/receiving only — no QBs on this board.
       return p.position === "RB" || p.position === "WR" || p.position === "TE";
     });
 
     const playerIdByExternal = await store.upsertPlayers(weekPlayers);
     const sleeperMeta = await getSleeperPlayersMap();
 
-    // Weather per game (bounded concurrency)
+    const { profiles: defense, label: defenseLabel } = await loadDefenseProfiles({
+      season,
+      week,
+    });
+    const rushTdRanks = rankTeamsByTdAllowed(defense, "rush");
+    const recTdRanks = rankTeamsByTdAllowed(defense, "rec");
+
+    const depthBySleeperId = new Map<string, number>();
+    const teammateOutByTeam = new Map<string, string[]>();
+
+    if (isSportsDataIoConfigured()) {
+      const [depth, injuries] = await Promise.all([
+        fetchSdioDepthChartsActive(),
+        fetchSdioInjuriesByWeek(season, week),
+      ]);
+      // Depth charts use SportsDataIO player IDs — map by name+team soft key.
+      const byNameTeam = new Map<string, string>();
+      for (const [id, p] of sleeperMeta) {
+        const name = (p.full_name || "").toLowerCase();
+        const team = (p.team || "").toUpperCase();
+        if (name && team) byNameTeam.set(`${name}|${team}`, id);
+      }
+      for (const row of depth) {
+        const name = (row.Name || "").toLowerCase();
+        const team = (row.Team || "").toUpperCase();
+        const sid = byNameTeam.get(`${name}|${team}`);
+        if (sid && row.DepthOrder != null) depthBySleeperId.set(sid, row.DepthOrder);
+      }
+      for (const inj of injuries) {
+        const status = (inj.InjuryStatus || inj.Status || "").toLowerCase();
+        if (!status.includes("out") && !status.includes("doubt")) continue;
+        const team = (inj.Team || "").toUpperCase();
+        if (!team) continue;
+        const list = teammateOutByTeam.get(team) ?? [];
+        list.push(`${inj.Name ?? "Teammate"} (${inj.InjuryStatus || inj.Status})`);
+        teammateOutByTeam.set(team, list);
+      }
+    } else {
+      // Depth proxy from Sleeper injury tags on teammates.
+      for (const [id, p] of sleeperMeta) {
+        if (!p.team) continue;
+        const status = mapInjury(p.injury_status);
+        if (status === "out" || status === "injured_reserve" || status === "doubtful") {
+          const list = teammateOutByTeam.get(p.team) ?? [];
+          list.push(
+            `${p.full_name ?? id}: ${p.injury_status ?? status}`,
+          );
+          teammateOutByTeam.set(p.team, list);
+        }
+      }
+    }
+
+    const projections = await getWeeklyTdProjectionScores({
+      season,
+      week,
+      roster: weekPlayers.map((p) => ({
+        external_player_id: p.external_player_id,
+        name: p.name,
+      })),
+    });
+    const projectionScores = new Map<string, number>();
+    for (const [id, row] of projections) projectionScores.set(id, row.score);
+
     const weatherByGame = new Map<string, Awaited<ReturnType<typeof fetchGameWeather>>>();
     {
       let cursor = 0;
@@ -112,21 +199,77 @@ export async function ensureNflWeekMaterialized(
           const i = cursor;
           cursor += 1;
           const g = games[i]!;
-          const w = await fetchGameWeather({
-            externalGameId: g.external_game_id,
-            homeTeam: g.home_team,
-            kickoffAt: g.kickoff_at,
-            isDome: g.is_dome,
-          });
-          weatherByGame.set(g.external_game_id, w);
+          weatherByGame.set(
+            g.external_game_id,
+            await fetchGameWeather({
+              externalGameId: g.external_game_id,
+              homeTeam: g.home_team,
+              kickoffAt: g.kickoff_at,
+              isDome: g.is_dome,
+            }),
+          );
         }
       });
       await Promise.all(workers);
     }
 
-    // Research per player (CPU-bound over cached stats)
+    const priorSeasonStats = new Map<string, Awaited<ReturnType<typeof collectPlayerSeasonStats>>>();
+    const currentSeasonStats = new Map<string, Awaited<ReturnType<typeof collectPlayerSeasonStats>>>();
+    for (const player of weekPlayers) {
+      const sid = parseSleeperExternalId(player.external_player_id);
+      if (!sid) continue;
+      currentSeasonStats.set(sid, collectPlayerSeasonStats(historyCtx, sid, season));
+      if (priorCtx) {
+        priorSeasonStats.set(sid, collectPlayerSeasonStats(priorCtx, sid, season - 1));
+      } else {
+        // Pull prior from historyCtx when it already scanned previous season.
+        priorSeasonStats.set(sid, collectPlayerSeasonStats(historyCtx, sid, season - 1));
+      }
+    }
+
+    // Seed depth order heuristically from carries/targets if SDIO missing.
+    if (depthBySleeperId.size === 0) {
+      const byTeamPos = new Map<string, Array<{ sid: string; touches: number }>>();
+      for (const player of weekPlayers) {
+        const sid = parseSleeperExternalId(player.external_player_id);
+        if (!sid) continue;
+        const stats = currentSeasonStats.get(sid) ?? priorSeasonStats.get(sid) ?? [];
+        const touches =
+          stats.reduce(
+            (s, st) => s + Number(st.rush_att ?? 0) + Number(st.targets ?? 0),
+            0,
+          ) / Math.max(1, stats.length);
+        const key = `${player.team}|${player.position}`;
+        const list = byTeamPos.get(key) ?? [];
+        list.push({ sid, touches });
+        byTeamPos.set(key, list);
+      }
+      for (const list of byTeamPos.values()) {
+        list.sort((a, b) => b.touches - a.touches);
+        list.forEach((row, i) => depthBySleeperId.set(row.sid, i + 1));
+      }
+    }
+
+    const featureCtx: FeatureBuildContext = {
+      season,
+      week,
+      historyCtx,
+      priorSeasonStats,
+      currentSeasonStats,
+      defense,
+      defenseLabel,
+      rushTdRanks,
+      recTdRanks,
+      depthBySleeperId,
+      teammateOutByTeam,
+      projections: projectionScores,
+    };
+
     type BoardRow = Parameters<Store["replacePlayerWeekBoard"]>[1][number];
-    const board: BoardRow[] = [];
+    const draft: Array<{
+      row: BoardRow;
+      features: ReturnType<typeof buildPlayerWeekFeatures>;
+    }> = [];
 
     for (const player of weekPlayers) {
       const game = gamesByTeam.get(player.team);
@@ -134,7 +277,6 @@ export async function ensureNflWeekMaterialized(
       const gameId = gameIdByExternal.get(game.external_game_id);
       const playerId = playerIdByExternal.get(player.external_player_id);
       if (!gameId || !playerId) continue;
-
       const sleeperId = parseSleeperExternalId(player.external_player_id);
       if (!sleeperId) continue;
 
@@ -151,59 +293,158 @@ export async function ensureNflWeekMaterialized(
           isDome: game.is_dome,
         }));
 
-      const history = buildLivePlayerHistoryFromContext({
-        sleeperPlayerId: sleeperId,
-        team: player.team,
-        opponent,
-        ctx: historyCtx,
-      });
-
-      const research = buildResearchFromLive({
+      const features = buildPlayerWeekFeatures({
+        externalPlayerId: player.external_player_id,
         playerName: player.name,
         team: player.team,
         position: player.position,
         opponent,
         game,
-        history,
         weather,
         injuryStatus,
         injuryDetail: meta?.injury_status
           ? `${player.name}: ${meta.injury_status}`
           : null,
+        ctx: featureCtx,
       });
+      features.playerId = playerId;
 
-      const scored = scoreTdPoolFromResearch(research);
-      board.push({
-        player_id: playerId,
-        game_id: gameId,
-        // Market stays 0 until Odds API sync — do not fake it from the model.
-        market_probability: 0,
-        our_probability: scored.our_probability,
-        td_pool_score: scored.score,
-        td_pool_rank: 0,
-        matchup_rating: scored.matchup_rating,
-        goal_line_rating: scored.goal_line_rating,
-        research_json: research,
-        injury_status: injuryStatus,
-        availability:
-          injuryStatus === "out" || injuryStatus === "injured_reserve"
-            ? "injured"
-            : injuryStatus === "questionable" || injuryStatus === "doubtful"
-              ? "questionable"
-              : "available",
-        tier: scored.tier,
-        consensus_american_odds: 0,
-        consensus_decimal_odds: 0,
+      // Filter teammate outs that are the player themselves.
+      features.teammateInjuryContext = features.teammateInjuryContext.filter(
+        (n) => !n.toLowerCase().includes(player.name.toLowerCase().split(" ").at(-1) ?? "___"),
+      );
+
+      draft.push({
+        features,
+        row: {
+          player_id: playerId,
+          game_id: gameId,
+          market_probability: 0,
+          our_probability: 0,
+          td_pool_score: 0,
+          td_pool_rank: 0,
+          matchup_rating: 1,
+          goal_line_rating: 1,
+          research_json: {
+            why_we_like: [],
+            concerns: [],
+            verdict: "",
+            red_zone: { carries: 0, targets: 0, touches_per_game: 0, share: 0 },
+            goal_line: {
+              carries_inside_10: 0,
+              carries_inside_5: 0,
+              team_share: 0,
+              opportunities: 0,
+            },
+            matchup: {
+              opponent,
+              tds_allowed: 0,
+              red_zone_td_rate: 0,
+              rushing_tds_allowed: 0,
+              receiving_tds_allowed: 0,
+              position_rank_allowed: 16,
+              notes: "",
+            },
+            usage: {
+              snap_share: 0,
+              carry_share: null,
+              target_share: null,
+              targets_per_game: null,
+              end_zone_targets: null,
+              recent_trend: "stable",
+              last_games_summary: "",
+            },
+            game_environment: {
+              spread: game.spread,
+              total: game.total,
+              team_implied_points: null,
+              weather: {
+                temperature_f: weather.temperature_f,
+                wind_mph: weather.wind_mph,
+                precip_chance: weather.precip_chance,
+                severity: weather.severity,
+                notes: weather.notes,
+              },
+            },
+            injuries: {
+              player_status: injuryStatus,
+              player_detail: null,
+              relevant: [],
+            },
+            market: { consensus_american: 0, consensus_implied: 0, books: [] },
+          },
+          injury_status: injuryStatus,
+          availability:
+            injuryStatus === "out" || injuryStatus === "injured_reserve"
+              ? "injured"
+              : injuryStatus === "questionable" || injuryStatus === "doubtful"
+                ? "questionable"
+                : "available",
+          tier: "average",
+          consensus_american_odds: 0,
+          consensus_decimal_odds: 0,
+        },
       });
     }
 
-    board.sort((a, b) => b.td_pool_score - a.td_pool_score);
-    board.forEach((row, idx) => {
+    const cohort = draft.map((d) => d.features);
+    const scored = await Promise.all(
+      draft.map(async ({ features, row }) => {
+        const model = computeTdPoolFromFeatures(features, cohort);
+        const history = buildLivePlayerHistoryFromContext({
+          sleeperPlayerId:
+            parseSleeperExternalId(features.externalPlayerId) ?? "",
+          team: features.team,
+          opponent: features.opponent,
+          ctx: historyCtx,
+        });
+        const analysis = await generatePlayerAnalysisCopy(features, model);
+        let research = featuresToResearchJson({
+          features,
+          history,
+          model,
+          analysis: {
+            overview: analysis.overview,
+            whyWeLike: analysis.whyWeLike,
+            concerns: analysis.concerns,
+            verdict: analysis.verdict,
+          },
+          injuryDetail: features.playerInjuryStatus !== "healthy"
+            ? `${features.playerName}: ${features.playerInjuryStatus}`
+            : null,
+        });
+        research = attachModelMeta(research, features, model);
+
+        const tier =
+          model.tdPoolProbability >= 0.55
+            ? ("elite" as const)
+            : model.tdPoolProbability >= 0.42
+              ? ("strong" as const)
+              : model.tdPoolProbability >= 0.3
+                ? ("solid" as const)
+                : model.tdPoolProbability >= 0.18
+                  ? ("average" as const)
+                  : ("long_shot" as const);
+
+        return {
+          ...row,
+          our_probability: model.tdPoolProbability,
+          td_pool_score: model.tdPoolProbability * 1000,
+          matchup_rating: model.matchupStars,
+          goal_line_rating: model.goalLineStars,
+          research_json: research,
+          tier,
+        };
+      }),
+    );
+
+    // Rank strictly by TD Pool %.
+    scored.sort((a, b) => b.our_probability - a.our_probability);
+    scored.forEach((row, idx) => {
       row.td_pool_rank = idx + 1;
     });
 
-    // Keep board size usable on mobile
-    const trimmed = board.slice(0, 60);
+    const trimmed = scored.slice(0, 60);
     await store.replacePlayerWeekBoard(nflWeek.id, trimmed);
     invalidateOddsSyncThrottle();
 

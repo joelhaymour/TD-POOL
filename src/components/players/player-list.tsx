@@ -31,10 +31,14 @@ function sortPlayers(
     case "our_prob":
       return copy.sort((a, b) => b.ourProbability - a.ourProbability);
     case "market_prob":
-      return copy.sort((a, b) => b.marketProbability - a.marketProbability);
+      return copy.sort(
+        (a, b) => (b.marketProbability ?? -1) - (a.marketProbability ?? -1),
+      );
     case "odds":
-      // Lower American (more negative) = more favored
-      return copy.sort((a, b) => a.americanOdds - b.americanOdds);
+      // Lower American (more negative) = more favored; missing odds sink.
+      return copy.sort(
+        (a, b) => (a.americanOdds ?? 9999) - (b.americanOdds ?? 9999),
+      );
     case "rank":
     default:
       return copy.sort((a, b) => a.rank - b.rank);

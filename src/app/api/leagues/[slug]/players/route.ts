@@ -53,10 +53,14 @@ export async function GET(
         players.sort((a, b) => b.ourProbability - a.ourProbability);
         break;
       case "market_prob":
-        players.sort((a, b) => b.marketProbability - a.marketProbability);
+        players.sort(
+          (a, b) => (b.marketProbability ?? -1) - (a.marketProbability ?? -1),
+        );
         break;
       case "odds":
-        players.sort((a, b) => a.americanOdds - b.americanOdds);
+        players.sort(
+          (a, b) => (a.americanOdds ?? 9999) - (b.americanOdds ?? 9999),
+        );
         break;
       case "rank":
       default:
