@@ -11,6 +11,8 @@ export type OddsSyncSummary = {
   playersUpdated: number;
   fetchedAt: string;
   error?: string;
+  /** Provider credits left, when metered. Null when unknown or unlimited. */
+  creditsRemaining?: number | null;
 };
 
 /**
@@ -64,8 +66,8 @@ export async function autoSyncLeagueOdds(
         source: summary.source,
         quotes: summary.quotes,
         playersUpdated: summary.playersUpdated,
-        // Present when the live feed failed and synthetic prices were used.
         providerError: summary.error ?? null,
+        creditsRemaining: summary.creditsRemaining ?? null,
       });
       return summary;
     } catch (err) {
@@ -152,6 +154,8 @@ export async function syncWeekOdds(
     });
   }
 
+  const creditsRemaining = provider.getQuotaRemaining?.() ?? null;
+
   return {
     source: effectiveSource,
     season: args.season,
@@ -160,5 +164,6 @@ export async function syncWeekOdds(
     playersUpdated,
     fetchedAt: new Date().toISOString(),
     error,
+    creditsRemaining,
   };
 }

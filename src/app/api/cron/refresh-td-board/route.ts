@@ -43,6 +43,7 @@ export async function GET(request: Request) {
           quotes: odds.quotes,
           playersUpdated: odds.playersUpdated,
           providerError: odds.error ?? null,
+          creditsRemaining: odds.creditsRemaining ?? null,
         })
         .catch(() => {}),
     ),

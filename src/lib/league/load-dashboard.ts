@@ -111,8 +111,16 @@ async function readEffectiveOddsSource(
         : typeof state?.detail.message === "string"
           ? state.detail.message
           : null;
+    // Warn while there is still time to act. Going quiet until the allowance
+    // is gone is how the board ended up blank without explanation.
+    const credits = state?.detail.creditsRemaining;
+    const lowCredit =
+      typeof credits === "number" && credits >= 0 && credits < 80
+        ? `${credits} odds API credits left this month`
+        : null;
+
     if (source === "live" || source === "mock" || source === "none") {
-      return { source, note };
+      return { source, note: note ?? lowCredit };
     }
     return { source: getConfiguredOddsSource(), note };
   } catch {

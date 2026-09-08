@@ -80,6 +80,10 @@ export class TheOddsApiProvider implements OddsProvider {
   private apiKey: string;
   private regions: string;
   private quotaRemaining: number | null = null;
+
+  getQuotaRemaining(): number | null {
+    return this.quotaRemaining;
+  }
   private roster: NonNullable<TheOddsApiProviderOptions["roster"]>;
   private games: NonNullable<TheOddsApiProviderOptions["games"]>;
   private fetchImpl: typeof fetch;

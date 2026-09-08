@@ -143,6 +143,11 @@ export interface OddsProvider {
     season: number,
     week: number,
   ): Promise<ConsensusOdds[]>;
+  /**
+   * Credits left on a metered plan, when the provider reports them. Surfaced so
+   * the board can warn before the allowance runs out instead of going blank.
+   */
+  getQuotaRemaining?(): number | null;
   getPlayerOdds(
     externalPlayerId: string,
     season: number,
