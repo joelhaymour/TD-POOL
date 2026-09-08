@@ -28,7 +28,7 @@ import {
   type FeatureBuildContext,
 } from "@/lib/model/build-features";
 import { computeTdPoolFromFeatures } from "@/lib/model/compute-td-pool";
-import { generatePlayerAnalysisCopy } from "@/lib/model/explain-ai";
+import { buildDeterministicAnalysis } from "@/lib/model/explain";
 import { attachModelMeta } from "@/lib/model/recompute-with-market";
 import { TD_POOL_MODEL_VERSION } from "@/lib/model/version";
 import type { Store } from "@/lib/store/types";
@@ -37,7 +37,7 @@ import type { InjuryStatus, NflWeek, ResearchJson } from "@/lib/types";
 const materializeInFlight = new Map<string, Promise<NflWeek>>();
 const materializeDoneAt = new Map<string, number>();
 /** Bump when scoring / feature pipeline changes so boards rebuild. */
-const BOARD_VERSION = `td-engine-${TD_POOL_MODEL_VERSION}`;
+const BOARD_VERSION = `td-engine-${TD_POOL_MODEL_VERSION}-no-ai-board`;
 const MATERIALIZE_TTL_MS = 10 * 60_000;
 
 function mapInjury(raw: string | null | undefined): InjuryStatus {
@@ -388,55 +388,57 @@ export async function ensureNflWeekMaterialized(
     }
 
     const cohort = draft.map((d) => d.features);
-    const scored = await Promise.all(
-      draft.map(async ({ features, row }) => {
-        const model = computeTdPoolFromFeatures(features, cohort);
-        const history = buildLivePlayerHistoryFromContext({
-          sleeperPlayerId:
-            parseSleeperExternalId(features.externalPlayerId) ?? "",
-          team: features.team,
-          opponent: features.opponent,
-          ctx: historyCtx,
-        });
-        const analysis = await generatePlayerAnalysisCopy(features, model);
-        let research = featuresToResearchJson({
-          features,
-          history,
-          model,
-          analysis: {
-            overview: analysis.overview,
-            whyWeLike: analysis.whyWeLike,
-            concerns: analysis.concerns,
-            verdict: analysis.verdict,
-          },
-          injuryDetail: features.playerInjuryStatus !== "healthy"
+    // Deterministic copy only during board build.
+    // AI writeups run lazily on the player detail page — 60 parallel Gateway
+    // calls here were timing out serverless rematerialize after AI keys were added.
+    const scored = draft.map(({ features, row }) => {
+      const model = computeTdPoolFromFeatures(features, cohort);
+      const history = buildLivePlayerHistoryFromContext({
+        sleeperPlayerId:
+          parseSleeperExternalId(features.externalPlayerId) ?? "",
+        team: features.team,
+        opponent: features.opponent,
+        ctx: historyCtx,
+      });
+      const analysis = buildDeterministicAnalysis(features, model);
+      let research = featuresToResearchJson({
+        features,
+        history,
+        model,
+        analysis: {
+          overview: analysis.overview,
+          whyWeLike: analysis.whyWeLike,
+          concerns: analysis.concerns,
+          verdict: analysis.verdict,
+        },
+        injuryDetail:
+          features.playerInjuryStatus !== "healthy"
             ? `${features.playerName}: ${features.playerInjuryStatus}`
             : null,
-        });
-        research = attachModelMeta(research, features, model);
+      });
+      research = attachModelMeta(research, features, model);
 
-        const tier =
-          model.tdPoolProbability >= 0.55
-            ? ("elite" as const)
-            : model.tdPoolProbability >= 0.42
-              ? ("strong" as const)
-              : model.tdPoolProbability >= 0.3
-                ? ("solid" as const)
-                : model.tdPoolProbability >= 0.18
-                  ? ("average" as const)
-                  : ("long_shot" as const);
+      const tier =
+        model.tdPoolProbability >= 0.55
+          ? ("elite" as const)
+          : model.tdPoolProbability >= 0.42
+            ? ("strong" as const)
+            : model.tdPoolProbability >= 0.3
+              ? ("solid" as const)
+              : model.tdPoolProbability >= 0.18
+                ? ("average" as const)
+                : ("long_shot" as const);
 
-        return {
-          ...row,
-          our_probability: model.tdPoolProbability,
-          td_pool_score: model.tdPoolProbability * 1000,
-          matchup_rating: model.matchupStars,
-          goal_line_rating: model.goalLineStars,
-          research_json: research,
-          tier,
-        };
-      }),
-    );
+      return {
+        ...row,
+        our_probability: model.tdPoolProbability,
+        td_pool_score: model.tdPoolProbability * 1000,
+        matchup_rating: model.matchupStars,
+        goal_line_rating: model.goalLineStars,
+        research_json: research,
+        tier,
+      };
+    });
 
     // Rank strictly by TD Pool %.
     scored.sort((a, b) => b.our_probability - a.our_probability);

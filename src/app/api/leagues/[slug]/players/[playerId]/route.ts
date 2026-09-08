@@ -4,6 +4,9 @@ import { storeErrorResponse } from "@/lib/api/store-error";
 import { toPlayerDetail } from "@/lib/api/mappers";
 import { parseSleeperExternalId } from "@/lib/providers/sleeper/client";
 import { buildLivePlayerHistory } from "@/lib/providers/sleeper/research";
+import { generatePlayerAnalysisCopy } from "@/lib/model/explain-ai";
+import type { PlayerWeekFeatures } from "@/lib/model/features";
+import { computeTdPoolFromFeatures } from "@/lib/model/compute-td-pool";
 
 export async function GET(
   _request: Request,
@@ -58,6 +61,24 @@ export async function GET(
       } catch {
         // keep stored research
       }
+    }
+
+    // Lazy AI writeup (single player) — never during full-board materialize.
+    try {
+      const rawFeatures = row.research_json.td_model?.features;
+      if (rawFeatures) {
+        const features = rawFeatures as unknown as PlayerWeekFeatures;
+        const model = computeTdPoolFromFeatures(features, [features]);
+        const ai = await generatePlayerAnalysisCopy(features, model);
+        row.research_json = {
+          ...row.research_json,
+          why_we_like: ai.whyWeLike,
+          concerns: ai.concerns,
+          verdict: ai.verdict,
+        };
+      }
+    } catch {
+      // keep deterministic copy already stored on the board
     }
 
     return NextResponse.json({

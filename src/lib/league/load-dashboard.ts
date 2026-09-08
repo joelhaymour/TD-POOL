@@ -40,6 +40,14 @@ function emptyResearch(r: LeagueDashboard["ranked_players"][number]["research_js
     concerns: [],
     verdict: "",
     market: { ...r.market, books: [] },
+    // Keep model meta for debugging/recompute, but drop bulky feature snapshots from list payloads.
+    td_model: r.td_model
+      ? {
+          ...r.td_model,
+          features: {},
+          contributions: r.td_model.contributions?.slice(0, 8) ?? [],
+        }
+      : undefined,
   };
 }
 

@@ -12,18 +12,41 @@ import {
 } from "@/lib/model/weights";
 
 function neutralBaselineFromRole(features: PlayerWeekFeatures): number {
+  const tdRate =
+    features.touchdownsLast5 > 0
+      ? features.touchdownsLast5 / 5
+      : features.touchdownsLast3 > 0
+        ? features.touchdownsLast3 / 3
+        : 0;
+  // Convert recent TD rate into a soft anytime baseline, then blend role prior.
+  const fromTds = 1 - Math.exp(-Math.max(0, tdRate) * 1.25);
+  let role = 0.16;
   switch (features.position) {
     case "RB":
-      return 0.28;
+      role = 0.24;
+      break;
     case "WR":
-      return 0.18;
+      role = 0.16;
+      break;
     case "TE":
-      return 0.14;
+      role = 0.12;
+      break;
     case "QB":
-      return 0.12;
+      role = 0.1;
+      break;
     default:
-      return 0.16;
+      break;
   }
+  // Depth chart: starters get a bump; deep bench stays low.
+  const depth =
+    features.depthOrder == null
+      ? 0
+      : features.depthOrder <= 1
+        ? 0.06
+        : features.depthOrder === 2
+          ? 0.02
+          : -0.04;
+  return clamp01(Math.max(fromTds, role * 0.55 + fromTds * 0.45) + depth);
 }
 
 function goalLineRawScore(f: PlayerWeekFeatures): number {
