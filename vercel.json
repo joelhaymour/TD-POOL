@@ -3,6 +3,10 @@
     {
       "path": "/api/cron/refresh-td-board",
       "schedule": "0 12 * * *"
+    },
+    {
+      "path": "/api/cron/refresh-goal-line",
+      "schedule": "0 10 * * 2"
     }
   ]
 }

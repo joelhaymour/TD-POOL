@@ -14,6 +14,7 @@ import {
   type SleeperWeekStat,
 } from "@/lib/providers/sleeper/client";
 import type { TeamDefenseProfile } from "@/lib/providers/team-defense/from-sleeper";
+import type { GoalLineIndex } from "@/lib/services/sync-goal-line";
 
 function trendFromRates(recent: number, baseline: number): TrendDirection {
   if (recent > baseline * 1.12 + 0.15) return "up";
@@ -54,6 +55,9 @@ export type FeatureBuildContext = {
   depthBySleeperId: Map<string, number>;
   teammateOutByTeam: Map<string, string[]>;
   projections: Map<string, number>;
+  /** Measured goal-line usage from play-by-play, by Sleeper id. */
+  goalLine?: GoalLineIndex;
+  goalLineSeason?: number | null;
 };
 
 export function collectPlayerSeasonStats(
@@ -167,15 +171,31 @@ export function buildPlayerWeekFeatures(args: {
   const targetsPerGame = targetBlend.value;
   const snapRate = snapBlend.value;
 
-  // Rough team-share proxies from depth + usage (improved when SportsDataIO RZ available)
+  // Measured inside-5 usage from nflverse play-by-play, when we have it.
+  // Sleeper's rush_rz_att counts carries inside the 20, not the 5, so deriving
+  // goal-line work from it with a fixed multiplier both doubled the volume and
+  // flattened the spread that matters: Gibbs took 22 carries inside the 10 but
+  // only 10 inside the 5, while Henry turned 40 into 27.
+  const measured = args.ctx.goalLine?.get(sleeperId) ?? null;
+  const measuredGames = measured && measured.gamesPlayed > 0 ? measured.gamesPlayed : null;
+
   // QBs share the rushing formula — their goal-line value is carries, not targets.
   const isRusher = args.position === "RB" || args.position === "QB";
-  const inside5Share = isRusher
+  const estimatedInside5Share = isRusher
     ? Math.min(0.85, Math.max(0.05, (glPerGame / 2.2) * (depthOrder === 1 ? 1.15 : 0.7)))
     : Math.min(0.55, Math.max(0.02, (rzPerGame ?? 0) / 8));
+  const inside5Share = measured?.inside5TeamShare ?? estimatedInside5Share;
+
+  const inside5PerGame = measuredGames
+    ? (measured!.inside5Carries + measured!.inside5Targets) / measuredGames
+    : glPerGame;
+  const inside10PerGame = measuredGames
+    ? (measured!.inside10Carries + measured!.inside10Targets) / measuredGames
+    : glPerGame * 1.35;
 
   const completenessFlags = [
     history.last_5.length > 0,
+    measuredGames != null,
     rzPerGame != null,
     snapRate != null,
     def != null,
@@ -191,6 +211,13 @@ export function buildPlayerWeekFeatures(args: {
     featureNotes.push(rzBlend.label);
     featureNotes.push(args.ctx.defenseLabel);
   }
+  // Say which goal-line numbers are measured and which are inferred, rather
+  // than presenting an estimate as if it were counted.
+  featureNotes.push(
+    measuredGames
+      ? `Goal-line measured from ${args.ctx.goalLineSeason ?? "prior season"} play-by-play`
+      : "Goal-line estimated from red-zone volume",
+  );
   if (limitedData) featureNotes.push("Limited Data");
 
   const posRank =
@@ -229,14 +256,20 @@ export function buildPlayerWeekFeatures(args: {
         : Math.min(0.4, Math.max(0.04, (targetsPerGame ?? 0) / 28)),
 
     redZoneTouchesPerGame: rzPerGame,
-    redZoneCarriesPerGame:
-      args.position === "RB" ? Math.max(0, (rzPerGame ?? 0) * 0.7) : null,
-    redZoneTargetsPerGame:
-      args.position === "RB"
+    // The 0.7/0.3 carry-vs-target split was a guess. Play-by-play knows the
+    // real split, so only fall back to the guess when a player is unmatched.
+    redZoneCarriesPerGame: measuredGames
+      ? measured!.inside10Carries / measuredGames
+      : args.position === "RB"
+        ? Math.max(0, (rzPerGame ?? 0) * 0.7)
+        : null,
+    redZoneTargetsPerGame: measuredGames
+      ? measured!.inside10Targets / measuredGames
+      : args.position === "RB"
         ? Math.max(0, (rzPerGame ?? 0) * 0.3)
         : rzPerGame,
-    inside10TouchesPerGame: glPerGame * 1.35,
-    inside5TouchesPerGame: glPerGame,
+    inside10TouchesPerGame: inside10PerGame,
+    inside5TouchesPerGame: inside5PerGame,
     inside5TeamShare: inside5Share,
     inside10TeamShare: Math.min(0.9, inside5Share * 1.1),
 

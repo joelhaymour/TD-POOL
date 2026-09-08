@@ -21,6 +21,7 @@ import {
 } from "@/lib/providers/team-defense/from-sleeper";
 import { getWeeklyTdProjectionScores } from "@/lib/providers/projections";
 import { mapWithConcurrency } from "@/lib/concurrency";
+import { loadGoalLineIndex } from "@/lib/services/sync-goal-line";
 import {
   buildPlayerWeekFeatures,
   collectPlayerSeasonStats,
@@ -287,6 +288,14 @@ export async function ensureNflWeekMaterialized(
       }
     }
 
+    // Week 1 has no plays yet, so fall back to the prior season — that is the
+    // window the rest of the Week 1 board already blends from.
+    const goalLine = await loadGoalLineIndex([season, season - 1]).catch(
+      () => ({ index: new Map(), season: null }) as Awaited<
+        ReturnType<typeof loadGoalLineIndex>
+      >,
+    );
+
     const featureCtx: FeatureBuildContext = {
       season,
       week,
@@ -300,6 +309,8 @@ export async function ensureNflWeekMaterialized(
       depthBySleeperId,
       teammateOutByTeam,
       projections: projectionScores,
+      goalLine: goalLine.index,
+      goalLineSeason: goalLine.season,
     };
 
     type BoardRow = Parameters<Store["replacePlayerWeekBoard"]>[1][number];
