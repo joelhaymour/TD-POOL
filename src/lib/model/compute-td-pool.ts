@@ -4,6 +4,7 @@ import type {
   TdPoolModelOutput,
 } from "@/lib/model/features";
 import { clamp, clamp01, percentileRank } from "@/lib/model/math";
+import { percentileLabel } from "@/lib/utils/ordinal";
 import { percentileToStars } from "@/lib/model/stars";
 import { TD_POOL_MODEL_VERSION } from "@/lib/model/version";
 import {
@@ -309,21 +310,21 @@ export function computeTdPoolFromFeatures(
     "Goal-line / red-zone",
     goalLinePercentile,
     TD_MODEL_RATE_STRENGTH.goalLine,
-    `GL score ${glRaw.toFixed(2)} · ${Math.round(goalLinePercentile * 100)}th pct vs ${features.position}s`,
+    `GL score ${glRaw.toFixed(2)} · ${percentileLabel(goalLinePercentile)} pct vs ${features.position}s`,
   );
   applyFactor(
     "recentUsage",
     "Recent usage / role",
     usagePercentile,
     TD_MODEL_RATE_STRENGTH.recentUsage,
-    `Usage ${Math.round(usagePercentile * 100)}th pct · trend ${features.recentTouchTrend}`,
+    `Usage ${percentileLabel(usagePercentile)} pct · trend ${features.recentTouchTrend}`,
   );
   applyFactor(
     "matchup",
     "Opponent matchup",
     matchupPercentile,
     TD_MODEL_RATE_STRENGTH.matchup,
-    `${features.opponentDataLabel}: ${Math.round(matchupPercentile * 100)}th pct matchup`,
+    `${features.opponentDataLabel}: ${percentileLabel(matchupPercentile)} pct matchup`,
   );
   applyFactor(
     "scoringEnvironment",

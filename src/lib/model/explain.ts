@@ -1,3 +1,4 @@
+import { percentileLabel } from "@/lib/utils/ordinal";
 import type { FactorContribution, PlayerWeekFeatures, TdPoolModelOutput } from "@/lib/model/features";
 
 function pct(n: number): string {
@@ -35,7 +36,7 @@ export function buildDeterministicAnalysis(
     features.redZoneTouchesPerGame >= 1
   ) {
     whyWeLike.push(
-      `${features.redZoneTouchesPerGame.toFixed(1)} red-zone touches per game (${Math.round(model.goalLinePercentile * 100)}th pct goal-line).`,
+      `${features.redZoneTouchesPerGame.toFixed(1)} red-zone touches per game (${percentileLabel(model.goalLinePercentile)} pct goal-line).`,
     );
   }
   if (
@@ -99,7 +100,7 @@ export function buildDeterministicAnalysis(
   // defensive rank left a two-star matchup reading "no red flags".
   if (concerns.length < 3 && model.matchupPercentile < 0.45) {
     concerns.push(
-      `Middling matchup: ${features.opponent} sits in the ${Math.round(model.matchupPercentile * 100)}th percentile of spots for ${features.position}s.`,
+      `Middling matchup: ${features.opponent} sits in the ${percentileLabel(model.matchupPercentile)} percentile of spots for ${features.position}s.`,
     );
   }
   if (!concerns.length) {
@@ -129,7 +130,7 @@ function formatContributionBullet(
       // inside5TeamShare is a capped estimate, so several stars printed the
       // identical "85%". Lead with the measured red-zone workload instead.
       if (features.redZoneTouchesPerGame != null && features.redZoneTouchesPerGame > 0) {
-        return `${features.redZoneTouchesPerGame.toFixed(1)} red-zone touches per game (${Math.round(model.goalLinePercentile * 100)}th pct goal-line).`;
+        return `${features.redZoneTouchesPerGame.toFixed(1)} red-zone touches per game (${percentileLabel(model.goalLinePercentile)} pct goal-line).`;
       }
       return `${c.detail} (${sign}${(c.delta * 100).toFixed(1)} pts).`;
     case "scoringEnvironment":
