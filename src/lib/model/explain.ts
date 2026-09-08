@@ -83,10 +83,13 @@ export function buildDeterministicAnalysis(
     }
     concerns.push(formatContributionBullet(features, c, model));
   }
+  // The matchup contribution above may already have said this; adding it again
+  // printed the same defensive rank twice on the page.
   if (
     features.opponentPositionTdRank != null &&
     features.opponentPositionTdRank <= 10 &&
-    concerns.length < 3
+    concerns.length < 3 &&
+    !concerns.some((x) => x.includes(`#${features.opponentPositionTdRank}`))
   ) {
     concerns.push(
       `Tough matchup: ${features.opponent} ranks #${features.opponentPositionTdRank} vs ${features.position} TDs.`,
@@ -103,7 +106,7 @@ export function buildDeterministicAnalysis(
 
   const verdict = model.limitedData
     ? `Limited data (${Math.round(model.dataCompleteness * 100)}% complete) — treat ${pct(model.tdPoolProbability)} as a lower-confidence estimate.`
-    : `TD Pool combines market expectations with opportunity, matchup, and game context → ${pct(model.tdPoolProbability)}.`;
+    : `TD Pool combines goal-line opportunity, matchup, and game context → ${pct(model.tdPoolProbability)}.`;
 
   return { overview, whyWeLike, concerns, verdict };
 }
