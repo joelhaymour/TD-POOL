@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import {
@@ -21,6 +21,12 @@ type DetailResponse = {
 export default function PlayerDetailPage() {
   const params = useParams<{ slug: string; playerId: string }>();
   const { slug, playerId } = params;
+  // Arriving from the game board carries the game, so back returns to that
+  // team's list rather than dropping the reader on the player board.
+  const fromGame = useSearchParams().get("game");
+  const backHref = fromGame
+    ? `/${slug}?game=${encodeURIComponent(fromGame)}`
+    : `/${slug}`;
   const { toast } = useToast();
   const [data, setData] = useState<DetailResponse | null>(null);
   const [loading, setLoading] = useState(true);
@@ -96,10 +102,11 @@ export default function PlayerDetailPage() {
   return (
     <div>
       <Link
-        href={`/${slug}`}
+        href={backHref}
         className="mb-3 inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-ink-muted hover:text-ink"
       >
-        <ArrowLeft className="h-3.5 w-3.5" /> Back to picks
+        <ArrowLeft className="h-3.5 w-3.5" />{" "}
+        {fromGame ? "Back to game" : "Back to picks"}
       </Link>
       <PlayerDetail
         player={data.player}

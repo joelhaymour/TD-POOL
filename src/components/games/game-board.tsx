@@ -16,9 +16,24 @@ export type GameGroup = {
 
 export type GameBoardProps = {
   games: GameGroup[];
+  /** Game to open on mount, so returning from a player analysis lands back here. */
+  initialGameId?: string | null;
   onSelect?: (playerId: string) => void | Promise<void>;
   selectDisabled?: boolean;
 };
+
+/**
+ * Keep ?game= in sync without a Next navigation. The dashboard page rebuilds
+ * the whole board on request, which is far too much work for a tile tap; this
+ * only has to survive a link out to a player and back.
+ */
+function syncGameParam(gameId: string | null) {
+  if (typeof window === "undefined") return;
+  const url = new URL(window.location.href);
+  if (gameId) url.searchParams.set("game", gameId);
+  else url.searchParams.delete("game");
+  window.history.replaceState(null, "", url);
+}
 
 // NFL weeks are described in Eastern time — a Sunday night kickoff is a Sunday
 // game even where it lands after midnight locally.
@@ -60,9 +75,27 @@ function statusLabel(game: NflGame) {
   return null;
 }
 
-export function GameBoard({ games, onSelect, selectDisabled }: GameBoardProps) {
-  const [openGameId, setOpenGameId] = useState<string | null>(null);
+export function GameBoard({
+  games,
+  initialGameId,
+  onSelect,
+  selectDisabled,
+}: GameBoardProps) {
+  const [openGameId, setOpenGameId] = useState<string | null>(
+    initialGameId ?? null,
+  );
   const [side, setSide] = useState<"away" | "home">("away");
+
+  function openGame(gameId: string) {
+    setOpenGameId(gameId);
+    setSide("away");
+    syncGameParam(gameId);
+  }
+
+  function closeGame() {
+    setOpenGameId(null);
+    syncGameParam(null);
+  }
 
   const ordered = useMemo(
     () =>
@@ -106,14 +139,19 @@ export function GameBoard({ games, onSelect, selectDisabled }: GameBoardProps) {
     const activeTeam = teams[side];
     const roster = players
       .filter((p) => p.team === activeTeam)
-      .sort((a, b) => a.rank - b.rank);
+      .sort((a, b) => a.rank - b.rank)
+      // Tag the analysis link so its back button returns to this game.
+      .map((p) => ({
+        ...p,
+        analysisHref: `${p.analysisHref}?game=${encodeURIComponent(game.id)}`,
+      }));
     const status = statusLabel(game);
 
     return (
       <div className="space-y-3">
         <button
           type="button"
-          onClick={() => setOpenGameId(null)}
+          onClick={closeGame}
           className="inline-flex items-center gap-1 text-xs font-bold uppercase tracking-wider text-turf hover:underline"
         >
           <ChevronLeft className="h-3.5 w-3.5" />
@@ -213,10 +251,7 @@ export function GameBoard({ games, onSelect, selectDisabled }: GameBoardProps) {
                 <li key={game.id}>
                   <button
                     type="button"
-                    onClick={() => {
-                      setOpenGameId(game.id);
-                      setSide("away");
-                    }}
+                    onClick={() => openGame(game.id)}
                     className={cn(
                       "flex w-full items-center gap-3 rounded-2xl border border-border bg-chalk px-4 py-3 text-left shadow-card transition",
                       "hover:border-border-strong hover:bg-field focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-turf",

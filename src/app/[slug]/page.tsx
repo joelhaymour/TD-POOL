@@ -11,8 +11,10 @@ export const maxDuration = 300;
 
 export default async function LeagueDashboardPage({
   params,
-}: LayoutProps<"/[slug]">) {
+  searchParams,
+}: PageProps<"/[slug]">) {
   const { slug } = await params;
+  const { game } = await searchParams;
   const member = await requireViewerMembership(slug);
   const dashboard = await loadLeagueDashboard(slug);
 
@@ -23,6 +25,7 @@ export default async function LeagueDashboardPage({
       slug={slug}
       initialDashboard={dashboard}
       viewer={{ memberId: member.id }}
+      initialGameId={typeof game === "string" ? game : null}
     />
   );
 }

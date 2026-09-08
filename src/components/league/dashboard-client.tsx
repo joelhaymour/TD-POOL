@@ -18,10 +18,13 @@ export function DashboardClient({
   slug,
   initialDashboard,
   viewer,
+  initialGameId,
 }: {
   slug: string;
   initialDashboard: LeagueDashboard | null;
   viewer: { memberId: string };
+  /** Set when arriving back from a player analysis opened off the game board. */
+  initialGameId?: string | null;
 }) {
   const { toast } = useToast();
   const [dashboard, setDashboard] = useState<LeagueDashboard | null>(
@@ -35,7 +38,9 @@ export function DashboardClient({
     sort: "rank",
   });
   const [selecting, setSelecting] = useState(false);
-  const [board, setBoard] = useState<"players" | "games">("players");
+  const [board, setBoard] = useState<"players" | "games">(
+    initialGameId ? "games" : "players",
+  );
 
   const refresh = useCallback(async (silent = false) => {
     if (!silent) setLoading(true);
@@ -236,6 +241,7 @@ export function DashboardClient({
         ) : (
           <GameBoard
             games={games}
+            initialGameId={initialGameId}
             onSelect={onSelect}
             selectDisabled={selecting || dashboard.picks_locked}
           />
