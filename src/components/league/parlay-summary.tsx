@@ -57,7 +57,15 @@ export function ParlaySummary({
   oddsNote,
   className,
 }: ParlaySummaryProps) {
-  const oddsLabel = formatOddsAge(oddsUpdatedAt, oddsSource, oddsNote);
+  // A failed refresh now leaves the previous prices in place, so trust what is
+  // actually on screen over the last sync's status: claiming "no sportsbook
+  // odds" above a rendered price would be the more confusing of the two.
+  const hasOdds = estimatedAmericanOdds != null;
+  const oddsLabel = formatOddsAge(
+    oddsUpdatedAt,
+    hasOdds && oddsSource === "none" ? "live" : oddsSource,
+    hasOdds ? null : oddsNote,
+  );
 
   return (
     <section

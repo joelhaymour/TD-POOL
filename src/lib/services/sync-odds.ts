@@ -139,11 +139,18 @@ export async function syncWeekOdds(
     effectiveSource = "none";
   }
 
-  const playersUpdated = await store.applyOddsRefresh({
-    weekId: args.weekId,
-    consensus,
-    quotes,
-  });
+  // applyOddsRefresh deletes the week's odds before inserting, so handing it an
+  // empty result wipes every price we already had. A failed refresh should leave
+  // the last good odds standing — otherwise one transient provider error erases
+  // them until the next success, which on a metered plan may be a day away.
+  let playersUpdated = 0;
+  if (consensus.length > 0) {
+    playersUpdated = await store.applyOddsRefresh({
+      weekId: args.weekId,
+      consensus,
+      quotes,
+    });
+  }
 
   return {
     source: effectiveSource,
