@@ -67,13 +67,25 @@ function buildGameLog(args: {
     ),
   );
 
+  const carries = isRunner
+    ? Math.round(8 + seededUnit(seed, `car-${week}-${index}`) * 12)
+    : Math.round(seededUnit(seed, `car-${week}-${index}`) * 2);
+  const receptions = isRunner
+    ? Math.round(seededUnit(seed, `rec-${week}-${index}`) * 4)
+    : Math.round(3 + seededUnit(seed, `rec-${week}-${index}`) * 6);
+
   return {
     week,
     opponent,
     home,
-    result: won ? "W" : "L",
     touchdowns,
     rz_touches,
+    carries,
+    rush_yards: Math.round(carries * (3.2 + seededUnit(seed, `ry-${week}`) * 2)),
+    receptions,
+    receiving_yards: Math.round(
+      receptions * (7 + seededUnit(seed, `recy-${week}`) * 6),
+    ),
     goal_line_chances,
   };
 }

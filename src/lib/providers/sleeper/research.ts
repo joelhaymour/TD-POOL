@@ -41,9 +41,17 @@ function trendFromLogs(logs: ResearchGameLog[]): TrendDirection {
 
 function summarizeLast5(logs: ResearchGameLog[]): string {
   if (!logs.length) return "No recent game logs yet.";
-  const tds = logs.reduce((s, g) => s + g.touchdowns, 0);
-  const rz = logs.reduce((s, g) => s + g.rz_touches, 0);
-  return `Last ${logs.length}: ${tds} TD · ${rz} RZ touches · ${logs.filter((g) => g.result === "W").length}-${logs.filter((g) => g.result === "L").length}`;
+  const sum = (pick: (g: ResearchGameLog) => number) =>
+    logs.reduce((s, g) => s + pick(g), 0);
+  const parts = [
+    `${sum((g) => g.touchdowns)} TD`,
+    `${sum((g) => g.rz_touches)} RZ touches`,
+  ];
+  const rushYd = sum((g) => g.rush_yards);
+  const recYd = sum((g) => g.receiving_yards);
+  if (rushYd > 0) parts.push(`${sum((g) => g.carries)} car / ${rushYd} yds`);
+  if (recYd > 0) parts.push(`${sum((g) => g.receptions)} rec / ${recYd} yds`);
+  return `Last ${logs.length}: ${parts.join(" · ")}`;
 }
 
 function summarizeVs(logs: ResearchGameLog[], opponent: string): string {
@@ -62,9 +70,12 @@ function toLog(
     week,
     opponent,
     home,
-    result: "T",
     touchdowns: touchdownsFromStat(stat),
     rz_touches: rzTouchesFromStat(stat),
+    carries: Math.round(Number(stat.rush_att ?? 0)),
+    rush_yards: Math.round(Number(stat.rush_yd ?? 0)),
+    receptions: Math.round(Number(stat.rec ?? 0)),
+    receiving_yards: Math.round(Number(stat.rec_yd ?? 0)),
     goal_line_chances: Math.max(
       0,
       Math.round(Number(stat.rush_rz_att ?? 0) * 0.55),

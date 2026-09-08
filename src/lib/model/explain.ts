@@ -31,11 +31,11 @@ export function buildDeterministicAnalysis(
   // Feature-backed fillers when contribution list is thin (common early season).
   if (
     whyWeLike.length < 2 &&
-    features.inside5TeamShare != null &&
-    features.inside5TeamShare >= 0.25
+    features.redZoneTouchesPerGame != null &&
+    features.redZoneTouchesPerGame >= 1
   ) {
     whyWeLike.push(
-      `${Math.round(features.inside5TeamShare * 100)}% estimated inside-5 share (${Math.round(model.goalLinePercentile * 100)}th pct goal-line).`,
+      `${features.redZoneTouchesPerGame.toFixed(1)} red-zone touches per game (${Math.round(model.goalLinePercentile * 100)}th pct goal-line).`,
     );
   }
   if (
@@ -129,8 +129,10 @@ function formatContributionBullet(
   const sign = c.delta >= 0 ? "+" : "";
   switch (c.key) {
     case "goalLine":
-      if (features.inside5TeamShare != null && features.inside5TeamShare >= 0.4) {
-        return `${Math.round(features.inside5TeamShare * 100)}% estimated inside-5 share (${Math.round(model.goalLinePercentile * 100)}th pct).`;
+      // inside5TeamShare is a capped estimate, so several stars printed the
+      // identical "85%". Lead with the measured red-zone workload instead.
+      if (features.redZoneTouchesPerGame != null && features.redZoneTouchesPerGame > 0) {
+        return `${features.redZoneTouchesPerGame.toFixed(1)} red-zone touches per game (${Math.round(model.goalLinePercentile * 100)}th pct goal-line).`;
       }
       return `${c.detail} (${sign}${(c.delta * 100).toFixed(1)} pts).`;
     case "scoringEnvironment":

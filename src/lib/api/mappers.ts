@@ -7,6 +7,10 @@ import type { LeagueDashboard, MemberPickStatus } from "@/lib/types";
 
 type RankedPlayer = LeagueDashboard["ranked_players"][number];
 
+function pctLabel(share: number): string {
+  return `${Math.round(share * 100)}%`;
+}
+
 export function toPlayerCard(
   row: RankedPlayer,
   slug: string,
@@ -100,6 +104,31 @@ export function toPlayerDetail(
         opponent,
         recentTrend: r.usage.recent_trend,
       }),
+    // Replaces the goal-line star rating: the real usage behind it, so the
+    // number can be judged instead of taken on faith.
+    usage: [
+      {
+        label: "RZ touches / game",
+        value:
+          r.red_zone.touches_per_game > 0
+            ? r.red_zone.touches_per_game.toFixed(1)
+            : "—",
+      },
+      { label: "RZ carries", value: r.red_zone.carries || "—" },
+      { label: "RZ targets", value: r.red_zone.targets || "—" },
+      {
+        label: "Snap share",
+        value: r.usage.snap_share > 0 ? pctLabel(r.usage.snap_share) : "—",
+      },
+      {
+        label: "Targets / game",
+        value:
+          r.usage.targets_per_game != null && r.usage.targets_per_game > 0
+            ? r.usage.targets_per_game.toFixed(1)
+            : "—",
+      },
+      { label: "Role trend", value: r.usage.recent_trend },
+    ],
     matchup: [
       { label: "Opponent", value: r.matchup.opponent },
       {

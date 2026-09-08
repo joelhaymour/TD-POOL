@@ -100,21 +100,15 @@ export function PlayerCard({
         </div>
       </div>
 
-      <div className="mt-3 grid grid-cols-3 gap-2">
+      {/* Market % lives on the analysis page — it is a model input, not a
+          number you pick on, and it crowded the card. */}
+      <div className="mt-3 grid grid-cols-2 gap-2">
         <div className="rounded-xl bg-field px-2.5 py-2">
           <p className="text-[9px] font-bold uppercase tracking-wider text-ink-faint">
-            TD Pool %
+            TD Chance
           </p>
           <p className="font-display text-xl font-extrabold text-ink">
             {pct(player.ourProbability)}
-          </p>
-        </div>
-        <div className="rounded-xl bg-field px-2.5 py-2">
-          <p className="text-[9px] font-bold uppercase tracking-wider text-ink-faint">
-            Market
-          </p>
-          <p className="font-display text-xl font-extrabold text-ink-muted">
-            {pct(player.marketProbability)}
           </p>
         </div>
         <div className="rounded-xl bg-ink px-2.5 py-2">
@@ -133,9 +127,10 @@ export function PlayerCard({
         </p>
       ) : null}
 
+      {/* Goal-line rating drives TD Chance already, so a second star row here
+          was redundant. The underlying usage is on the analysis page. */}
       <div className="mt-2.5 flex flex-wrap items-center gap-x-3 gap-y-1">
         <StarRating value={player.matchupStars} size="sm" label="Matchup" />
-        <StarRating value={player.goalLineStars} size="sm" label="GL" />
       </div>
 
       <div className="mt-3 grid grid-cols-2 gap-2">

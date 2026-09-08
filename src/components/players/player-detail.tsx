@@ -43,6 +43,7 @@ export type PlayerDetailData = {
     verdict?: string;
   };
   history?: ResearchHistory;
+  usage?: ResearchStat[];
   matchup?: ResearchStat[];
   gameEnvironment?: ResearchStat[];
   availabilityNotes?: string[];
@@ -142,43 +143,74 @@ function GameLogTable({
     return <p className="text-sm text-ink-muted">{emptyLabel}</p>;
   }
 
+  // Rushers and receivers get the columns that matter for their role; showing
+  // both sets for everyone leaves half the table full of zeroes.
+  const totalCarries = games.reduce((s, g) => s + g.carries, 0);
+  const totalReceptions = games.reduce((s, g) => s + g.receptions, 0);
+  const showRush = totalCarries > 0;
+  const showRec = totalReceptions > 0;
+
   return (
     <div className="overflow-hidden rounded-xl border border-border">
       <table className="w-full text-left text-sm">
         <thead className="bg-field text-[10px] font-bold uppercase tracking-wider text-ink-faint">
           <tr>
-            <th className="px-2.5 py-2 font-bold">Wk</th>
-            <th className="px-2.5 py-2 font-bold">Opp</th>
-            <th className="px-2.5 py-2 text-center font-bold">TD</th>
-            <th className="px-2.5 py-2 text-center font-bold">RZ</th>
-            <th className="px-2.5 py-2 text-center font-bold">GL</th>
-            <th className="px-2.5 py-2 text-right font-bold">Res</th>
+            <th className="px-2 py-2 font-bold">Wk</th>
+            <th className="px-2 py-2 font-bold">Opp</th>
+            <th className="px-2 py-2 text-center font-bold">TD</th>
+            <th className="px-2 py-2 text-center font-bold">RZ</th>
+            {showRush ? (
+              <>
+                <th className="px-2 py-2 text-center font-bold">Car</th>
+                <th className="px-2 py-2 text-center font-bold">Ru Yds</th>
+              </>
+            ) : null}
+            {showRec ? (
+              <>
+                <th className="px-2 py-2 text-center font-bold">Rec</th>
+                <th className="px-2 py-2 text-center font-bold">Re Yds</th>
+              </>
+            ) : null}
           </tr>
         </thead>
         <tbody className="divide-y divide-border">
           {games.map((g) => (
             <tr key={`${g.week}-${g.opponent}-${g.home ? "h" : "a"}`}>
-              <td className="px-2.5 py-2 font-medium text-ink-muted">{g.week}</td>
-              <td className="px-2.5 py-2 font-semibold text-ink">
+              <td className="px-2 py-2 font-medium text-ink-muted">{g.week}</td>
+              <td className="px-2 py-2 font-semibold text-ink">
                 {g.home ? "vs" : "@"} {g.opponent}
               </td>
               <td
                 className={cn(
-                  "px-2.5 py-2 text-center font-display text-base font-bold",
+                  "px-2 py-2 text-center font-display text-base font-bold",
                   g.touchdowns > 0 ? "text-turf" : "text-ink-faint",
                 )}
               >
                 {g.touchdowns}
               </td>
-              <td className="px-2.5 py-2 text-center font-medium text-ink">
+              <td className="px-2 py-2 text-center font-medium text-ink">
                 {g.rz_touches}
               </td>
-              <td className="px-2.5 py-2 text-center font-medium text-ink">
-                {g.goal_line_chances}
-              </td>
-              <td className="px-2.5 py-2 text-right font-bold text-ink-muted">
-                {g.result}
-              </td>
+              {showRush ? (
+                <>
+                  <td className="px-2 py-2 text-center font-medium text-ink">
+                    {g.carries}
+                  </td>
+                  <td className="px-2 py-2 text-center font-medium text-ink">
+                    {g.rush_yards}
+                  </td>
+                </>
+              ) : null}
+              {showRec ? (
+                <>
+                  <td className="px-2 py-2 text-center font-medium text-ink">
+                    {g.receptions}
+                  </td>
+                  <td className="px-2 py-2 text-center font-medium text-ink">
+                    {g.receiving_yards}
+                  </td>
+                </>
+              ) : null}
             </tr>
           ))}
         </tbody>
@@ -315,7 +347,6 @@ export function PlayerDetail({
 
         <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1">
           <StarRating value={player.matchupStars} label="Matchup" />
-          <StarRating value={player.goalLineStars} label="Goal-Line" />
         </div>
 
         {player.injuryNote ? (
@@ -411,6 +442,12 @@ export function PlayerDetail({
           Odds may change and are not guaranteed executable pricing.
         </p>
       </Section>
+
+      {player.usage?.length ? (
+        <Section title="Scoring Opportunity">
+          <StatGrid stats={player.usage} />
+        </Section>
+      ) : null}
 
       <HistorySection history={player.history} opponent={player.opponent} />
 

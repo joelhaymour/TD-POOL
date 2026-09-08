@@ -113,11 +113,17 @@ export interface ResearchGameLog {
   week: number;
   opponent: string;
   home: boolean;
-  result: "W" | "L" | "T";
   touchdowns: number;
   /** Red-zone touches (carries + targets inside the 20). */
   rz_touches: number;
-  /** Goal-line / inside-5 carries or end-zone targets, position-aware. */
+  carries: number;
+  rush_yards: number;
+  receptions: number;
+  receiving_yards: number;
+  /**
+   * Model input only — an estimate of inside-5 work derived from red-zone
+   * attempts, not an observed stat. Never render this as a game-log number.
+   */
   goal_line_chances: number;
 }
 
