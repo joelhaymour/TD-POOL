@@ -31,6 +31,23 @@ export async function GET(request: Request) {
     weekId: nflWeek.id,
   });
 
+  // syncWeekOdds is week-scoped and does not touch sync_state, which is keyed
+  // per league. Without this the dashboard kept serving the previous run's
+  // status note long after the cause had changed.
+  const leagues = await store.listLeagues().catch(() => []);
+  await Promise.all(
+    leagues.map((league) =>
+      store
+        .completeSyncSlot(`odds:${league.slug}`, odds.error ? "error" : "ok", {
+          source: odds.source,
+          quotes: odds.quotes,
+          playersUpdated: odds.playersUpdated,
+          providerError: odds.error ?? null,
+        })
+        .catch(() => {}),
+    ),
+  );
+
   return NextResponse.json({
     ok: true,
     season,
