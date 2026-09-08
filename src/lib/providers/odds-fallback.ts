@@ -15,10 +15,34 @@ function hashName(name: string): number {
 
 /** Position-aware synthetic anytime TD implied prob when live books are unavailable. */
 function syntheticImplied(name: string, position: string): number {
+  const n = name.toLowerCase();
+  // Keep household TD names prioritized when live books are unavailable.
+  const elite: Record<string, number> = {
+    "christian mccaffrey": 0.58,
+    "saquon barkley": 0.56,
+    "derrick henry": 0.55,
+    "jahmyr gibbs": 0.54,
+    "bijan robinson": 0.53,
+    "jonathan taylor": 0.52,
+    "josh jacobs": 0.48,
+    "kyren williams": 0.47,
+    "breece hall": 0.46,
+    "de'von achane": 0.45,
+    "ja'marr chase": 0.44,
+    "justin jefferson": 0.43,
+    "cee dee lamb": 0.42,
+    "ceedee lamb": 0.42,
+    "puka nacua": 0.41,
+    "amon-ra st. brown": 0.4,
+  };
+  for (const [key, value] of Object.entries(elite)) {
+    if (n.includes(key) || key.includes(n)) return value;
+  }
+
   const roll = (hashName(name) % 1000) / 1000;
   const base =
-    position === "RB" ? 0.42 : position === "WR" ? 0.28 : position === "TE" ? 0.22 : 0.18;
-  return Math.max(0.08, Math.min(0.58, base + (roll - 0.5) * 0.12));
+    position === "RB" ? 0.34 : position === "WR" ? 0.24 : position === "TE" ? 0.2 : 0.16;
+  return Math.max(0.08, Math.min(0.48, base + (roll - 0.5) * 0.1));
 }
 
 /**
