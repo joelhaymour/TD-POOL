@@ -106,17 +106,38 @@ export async function syncWeekOdds(
   try {
     consensus = await provider.getConsensusAnytimeTdOdds(args.season, args.week);
     quotes = consensus.flatMap((c) => c.books);
+    if (source === "live" && consensus.length === 0) {
+      throw new Error(
+        "The Odds API returned 0 anytime-TD quotes (key may lack player-props access, or market not posted yet)",
+      );
+    }
   } catch (err) {
     error = err instanceof Error ? err.message : "Provider fetch failed";
     if (source === "live") {
-      const { createMockOddsProvider } = await import(
-        "@/lib/providers/mock/mock-odds-provider"
+      const { buildSyntheticAnytimeTdConsensus } = await import(
+        "@/lib/providers/odds-fallback"
       );
-      const mock = createMockOddsProvider();
-      consensus = await mock.getConsensusAnytimeTdOdds(args.season, args.week);
+      // Prefer roster-matched synthetic quotes over mock seed IDs (p-gibbs etc).
+      consensus = buildSyntheticAnytimeTdConsensus({
+        roster: players
+          .filter((p) => p.external_player_id)
+          .map((p) => ({
+            external_player_id: p.external_player_id!,
+            name: p.name,
+            team: p.team,
+            position: p.position,
+          })),
+        games: games
+          .filter((g) => g.external_game_id)
+          .map((g) => ({
+            external_game_id: g.external_game_id!,
+            home_team: g.home_team,
+            away_team: g.away_team,
+          })),
+      });
       quotes = consensus.flatMap((c) => c.books);
       effectiveSource = "mock";
-      error = `${error} (fell back to mock)`;
+      error = `${error} (fell back to roster synthetic odds)`;
     }
   }
 

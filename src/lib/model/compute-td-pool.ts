@@ -186,10 +186,10 @@ export function computeTdPoolFromFeatures(
   const usagePercentile = percentileRank(usageRaw, usageSample);
 
   const market = features.marketConsensusProbability;
-  const baseline =
-    market != null && market > 0
-      ? market
-      : neutralBaselineFromRole(features) * (0.7 + usagePercentile * 0.6);
+  const hasMarket = market != null && market > 0;
+  const baseline = hasMarket
+    ? market
+    : neutralBaselineFromRole(features) * (0.75 + usagePercentile * 0.35);
 
   const contributions: FactorContribution[] = [];
 
@@ -201,7 +201,9 @@ export function computeTdPoolFromFeatures(
     detail: string,
     center = 0.5,
   ) => {
-    const delta = (factorScore - center) * scale;
+    // Without market, keep adjustments smaller so we don't pin everyone near the ceiling.
+    const effectiveScale = hasMarket ? scale : scale * 0.55;
+    const delta = (factorScore - center) * effectiveScale;
     contributions.push({
       key,
       label,
@@ -221,7 +223,7 @@ export function computeTdPoolFromFeatures(
     detail:
       market != null
         ? `Consensus anytime TD implied ${(market * 100).toFixed(1)}%`
-        : "Market unavailable — role baseline used",
+        : "Market unavailable — role/history baseline used",
   });
 
   total += pushAdj(
@@ -292,7 +294,8 @@ export function computeTdPoolFromFeatures(
   const tdPoolProbability = clamp(
     total,
     TD_POOL_PROBABILITY_BOUNDS.min,
-    TD_POOL_PROBABILITY_BOUNDS.max,
+    // Without a market anchor, refuse absurd ceilings (stars/history alone shouldn't hit 90%).
+    hasMarket ? TD_POOL_PROBABILITY_BOUNDS.max : 0.62,
   );
 
   return {

@@ -165,12 +165,21 @@ export class TheOddsApiProvider implements OddsProvider {
       ? new Set(sportsbooks.filter((b) => b !== "Consensus"))
       : null;
 
-    const quotes: OddsQuote[] = [];
+    // Only pull near-term NFL games (this week), not the entire season calendar.
+    const now = Date.now();
+    const horizonMs = 14 * 24 * 60 * 60_000;
+    const upcoming = events.filter((e) => {
+      const t = Date.parse(e.commence_time);
+      return Number.isFinite(t) && t >= now - 6 * 60 * 60_000 && t <= now + horizonMs;
+    });
 
-    // Limit concurrent event fetches to protect quota / rate limits
+    const quotes: OddsQuote[] = [];
+    let authFailures = 0;
+    let attempted = 0;
+
     const batchSize = 3;
-    for (let i = 0; i < events.length; i += batchSize) {
-      const batch = events.slice(i, i + batchSize);
+    for (let i = 0; i < upcoming.length; i += batchSize) {
+      const batch = upcoming.slice(i, i + batchSize);
       const results = await Promise.allSettled(
         batch.map((e) => this.eventAnytimeTd(e.id)),
       );
@@ -178,7 +187,12 @@ export class TheOddsApiProvider implements OddsProvider {
       for (let j = 0; j < results.length; j += 1) {
         const result = results[j]!;
         const eventMeta = batch[j]!;
-        if (result.status !== "fulfilled") continue;
+        attempted += 1;
+        if (result.status !== "fulfilled") {
+          const msg = String(result.reason ?? "");
+          if (msg.includes("401") || msg.includes("403")) authFailures += 1;
+          continue;
+        }
         const eventOdds = result.value;
         const gameId = this.resolveGameId(
           eventOdds.home_team ?? eventMeta.home_team,
@@ -195,7 +209,6 @@ export class TheOddsApiProvider implements OddsProvider {
           if (!market) continue;
 
           for (const outcome of market.outcomes) {
-            // Anytime TD yes outcomes use description = player name
             const isYes =
               outcome.name.toLowerCase() === "yes" ||
               !outcome.description ||
@@ -223,6 +236,12 @@ export class TheOddsApiProvider implements OddsProvider {
           }
         }
       }
+    }
+
+    if (attempted > 0 && authFailures === attempted) {
+      throw new Error(
+        "The Odds API denied player_anytime_td (401/403) — upgrade plan or use a key with player props access",
+      );
     }
 
     return quotes;
