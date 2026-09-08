@@ -27,11 +27,15 @@ export type TdModelWeightKey = keyof typeof TD_MODEL_WEIGHTS;
  * so goalLine spans roughly 0.74x–1.35x and matchup roughly 0.93x–1.08x.
  */
 export const TD_MODEL_RATE_STRENGTH = {
-  goalLine: 0.45,
-  recentUsage: 0.4,
+  // Deliberately small. Red-zone workload already enters the baseline rate
+  // directly, so these only correct for role beyond raw touch counts.
+  goalLine: 0.15,
+  recentUsage: 0.1,
+  // Situational factors carry full weight — they are the part the baseline
+  // rate genuinely does not know about.
   matchup: 0.16,
   scoringEnvironment: 0.22,
-  projection: 0.1,
+  projection: 0.08,
   weather: 0.25,
 } as const;
 

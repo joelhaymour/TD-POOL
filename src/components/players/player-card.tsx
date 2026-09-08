@@ -100,9 +100,14 @@ export function PlayerCard({
         </div>
       </div>
 
-      {/* Market % lives on the analysis page — it is a model input, not a
-          number you pick on, and it crowded the card. */}
-      <div className="mt-3 grid grid-cols-2 gap-2">
+      {/* The odds tile is only worth its space when a price exists. With no
+          props feed it read "Unavailable" on every card in the league. */}
+      <div
+        className={cn(
+          "mt-3 grid gap-2",
+          player.americanOdds != null ? "grid-cols-2" : "grid-cols-1",
+        )}
+      >
         <div className="rounded-xl bg-field px-2.5 py-2">
           <p className="text-[9px] font-bold uppercase tracking-wider text-ink-faint">
             TD Chance
@@ -111,14 +116,16 @@ export function PlayerCard({
             {pct(player.ourProbability)}
           </p>
         </div>
-        <div className="rounded-xl bg-ink px-2.5 py-2">
-          <p className="text-[9px] font-bold uppercase tracking-wider text-chalk/55">
-            Odds
-          </p>
-          <p className="font-display text-xl font-extrabold text-lime">
-            {formatAmerican(player.americanOdds)}
-          </p>
-        </div>
+        {player.americanOdds != null ? (
+          <div className="rounded-xl bg-ink px-2.5 py-2">
+            <p className="text-[9px] font-bold uppercase tracking-wider text-chalk/55">
+              Odds
+            </p>
+            <p className="font-display text-xl font-extrabold text-lime">
+              {formatAmerican(player.americanOdds)}
+            </p>
+          </div>
+        ) : null}
       </div>
 
       {player.limitedData ? (

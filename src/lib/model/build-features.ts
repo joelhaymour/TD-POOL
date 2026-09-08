@@ -293,11 +293,7 @@ export function featuresToResearchJson(args: {
   };
   injuryDetail: string | null;
 }): ResearchJson {
-  const { features: f, history, model, analysis } = args;
-  const glRankLabel =
-    model.goalLinePercentile >= 0
-      ? `${Math.round(model.goalLinePercentile * 100)}th percentile`
-      : "—";
+  const { features: f, history, analysis } = args;
 
   return {
     why_we_like: analysis.whyWeLike,
@@ -331,7 +327,9 @@ export function featuresToResearchJson(args: {
           Math.max(1, f.opponentTdAllowedSampleGames),
       ),
       position_rank_allowed: f.opponentPositionTdRank ?? 16,
-      notes: `${f.opponentDataLabel}. Goal-line ${glRankLabel}. ${analysis.overview}`,
+      // `overview` already cites the goal-line percentile, so repeating
+      // glRankLabel here printed "98th percentile" twice in one sentence.
+      notes: `${f.opponentDataLabel}. ${analysis.overview}`,
     },
     usage: {
       snap_share: f.snapRate ?? 0,

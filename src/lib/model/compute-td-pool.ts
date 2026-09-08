@@ -55,6 +55,28 @@ function baseTouchdownRate(features: PlayerWeekFeatures): number {
   );
 }
 
+/** Share of red-zone touches that become touchdowns, by position. */
+const RED_ZONE_CONVERSION: Record<string, number> = {
+  RB: 0.17,
+  WR: 0.2,
+  TE: 0.2,
+  QB: 0.15,
+};
+
+/**
+ * Second, independent estimate of expected touchdowns built from red-zone
+ * workload rather than past scoring. Blending the two keeps a back who scored
+ * on a light workload from being credited with a role he does not have, and
+ * keeps a heavy red-zone role visible before the touchdowns arrive.
+ */
+function opportunityTouchdownRate(
+  features: PlayerWeekFeatures,
+): number | null {
+  const rz = features.redZoneTouchesPerGame;
+  if (rz == null || rz <= 0) return null;
+  return rz * (RED_ZONE_CONVERSION[features.position] ?? 0.18);
+}
+
 function goalLineRawScore(f: PlayerWeekFeatures): number {
   const inside5 = f.inside5TouchesPerGame ?? 0;
   const inside10 = f.inside10TouchesPerGame ?? 0;
@@ -235,7 +257,17 @@ export function computeTdPoolFromFeatures(
   // points, then a Poisson conversion turns the rate into P(scores at least
   // once). Additive nudges on a probability saturate — every starter pinned to
   // the ceiling — because they ignore how little headroom is left near 1.
-  const baseRate = baseTouchdownRate(features);
+  // Ability comes from two independent estimates. Goal-line and usage then only
+  // nudge, because multiplying a scoring rate by percentiles that measure the
+  // same scoring ability double-counts it and pinned the top of the board to
+  // the ceiling: Adams, Henry and Jacobs all read 68% with 4, 2 and 1 star
+  // matchups.
+  const historyRate = baseTouchdownRate(features);
+  const opportunityRate = opportunityTouchdownRate(features);
+  const baseRate =
+    opportunityRate == null
+      ? historyRate
+      : historyRate * 0.6 + opportunityRate * 0.4;
 
   const contributions: FactorContribution[] = [];
   let rate = baseRate;
@@ -266,7 +298,10 @@ export function computeTdPoolFromFeatures(
     label: "Scoring rate baseline",
     delta: 0,
     factorScore: Number(baseRate.toFixed(4)),
-    detail: `${baseRate.toFixed(2)} expected TD/game from role and recent scoring`,
+    detail:
+      opportunityRate == null
+        ? `${baseRate.toFixed(2)} expected TD/game from role and recent scoring`
+        : `${baseRate.toFixed(2)} expected TD/game — ${historyRate.toFixed(2)} from scoring history, ${opportunityRate.toFixed(2)} from red-zone workload`,
   });
 
   applyFactor(

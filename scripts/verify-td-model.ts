@@ -227,7 +227,38 @@ const ruledOut = computeTdPoolFromFeatures(
 );
 assert.ok(ruledOut.tdPoolProbability < strong.tdPoolProbability * 0.4);
 
+// Real-world anchor: Derrick Henry's 2025 line (17 games, 16 TD, 3.76 red-zone
+// touches per game) against a middling defense indoors. He is the shortest
+// anytime-TD price on a normal board, which implies the high 50s — not the
+// clamp. v1.11 shipped him at 68% tied with two other players.
+const henry = computeTdPoolFromFeatures(
+  baseFeatures({
+    playerName: "Bellcow Back",
+    scoringSampleGames: 17,
+    touchdownsInSample: 16,
+    touchdownsLast3: 6,
+    touchdownsLast5: 6,
+    redZoneTouchesPerGame: 3.76,
+    redZoneCarriesPerGame: 3,
+    redZoneTargetsPerGame: 1,
+    carriesPerGame: 22,
+    targetsPerGame: 0.3,
+    snapRate: 0.5,
+    opponentPositionTdRank: 16,
+    teamImpliedPoints: 25.5,
+    indoor: true,
+  }),
+  [baseFeatures(), baseFeatures({ playerName: "Bench", inside5TouchesPerGame: 0.1 })],
+);
+assert.ok(
+  henry.tdPoolProbability > 0.45 && henry.tdPoolProbability < 0.63,
+  `bellcow back out of range: ${henry.tdPoolProbability}`,
+);
+
 console.log("verify-td-model: all checks passed");
+console.log(
+  `  bellcow back (16 TD/17 g) ${(henry.tdPoolProbability * 100).toFixed(1)}%`,
+);
 console.log(
   `  elite RB ${(strong.tdPoolProbability * 100).toFixed(1)}% · ` +
     `reserve ${(weak.tdPoolProbability * 100).toFixed(1)}% · ` +

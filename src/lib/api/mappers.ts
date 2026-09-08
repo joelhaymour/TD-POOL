@@ -14,6 +14,21 @@ function pctLabel(share: number): string {
   return `${Math.round(share * 100)}%`;
 }
 
+function ordinal(n: number): string {
+  const mod100 = n % 100;
+  if (mod100 >= 11 && mod100 <= 13) return `${n}th`;
+  switch (n % 10) {
+    case 1:
+      return `${n}st`;
+    case 2:
+      return `${n}nd`;
+    case 3:
+      return `${n}rd`;
+    default:
+      return `${n}th`;
+  }
+}
+
 function perGame(
   games: readonly ResearchGameLog[] | undefined,
   pick: (game: ResearchGameLog) => number,
@@ -173,14 +188,14 @@ export function toPlayerDetail(
         label: "GL percentile",
         value:
           r.td_model?.goal_line_percentile != null
-            ? `${Math.round(r.td_model.goal_line_percentile * 100)}th`
+            ? ordinal(Math.round(r.td_model.goal_line_percentile * 100))
             : "—",
       },
       {
         label: "Matchup percentile",
         value:
           r.td_model?.matchup_percentile != null
-            ? `${Math.round(r.td_model.matchup_percentile * 100)}th`
+            ? ordinal(Math.round(r.td_model.matchup_percentile * 100))
             : "—",
       },
     ],

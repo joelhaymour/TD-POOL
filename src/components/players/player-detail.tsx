@@ -259,13 +259,20 @@ function HistorySection({
           <p className="mb-1.5 text-[10px] font-bold uppercase tracking-wider text-ink-faint">
             vs {opponent}
           </p>
-          <p className="mb-2 text-xs leading-snug text-ink-muted">
-            {history.vs_opponent_summary}
-          </p>
-          <GameLogTable
-            games={history.vs_opponent}
-            emptyLabel={`No recent meetings vs ${opponent}.`}
-          />
+          {/* The summary already says "no recent games" when the list is
+              empty, so the table's empty label repeated it verbatim. */}
+          {history.vs_opponent.length > 0 ? (
+            <>
+              <p className="mb-2 text-xs leading-snug text-ink-muted">
+                {history.vs_opponent_summary}
+              </p>
+              <GameLogTable games={history.vs_opponent} emptyLabel="" />
+            </>
+          ) : (
+            <p className="text-sm text-ink-muted">
+              No recent meetings vs {opponent}.
+            </p>
+          )}
         </div>
       </div>
     </Section>

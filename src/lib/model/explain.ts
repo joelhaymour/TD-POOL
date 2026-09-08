@@ -95,6 +95,13 @@ export function buildDeterministicAnalysis(
       `Tough matchup: ${features.opponent} ranks #${features.opponentPositionTdRank} vs ${features.position} TDs.`,
     );
   }
+  // A below-average matchup should be said out loud. Gating only on a top-10
+  // defensive rank left a two-star matchup reading "no red flags".
+  if (concerns.length < 3 && model.matchupPercentile < 0.45) {
+    concerns.push(
+      `Middling matchup: ${features.opponent} sits in the ${Math.round(model.matchupPercentile * 100)}th percentile of spots for ${features.position}s.`,
+    );
+  }
   if (!concerns.length) {
     concerns.push("No major usage or matchup red flags in the model this week.");
   }
