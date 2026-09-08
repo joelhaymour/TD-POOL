@@ -52,6 +52,7 @@ function baseFeatures(over: Partial<PlayerWeekFeatures> = {}): PlayerWeekFeature
     recentRedZoneTrend: "up",
     touchdownsLast3: 3,
     touchdownsLast5: 4,
+    scoringSampleGames: 5,
     opponentDataLabel: "2025 opponent data",
     opponentRzTdAllowedRate: 0.5,
     opponentRushTdAllowedRate: 0.3,
@@ -135,8 +136,8 @@ const weak = computeTdPoolFromFeatures(
 );
 
 assert.ok(strong.tdPoolProbability > weak.tdPoolProbability);
-assert.ok(strong.tdPoolProbability >= 0.05 && strong.tdPoolProbability <= 0.9);
-assert.ok(strong.contributions.some((c) => c.key === "market"));
+assert.ok(strong.tdPoolProbability >= 0.02 && strong.tdPoolProbability <= 0.75);
+assert.ok(strong.contributions.some((c) => c.key === "baseline"));
 assert.equal(clamp(2, 0, 1), 1);
 
 const ranked = [weak, strong].sort(
@@ -144,4 +145,59 @@ const ranked = [weak, strong].sort(
 );
 assert.equal(ranked[0], strong);
 
+// Calibration guards. An elite back is a coin flip, not a certainty, and a
+// deep reserve must stay low. These bounds are what the additive model broke:
+// every starter saturated at the ceiling once the market anchor was removed.
+assert.ok(
+  strong.tdPoolProbability > 0.4 && strong.tdPoolProbability < 0.68,
+  `elite RB out of range: ${strong.tdPoolProbability}`,
+);
+// `weak` still carries 18/game and 4 recent TDs — it is a volume back with a
+// poor goal-line role, so it should land well under the elite tier but not low.
+assert.ok(
+  weak.tdPoolProbability < 0.45,
+  `low goal-line back too high: ${weak.tdPoolProbability}`,
+);
+
+const deepReserve = computeTdPoolFromFeatures(
+  baseFeatures({
+    playerName: "Deep Reserve",
+    position: "WR",
+    depthOrder: 4,
+    snapRate: 0.1,
+    carriesPerGame: 0,
+    targetsPerGame: 0.6,
+    touchShare: 0.02,
+    targetShare: 0.02,
+    redZoneTouchesPerGame: 0,
+    redZoneCarriesPerGame: 0,
+    redZoneTargetsPerGame: 0,
+    inside10TouchesPerGame: 0,
+    inside5TouchesPerGame: 0,
+    inside5TeamShare: 0.02,
+    inside10TeamShare: 0.02,
+    touchdownsLast3: 0,
+    touchdownsLast5: 0,
+    teamImpliedPoints: 17,
+  }),
+  [baseFeatures(), baseFeatures({ playerName: "Bench", inside5TouchesPerGame: 0.1 })],
+);
+assert.ok(
+  deepReserve.tdPoolProbability < 0.18,
+  `deep reserve too high: ${deepReserve.tdPoolProbability}`,
+);
+
+// An out player must never outrank a healthy one with identical usage.
+const ruledOut = computeTdPoolFromFeatures(
+  baseFeatures({ playerInjuryStatus: "out" }),
+  [baseFeatures()],
+);
+assert.ok(ruledOut.tdPoolProbability < strong.tdPoolProbability * 0.4);
+
 console.log("verify-td-model: all checks passed");
+console.log(
+  `  elite RB ${(strong.tdPoolProbability * 100).toFixed(1)}% · ` +
+    `reserve ${(weak.tdPoolProbability * 100).toFixed(1)}% · ` +
+    `deep reserve ${(deepReserve.tdPoolProbability * 100).toFixed(1)}% · ` +
+    `ruled out ${(ruledOut.tdPoolProbability * 100).toFixed(1)}%`,
+);

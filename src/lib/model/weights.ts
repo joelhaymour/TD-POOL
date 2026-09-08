@@ -21,20 +21,24 @@ export type TdModelWeightKey = keyof typeof TD_MODEL_WEIGHTS;
  * Max absolute probability-point adjustments applied on top of market baseline.
  * Keeps the model explainable and within sensible bounds.
  */
-export const TD_MODEL_ADJUSTMENT_SCALE = {
-  goalLine: 0.12,
-  scoringEnvironment: 0.06,
-  recentUsage: 0.06,
-  matchup: 0.05,
-  projection: 0.04,
-  injury: 0.08,
-  weather: 0.03,
+/**
+ * Exponential strength of each factor on the expected-touchdowns rate. A
+ * percentile of 1.0 multiplies the rate by e^(strength/2), 0.0 divides by it,
+ * so goalLine spans roughly 0.74x–1.35x and matchup roughly 0.93x–1.08x.
+ */
+export const TD_MODEL_RATE_STRENGTH = {
+  goalLine: 0.6,
+  recentUsage: 0.34,
+  matchup: 0.16,
+  scoringEnvironment: 0.3,
+  projection: 0.12,
+  weather: 0.3,
 } as const;
 
 /** Final TD Pool % clamp. */
 export const TD_POOL_PROBABILITY_BOUNDS = {
-  min: 0.05,
-  max: 0.9,
+  min: 0.02,
+  max: 0.75,
 } as const;
 
 /**

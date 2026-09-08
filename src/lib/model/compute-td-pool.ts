@@ -7,46 +7,48 @@ import { clamp, clamp01, percentileRank } from "@/lib/model/math";
 import { percentileToStars } from "@/lib/model/stars";
 import { TD_POOL_MODEL_VERSION } from "@/lib/model/version";
 import {
-  TD_MODEL_ADJUSTMENT_SCALE,
+  TD_MODEL_RATE_STRENGTH,
   TD_POOL_PROBABILITY_BOUNDS,
 } from "@/lib/model/weights";
 
-function neutralBaselineFromRole(features: PlayerWeekFeatures): number {
-  const tdRate =
-    features.touchdownsLast5 > 0
-      ? features.touchdownsLast5 / 5
-      : features.touchdownsLast3 > 0
-        ? features.touchdownsLast3 / 3
-        : 0;
-  // Convert recent TD rate into a soft anytime baseline, then blend role prior.
-  const fromTds = 1 - Math.exp(-Math.max(0, tdRate) * 1.25);
-  let role = 0.16;
-  switch (features.position) {
-    case "RB":
-      role = 0.24;
-      break;
-    case "WR":
-      role = 0.16;
-      break;
-    case "TE":
-      role = 0.12;
-      break;
-    case "QB":
-      role = 0.1;
-      break;
-    default:
-      break;
-  }
-  // Depth chart: starters get a bump; deep bench stays low.
+/** P(at least one TD) for a Poisson process with the given per-game rate. */
+function poissonAtLeastOne(rate: number): number {
+  return 1 - Math.exp(-Math.max(0, rate));
+}
+
+/** League-average touchdowns per game for a rostered player at each position. */
+const POSITION_TD_RATE_PRIOR: Record<string, number> = {
+  RB: 0.42,
+  WR: 0.3,
+  TE: 0.24,
+  QB: 0.16,
+};
+
+/** Games of prior weight mixed into the observed rate. Five games is noisy. */
+const SCORING_PRIOR_WEIGHT = 4;
+
+/**
+ * Expected touchdowns per game from scoring history, shrunk toward the position
+ * prior by sample size. A back with 4 scores in 5 games is not a 0.8/game back.
+ */
+function baseTouchdownRate(features: PlayerWeekFeatures): number {
+  const games = Math.max(0, Math.min(5, features.scoringSampleGames));
+  const tds = Math.max(0, features.touchdownsLast5);
+  const prior = POSITION_TD_RATE_PRIOR[features.position] ?? 0.25;
+
   const depth =
     features.depthOrder == null
-      ? 0
+      ? 1
       : features.depthOrder <= 1
-        ? 0.06
+        ? 1.12
         : features.depthOrder === 2
-          ? 0.02
-          : -0.04;
-  return clamp01(Math.max(fromTds, role * 0.55 + fromTds * 0.45) + depth);
+          ? 0.92
+          : 0.7;
+
+  return (
+    ((tds + SCORING_PRIOR_WEIGHT * prior) / (games + SCORING_PRIOR_WEIGHT)) *
+    depth
+  );
 }
 
 function goalLineRawScore(f: PlayerWeekFeatures): number {
@@ -221,97 +223,98 @@ export function computeTdPoolFromFeatures(
   const matchupPercentile = percentileRank(matchRaw, samples.match);
   const usagePercentile = percentileRank(usageRaw, samples.usage);
 
-  // The model is deliberately market-free: it ranks on measured usage,
-  // matchup, and environment. Anchoring to a sportsbook line we do not have
-  // meant anchoring to a synthetic number we generated ourselves.
-  const baseline =
-    neutralBaselineFromRole(features) * (0.75 + usagePercentile * 0.35);
+  // The model is market-free: it ranks on measured usage, matchup, and
+  // environment. Anchoring to a sportsbook line we do not have meant anchoring
+  // to a synthetic number we generated ourselves.
+  //
+  // Factors scale an expected-touchdowns rate rather than adding probability
+  // points, then a Poisson conversion turns the rate into P(scores at least
+  // once). Additive nudges on a probability saturate — every starter pinned to
+  // the ceiling — because they ignore how little headroom is left near 1.
+  const baseRate = baseTouchdownRate(features);
 
   const contributions: FactorContribution[] = [];
+  let rate = baseRate;
 
-  const pushAdj = (
+  const applyFactor = (
     key: string,
     label: string,
     factorScore: number,
-    scale: number,
+    strength: number,
     detail: string,
     center = 0.5,
   ) => {
-    // Adjustments stay modest so a role baseline is not pushed to the ceiling.
-    const effectiveScale = scale * 0.55;
-    const delta = (factorScore - center) * effectiveScale;
+    const multiplier = Math.exp((factorScore - center) * strength);
+    const before = poissonAtLeastOne(rate);
+    rate *= multiplier;
     contributions.push({
       key,
       label,
-      delta: Number(delta.toFixed(4)),
+      // Reported as probability points so the explanation layer is unchanged.
+      delta: Number((poissonAtLeastOne(rate) - before).toFixed(4)),
       factorScore: Number(factorScore.toFixed(4)),
       detail,
     });
-    return delta;
   };
 
-  let total = baseline;
   contributions.push({
     key: "baseline",
-    label: "Role baseline",
+    label: "Scoring rate baseline",
     delta: 0,
-    factorScore: baseline,
-    detail: `Role and recent scoring baseline ${(baseline * 100).toFixed(1)}%`,
+    factorScore: Number(baseRate.toFixed(4)),
+    detail: `${baseRate.toFixed(2)} expected TD/game from role and recent scoring`,
   });
 
-  total += pushAdj(
+  applyFactor(
     "goalLine",
     "Goal-line / red-zone",
     goalLinePercentile,
-    TD_MODEL_ADJUSTMENT_SCALE.goalLine,
+    TD_MODEL_RATE_STRENGTH.goalLine,
     `GL score ${glRaw.toFixed(2)} · ${Math.round(goalLinePercentile * 100)}th pct vs ${features.position}s`,
   );
-  total += pushAdj(
+  applyFactor(
+    "recentUsage",
+    "Recent usage / role",
+    usagePercentile,
+    TD_MODEL_RATE_STRENGTH.recentUsage,
+    `Usage ${Math.round(usagePercentile * 100)}th pct · trend ${features.recentTouchTrend}`,
+  );
+  applyFactor(
+    "matchup",
+    "Opponent matchup",
+    matchupPercentile,
+    TD_MODEL_RATE_STRENGTH.matchup,
+    `${features.opponentDataLabel}: ${Math.round(matchupPercentile * 100)}th pct matchup`,
+  );
+  applyFactor(
     "scoringEnvironment",
     "Scoring environment",
     envRaw,
-    TD_MODEL_ADJUSTMENT_SCALE.scoringEnvironment,
+    TD_MODEL_RATE_STRENGTH.scoringEnvironment,
     features.teamImpliedPoints != null
       ? `Team implied ${features.teamImpliedPoints.toFixed(1)} pts`
       : "Implied points unavailable",
   );
-  total += pushAdj(
-    "recentUsage",
-    "Recent usage / role",
-    usagePercentile,
-    TD_MODEL_ADJUSTMENT_SCALE.recentUsage,
-    `Usage ${Math.round(usagePercentile * 100)}th pct · trend ${features.recentTouchTrend}`,
-  );
-  total += pushAdj(
-    "matchup",
-    "Opponent matchup",
-    matchupPercentile,
-    TD_MODEL_ADJUSTMENT_SCALE.matchup,
-    `${features.opponentDataLabel}: ${Math.round(matchupPercentile * 100)}th pct matchup`,
-  );
 
   if (proj != null) {
-    total += pushAdj(
+    applyFactor(
       "projection",
       "External projection",
       clamp01(proj),
-      TD_MODEL_ADJUSTMENT_SCALE.projection,
+      TD_MODEL_RATE_STRENGTH.projection,
       "Secondary projection signal",
     );
   }
 
   // deltaScale < 0 = player injury risk (always a penalty).
   // deltaScale > 0 = teammate absence boost.
-  // Do not multiply negative scale by (score - 0.7) — that flipped Q tags into "why we like".
-  let injuryDelta = 0;
-  if (inj.deltaScale < 0) {
-    injuryDelta = inj.deltaScale * TD_MODEL_ADJUSTMENT_SCALE.injury;
-  } else if (inj.deltaScale > 0) {
-    injuryDelta =
-      inj.deltaScale *
-      TD_MODEL_ADJUSTMENT_SCALE.injury *
-      Math.max(0, inj.score - 0.55);
-  }
+  const injuryMultiplier =
+    inj.deltaScale < 0
+      ? Math.max(0.05, 1 + inj.deltaScale * 0.9)
+      : 1 + inj.deltaScale * 0.25 * Math.max(0, inj.score - 0.55);
+  const injuryBefore = poissonAtLeastOne(rate);
+  rate *= injuryMultiplier;
+  const injuryDelta = poissonAtLeastOne(rate) - injuryBefore;
   contributions.push({
     key: "injury",
     label: "Injury / depth context",
@@ -319,10 +322,10 @@ export function computeTdPoolFromFeatures(
     factorScore: inj.score,
     detail: inj.detail,
   });
-  total += injuryDelta;
 
-  const weatherDelta =
-    (wx.score - 0.55) * TD_MODEL_ADJUSTMENT_SCALE.weather;
+  const weatherBefore = poissonAtLeastOne(rate);
+  rate *= Math.exp((wx.score - 0.55) * TD_MODEL_RATE_STRENGTH.weather);
+  const weatherDelta = poissonAtLeastOne(rate) - weatherBefore;
   contributions.push({
     key: "weather",
     label: "Weather / game context",
@@ -330,13 +333,11 @@ export function computeTdPoolFromFeatures(
     factorScore: wx.score,
     detail: wx.detail,
   });
-  total += weatherDelta;
 
-  // Usage and matchup alone cannot justify a 90% call, so the ceiling stays low.
   const tdPoolProbability = clamp(
-    total,
+    poissonAtLeastOne(rate),
     TD_POOL_PROBABILITY_BOUNDS.min,
-    0.62,
+    TD_POOL_PROBABILITY_BOUNDS.max,
   );
 
   return {

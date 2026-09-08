@@ -247,6 +247,7 @@ export function buildPlayerWeekFeatures(args: {
 
     touchdownsLast3: tdsLast3,
     touchdownsLast5: tdsLast5,
+    scoringSampleGames: history.last_5.length,
 
     opponentDataLabel: args.ctx.defenseLabel,
     opponentRzTdAllowedRate: def?.rzTdAllowedRate ?? null,
