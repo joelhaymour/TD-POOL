@@ -1,47 +1,26 @@
-/* TD Pool — cache icons/manifest only; never cache-first Next JS/CSS (causes hydration mismatches). */
-const CACHE = "td-pool-static-v2";
-const PRECACHE = ["/icon.svg", "/manifest.webmanifest"];
+/* TD Pool — self-updating SW.
+ * v1 cached /_next/static (stale UI). v2+ only icons.
+ * This build clears ALL caches and does not intercept app traffic.
+ */
+const CACHE = "td-pool-static-v3";
 
 self.addEventListener("install", (event) => {
-  event.waitUntil(
-    caches.open(CACHE).then((cache) => cache.addAll(PRECACHE)).then(() => self.skipWaiting()),
-  );
+  event.waitUntil(self.skipWaiting());
 });
 
 self.addEventListener("activate", (event) => {
   event.waitUntil(
-    caches.keys().then((keys) =>
-      Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k))),
-    ).then(() => self.clients.claim()),
-  );
-});
-
-self.addEventListener("fetch", (event) => {
-  const { request } = event;
-  if (request.method !== "GET") return;
-
-  const url = new URL(request.url);
-  if (url.origin !== self.location.origin) return;
-
-  // Only cache static brand assets — never HTML, API, or /_next bundles.
-  const isAsset =
-    url.pathname === "/icon.svg" ||
-    url.pathname === "/manifest.webmanifest" ||
-    /\.(?:svg|png|jpg|jpeg|webp|woff2?)$/i.test(url.pathname);
-
-  if (!isAsset) return;
-
-  event.respondWith(
-    caches.open(CACHE).then(async (cache) => {
-      const cached = await cache.match(request);
-      if (cached) return cached;
-      try {
-        const response = await fetch(request);
-        if (response.ok) cache.put(request, response.clone());
-        return response;
-      } catch {
-        return cached ?? Response.error();
+    (async () => {
+      const keys = await caches.keys();
+      await Promise.all(keys.map((k) => caches.delete(k)));
+      await self.clients.claim();
+      // Notify open tabs to reload once so they drop any stale controller state.
+      const clients = await self.clients.matchAll({ type: "window" });
+      for (const client of clients) {
+        client.postMessage({ type: "TD_POOL_SW_UPDATED", cache: CACHE });
       }
-    }),
+    })(),
   );
 });
+
+// Do not intercept fetches — always hit the network for HTML/JS/API.
