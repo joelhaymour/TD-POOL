@@ -149,8 +149,38 @@ assert.equal(ranked[0], strong);
 // deep reserve must stay low. These bounds are what the additive model broke:
 // every starter saturated at the ceiling once the market anchor was removed.
 assert.ok(
-  strong.tdPoolProbability > 0.4 && strong.tdPoolProbability < 0.68,
+  strong.tdPoolProbability > 0.4 && strong.tdPoolProbability < 0.62,
   `elite RB out of range: ${strong.tdPoolProbability}`,
+);
+
+// A reserve with a hot two-game sample must not outrank real starters. This is
+// what floated backup tight ends into the top ten before the prior was raised.
+const smallSampleFluke = computeTdPoolFromFeatures(
+  baseFeatures({
+    playerName: "Hot Backup TE",
+    position: "TE",
+    depthOrder: 3,
+    snapRate: 0.25,
+    carriesPerGame: 0,
+    targetsPerGame: 2,
+    touchShare: 0.05,
+    targetShare: 0.07,
+    redZoneTouchesPerGame: 0.8,
+    redZoneCarriesPerGame: 0,
+    redZoneTargetsPerGame: 0.8,
+    inside10TouchesPerGame: 0.4,
+    inside5TouchesPerGame: 0.3,
+    inside5TeamShare: 0.12,
+    inside10TeamShare: 0.12,
+    touchdownsLast3: 2,
+    touchdownsLast5: 2,
+    scoringSampleGames: 2,
+  }),
+  [baseFeatures(), baseFeatures({ playerName: "Bench", inside5TouchesPerGame: 0.1 })],
+);
+assert.ok(
+  smallSampleFluke.tdPoolProbability < strong.tdPoolProbability * 0.7,
+  `two-game fluke too high: ${smallSampleFluke.tdPoolProbability}`,
 );
 // `weak` still carries 18/game and 4 recent TDs — it is a volume back with a
 // poor goal-line role, so it should land well under the elite tier but not low.
@@ -199,5 +229,6 @@ console.log(
   `  elite RB ${(strong.tdPoolProbability * 100).toFixed(1)}% · ` +
     `reserve ${(weak.tdPoolProbability * 100).toFixed(1)}% · ` +
     `deep reserve ${(deepReserve.tdPoolProbability * 100).toFixed(1)}% · ` +
-    `ruled out ${(ruledOut.tdPoolProbability * 100).toFixed(1)}%`,
+    `ruled out ${(ruledOut.tdPoolProbability * 100).toFixed(1)}% · ` +
+    `two-game fluke ${(smallSampleFluke.tdPoolProbability * 100).toFixed(1)}%`,
 );

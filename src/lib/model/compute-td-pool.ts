@@ -24,8 +24,12 @@ const POSITION_TD_RATE_PRIOR: Record<string, number> = {
   QB: 0.16,
 };
 
-/** Games of prior weight mixed into the observed rate. Five games is noisy. */
-const SCORING_PRIOR_WEIGHT = 4;
+/**
+ * Games of prior weight mixed into the observed rate. Heavy on purpose: a
+ * reserve with two scores in two games is the loudest noise on the board, and
+ * a lighter prior floated several of them into the top ten.
+ */
+const SCORING_PRIOR_WEIGHT = 6;
 
 /**
  * Expected touchdowns per game from scoring history, shrunk toward the position
@@ -40,10 +44,10 @@ function baseTouchdownRate(features: PlayerWeekFeatures): number {
     features.depthOrder == null
       ? 1
       : features.depthOrder <= 1
-        ? 1.12
+        ? 1.08
         : features.depthOrder === 2
-          ? 0.92
-          : 0.7;
+          ? 0.95
+          : 0.75;
 
   return (
     ((tds + SCORING_PRIOR_WEIGHT * prior) / (games + SCORING_PRIOR_WEIGHT)) *
