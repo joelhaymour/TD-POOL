@@ -52,6 +52,8 @@ export async function autoSyncLeagueOdds(
         source: summary.source,
         quotes: summary.quotes,
         playersUpdated: summary.playersUpdated,
+        // Present when the live feed failed and synthetic prices were used.
+        providerError: summary.error ?? null,
       });
       return summary;
     } catch (err) {

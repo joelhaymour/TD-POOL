@@ -86,9 +86,28 @@ export const loadLeagueDashboard = cache(async function loadLeagueDashboard(
 
   return {
     ...slimDashboard(dashboard),
-    odds_source: getConfiguredOddsSource(),
+    odds_source: await readEffectiveOddsSource(store, slug),
   };
 });
+
+/**
+ * Report the source the last sync actually used. `getConfiguredOddsSource()`
+ * only says whether a key is set, so it reads "live" even when every price
+ * came from the synthetic fallback.
+ */
+async function readEffectiveOddsSource(
+  store: Store,
+  slug: string,
+): Promise<"live" | "mock"> {
+  try {
+    const state = await store.getSyncState(`odds:${slug}`);
+    const source = state?.detail.source;
+    if (source === "live" || source === "mock") return source;
+  } catch {
+    // fall through to the configured value
+  }
+  return getConfiguredOddsSource();
+}
 
 async function hasServableBoard(
   store: Store,
