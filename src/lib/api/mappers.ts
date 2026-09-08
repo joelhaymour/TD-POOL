@@ -107,8 +107,11 @@ export function toPlayerDetail(
         value: opponentDataLabel,
       },
       {
-        label: "RZ TD rate",
-        value: `${Math.round(r.matchup.red_zone_td_rate * 100)}%`,
+        label: "Opp TDs / game",
+        value:
+          r.matchup.red_zone_td_rate > 0
+            ? r.matchup.red_zone_td_rate.toFixed(2)
+            : "—",
       },
       {
         label: "Rush TDs allowed",

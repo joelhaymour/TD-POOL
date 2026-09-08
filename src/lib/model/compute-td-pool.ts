@@ -76,17 +76,17 @@ function matchupRawScore(f: PlayerWeekFeatures): number {
   const rz = f.opponentRzTdAllowedRate;
   const rank = f.opponentPositionTdRank;
 
+  // Rates are TDs allowed per game (not 0–1). Rank 1 = stingiest, 32 = softest.
   if (f.position === "RB") {
-    const rushPart = rush != null ? clamp01(rush / 0.35) : 0.5;
-    const rzPart = rz != null ? clamp01(rz / 0.55) : 0.5;
-    const rankPart =
-      rank != null ? clamp01((32 - rank) / 31) : 0.5;
+    const rushPart = rush != null ? clamp01(rush / 1.15) : 0.5;
+    const rzPart = rz != null ? clamp01(rz / 2.4) : 0.5;
+    const rankPart = rank != null ? clamp01((rank - 1) / 31) : 0.5;
     return rushPart * 0.45 + rzPart * 0.35 + rankPart * 0.2;
   }
 
-  const recPart = rec != null ? clamp01(rec / 0.4) : 0.5;
-  const rzPart = rz != null ? clamp01(rz / 0.55) : 0.5;
-  const rankPart = rank != null ? clamp01((32 - rank) / 31) : 0.5;
+  const recPart = rec != null ? clamp01(rec / 2.0) : 0.5;
+  const rzPart = rz != null ? clamp01(rz / 2.4) : 0.5;
+  const rankPart = rank != null ? clamp01((rank - 1) / 31) : 0.5;
   return recPart * 0.45 + rzPart * 0.35 + rankPart * 0.2;
 }
 

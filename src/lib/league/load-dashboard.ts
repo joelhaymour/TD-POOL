@@ -36,9 +36,9 @@ export function slimDashboard(dashboard: LeagueDashboard): LeagueDashboard {
 function emptyResearch(r: LeagueDashboard["ranked_players"][number]["research_json"]) {
   return {
     ...r,
-    why_we_like: [],
-    concerns: [],
-    verdict: "",
+    why_we_like: r.why_we_like?.slice(0, 4) ?? [],
+    concerns: r.concerns?.slice(0, 3) ?? [],
+    verdict: r.verdict ?? "",
     market: { ...r.market, books: [] },
     // Keep model meta for debugging/recompute, but drop bulky feature snapshots from list payloads.
     td_model: r.td_model
