@@ -68,3 +68,29 @@ export async function requireApiMembership(
 
   return { ok: true, user: auth.user, league, member };
 }
+
+/**
+ * Guards commissioner actions. Admin is a property of the member row rather
+ * than a shared PIN, so there is nothing to forward into a group chat.
+ */
+export async function requireApiAdmin(
+  slug: string,
+): Promise<
+  | { ok: true; user: User; league: League; member: LeagueMember }
+  | { ok: false; response: NextResponse }
+> {
+  const access = await requireApiMembership(slug);
+  if (!access.ok) return access;
+
+  if (access.member.role !== "admin") {
+    return {
+      ok: false,
+      response: NextResponse.json(
+        { error: "Only league admins can do that", code: "FORBIDDEN" },
+        { status: 403 },
+      ),
+    };
+  }
+
+  return access;
+}

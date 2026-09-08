@@ -10,9 +10,8 @@ type PickBody = {
   weekId?: string;
   /** Only honoured with `override` — the member an admin is picking for. */
   memberId?: string;
-  /** When true with a valid adminPin, uses store.overridePick */
+  /** Admin-only: assign the pick to `memberId`, ignoring locks and conflicts. */
   override?: boolean;
-  adminPin?: string;
 };
 
 async function resolvePickInput(
@@ -62,16 +61,26 @@ async function resolvePickInput(
     };
   }
 
-  // An admin holding the PIN may pick on someone else's behalf; everyone else
-  // picks as themselves, so the member id comes from the session rather than
-  // the request body.
-  let memberId: string;
+  // A league admin may pick on someone else's behalf; everyone else picks as
+  // themselves, so the member id comes from the session rather than the body.
+  const viewer = await store.getMemberForUser(league.id, auth.user.id);
+  if (!viewer) {
+    return {
+      ok: false,
+      response: NextResponse.json(
+        { error: "You are not a member of this league", code: "FORBIDDEN" },
+        { status: 403 },
+      ),
+    };
+  }
+
+  let memberId = viewer.id;
   if (body.override) {
-    if (!body.adminPin || body.adminPin !== league.admin_pin) {
+    if (viewer.role !== "admin") {
       return {
         ok: false,
         response: NextResponse.json(
-          { error: "Invalid admin PIN", code: "FORBIDDEN" },
+          { error: "Only league admins can override picks", code: "FORBIDDEN" },
           { status: 403 },
         ),
       };
@@ -86,18 +95,6 @@ async function resolvePickInput(
       };
     }
     memberId = body.memberId;
-  } else {
-    const member = await store.getMemberForUser(league.id, auth.user.id);
-    if (!member) {
-      return {
-        ok: false,
-        response: NextResponse.json(
-          { error: "You are not a member of this league", code: "FORBIDDEN" },
-          { status: 403 },
-        ),
-      };
-    }
-    memberId = member.id;
   }
 
   return {

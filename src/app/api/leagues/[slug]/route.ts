@@ -1,7 +1,7 @@
 import { NextResponse, after } from "next/server";
 import { getStore } from "@/lib/store";
 import { storeErrorResponse } from "@/lib/api/store-error";
-import { requireApiMembership } from "@/lib/auth/api";
+import { requireApiAdmin, requireApiMembership } from "@/lib/auth/api";
 import {
   loadLeagueDashboard,
   refreshLeagueData,
@@ -11,7 +11,7 @@ import type { UpdateLeagueSettingsInput } from "@/lib/types";
 /** First-run board materialize can exceed the default timeout. */
 export const maxDuration = 300;
 
-type PatchBody = UpdateLeagueSettingsInput & { admin_pin?: string };
+type PatchBody = UpdateLeagueSettingsInput;
 
 export async function GET(
   _request: Request,
@@ -46,26 +46,14 @@ export async function PATCH(
 ) {
   try {
     const { slug } = await context.params;
+    const access = await requireApiAdmin(slug);
+    if (!access.ok) return access.response;
+
     const body = (await request.json()) as PatchBody;
     const store = getStore();
-
-    const league = await store.getLeagueBySlug(slug);
-    if (!league) {
-      return NextResponse.json(
-        { error: "League not found", code: "NOT_FOUND" },
-        { status: 404 },
-      );
-    }
-
-    if (!body.admin_pin || body.admin_pin !== league.admin_pin) {
-      return NextResponse.json(
-        { error: "Invalid admin PIN", code: "FORBIDDEN" },
-        { status: 403 },
-      );
-    }
+    const league = access.league;
 
     const {
-      admin_pin: _pin,
       name,
       currency,
       betting_mode,

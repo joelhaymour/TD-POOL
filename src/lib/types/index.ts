@@ -52,7 +52,6 @@ export interface League {
   allow_pick_changes: boolean;
   odds_format: OddsFormat;
   survivor_mode: boolean;
-  admin_pin: string;
   join_pin: string;
   logo_url: string | null;
   active_week_id: string | null;
@@ -68,7 +67,6 @@ export interface LeagueMember {
   display_name: string;
   role: MemberRole;
   active: boolean;
-  pin: string | null;
   created_at: string;
 }
 
@@ -318,7 +316,6 @@ export interface CreateLeagueInput {
   allow_pick_changes?: boolean;
   odds_format?: OddsFormat;
   survivor_mode?: boolean;
-  admin_pin: string;
   join_pin: string;
   admin_display_name: string;
   /** Auth user who owns the league and takes the admin seat. */
@@ -346,7 +343,6 @@ export interface UpdateLeagueSettingsInput {
   allow_pick_changes?: boolean;
   odds_format?: OddsFormat;
   survivor_mode?: boolean;
-  admin_pin?: string;
   join_pin?: string;
   logo_url?: string | null;
   member_count?: number;

@@ -4,6 +4,7 @@ import type {
   League,
   LeagueDashboard,
   LeagueMember,
+  MemberRole,
   NflGame,
   NflPlayer,
   NflWeek,
@@ -88,6 +89,12 @@ export interface Store {
     leagueId: string,
     userId: string,
   ): Promise<LeagueMember | null>;
+  /** Promote a member to admin or demote them. Never leaves a league adminless. */
+  setMemberRole(
+    leagueId: string,
+    memberId: string,
+    role: MemberRole,
+  ): Promise<LeagueMember>;
   /** Soft-deactivate or reactivate a member. Blocks deactivating the last admin. */
   setMemberActive(
     leagueId: string,

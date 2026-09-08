@@ -30,7 +30,6 @@ export async function POST(request: Request) {
       slug: body.slug,
       admin_display_name: body.admin_display_name.trim(),
       admin_user_id: auth.user.id,
-      admin_pin: body.admin_pin ?? "1234",
       join_pin: body.join_pin ?? "0000",
       currency: body.currency,
       betting_mode: body.betting_mode,

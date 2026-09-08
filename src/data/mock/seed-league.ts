@@ -89,7 +89,6 @@ export async function buildSeedPayload(): Promise<SeedPayload> {
     allow_pick_changes: true,
     odds_format: "american",
     survivor_mode: false,
-    admin_pin: "1234",
     join_pin: "0000",
     logo_url: null,
     active_week_id: weekId,
@@ -105,7 +104,6 @@ export async function buildSeedPayload(): Promise<SeedPayload> {
     display_name: name,
     role: index === 0 ? "admin" : "member",
     active: true,
-    pin: index === 0 ? "1234" : null,
     created_at: createdAt,
   }));
 

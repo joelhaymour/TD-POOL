@@ -16,12 +16,10 @@ export function slimDashboard(dashboard: LeagueDashboard): LeagueDashboard {
     ...dashboard,
     league: {
       ...dashboard.league,
-      admin_pin: "",
       join_pin: "",
     },
     members: dashboard.members.map((m) => ({
       ...m,
-      member: { ...m.member, pin: null },
       player_week: m.player_week
         ? {
             ...m.player_week,

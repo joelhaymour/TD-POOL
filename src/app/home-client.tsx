@@ -73,7 +73,6 @@ export function HomeClient({
         body: JSON.stringify({
           name: name.trim(),
           admin_display_name: displayName.trim(),
-          admin_pin: "1234",
           join_pin: newJoinPin,
         }),
       });

@@ -351,7 +351,6 @@ function toLeagueRow(
     survivor_mode: league.survivor_mode,
     odds_format: league.odds_format,
     join_pin: league.join_pin,
-    admin_pin: league.admin_pin,
     logo_url: league.logo_url,
     active_week_id: activeWeekId,
     created_at: league.created_at,
@@ -371,7 +370,6 @@ function toMemberRow(
     display_name: member.display_name,
     role: member.role,
     active: member.active,
-    pin: member.pin,
     created_at: member.created_at,
   };
 }

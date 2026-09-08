@@ -23,6 +23,7 @@ import type {
   LeagueDashboard,
   LeagueMember,
   MemberPickStatus,
+  MemberRole,
   NflGame,
   NflPlayer,
   NflWeek,
@@ -199,7 +200,6 @@ export class LocalFileStore implements Store {
         allow_pick_changes: input.allow_pick_changes ?? true,
         odds_format: input.odds_format ?? "american",
         survivor_mode: input.survivor_mode ?? false,
-        admin_pin: input.admin_pin,
         join_pin: input.join_pin,
         logo_url: input.logo_url ?? null,
         active_week_id: week.id,
@@ -222,7 +222,6 @@ export class LocalFileStore implements Store {
           display_name: name,
           role: name === input.admin_display_name ? "admin" : "member",
           active: true,
-          pin: name === input.admin_display_name ? input.admin_pin : null,
           created_at: createdAt,
         };
         data.members.push(member);
@@ -284,7 +283,6 @@ export class LocalFileStore implements Store {
         display_name: displayName,
         role: "member",
         active: true,
-        pin: null,
         created_at: nowIso(),
       };
       data.members.push(member);
@@ -363,6 +361,38 @@ export class LocalFileStore implements Store {
           (m) => m.league_id === leagueId && m.user_id === userId && m.active,
         ) ?? null,
     );
+  }
+
+  async setMemberRole(
+    leagueId: string,
+    memberId: string,
+    role: MemberRole,
+  ): Promise<LeagueMember> {
+    return this.withData((data) => {
+      const member = data.members.find(
+        (m) => m.id === memberId && m.league_id === leagueId,
+      );
+      if (!member) throw new StoreError("Member not found", "NOT_FOUND");
+
+      if (role !== "admin" && member.role === "admin") {
+        const otherAdmins = data.members.filter(
+          (m) =>
+            m.league_id === leagueId &&
+            m.active &&
+            m.role === "admin" &&
+            m.id !== memberId,
+        );
+        if (otherAdmins.length === 0) {
+          throw new StoreError(
+            "Promote someone else before stepping down as the last admin",
+            "FORBIDDEN",
+          );
+        }
+      }
+
+      member.role = role;
+      return member;
+    });
   }
 
   async getPicksForWeek(leagueId: string, weekId: string): Promise<Pick[]> {

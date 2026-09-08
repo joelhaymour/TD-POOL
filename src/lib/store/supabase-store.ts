@@ -30,6 +30,7 @@ import type {
   LeagueDashboard,
   LeagueMember,
   MemberPickStatus,
+  MemberRole,
   NflGame,
   NflPlayer,
   NflWeek,
@@ -114,7 +115,6 @@ function mapLeague(row: DbLeague): League {
     allow_pick_changes: Boolean(row.allow_pick_changes ?? true),
     odds_format: (row.odds_format as League["odds_format"]) ?? "american",
     survivor_mode: Boolean(row.survivor_mode ?? false),
-    admin_pin: row.admin_pin != null ? String(row.admin_pin) : "",
     join_pin: row.join_pin != null ? String(row.join_pin) : "",
     logo_url: row.logo_url != null ? String(row.logo_url) : null,
     active_week_id: row.active_week_id ? String(row.active_week_id) : null,
@@ -132,7 +132,6 @@ function mapMember(row: DbMember): LeagueMember {
     display_name: String(row.display_name),
     role: (row.role as LeagueMember["role"]) ?? "member",
     active: Boolean(row.active ?? true),
-    pin: row.pin != null ? String(row.pin) : null,
     created_at: String(row.created_at),
   };
 }
@@ -264,7 +263,6 @@ function leagueToDbPatch(settings: UpdateLeagueSettingsInput): Record<string, un
   }
   if (settings.odds_format !== undefined) patch.odds_format = settings.odds_format;
   if (settings.survivor_mode !== undefined) patch.survivor_mode = settings.survivor_mode;
-  if (settings.admin_pin !== undefined) patch.admin_pin = settings.admin_pin;
   if (settings.join_pin !== undefined) patch.join_pin = settings.join_pin;
   if (settings.logo_url !== undefined) patch.logo_url = settings.logo_url;
   if (settings.member_count !== undefined) {
@@ -361,7 +359,6 @@ export class SupabaseStore implements Store {
         allow_pick_changes: input.allow_pick_changes ?? true,
         odds_format: input.odds_format ?? "american",
         survivor_mode: input.survivor_mode ?? false,
-        admin_pin: input.admin_pin,
         join_pin: input.join_pin,
         logo_url: input.logo_url ?? null,
         active_week_id: week.id,
@@ -388,7 +385,6 @@ export class SupabaseStore implements Store {
       display_name: name,
       role: name === input.admin_display_name ? "admin" : "member",
       active: true,
-      pin: name === input.admin_display_name ? input.admin_pin : null,
       created_at: createdAt,
     }));
 
@@ -475,7 +471,6 @@ export class SupabaseStore implements Store {
         display_name: displayName,
         role: "member",
         active: true,
-        pin: null,
         created_at: createdAt,
       })
       .select("*")
@@ -609,6 +604,53 @@ export class SupabaseStore implements Store {
       .maybeSingle();
     if (error) throw error;
     return data ? mapMember(data) : null;
+  }
+
+  async setMemberRole(
+    leagueId: string,
+    memberId: string,
+    role: MemberRole,
+  ): Promise<LeagueMember> {
+    const { data: memberRow, error: memberErr } = await this.client
+      .from("league_members")
+      .select("*")
+      .eq("id", memberId)
+      .eq("league_id", leagueId)
+      .maybeSingle();
+    if (memberErr) throw memberErr;
+    if (!memberRow) throw new StoreError("Member not found", "NOT_FOUND");
+
+    if (role !== "admin" && memberRow.role === "admin") {
+      const { data: otherAdmins, error: adminsErr } = await this.client
+        .from("league_members")
+        .select("id")
+        .eq("league_id", leagueId)
+        .eq("active", true)
+        .eq("role", "admin")
+        .neq("id", memberId);
+      if (adminsErr) throw adminsErr;
+      if (!otherAdmins?.length) {
+        throw new StoreError(
+          "Promote someone else before stepping down as the last admin",
+          "FORBIDDEN",
+        );
+      }
+    }
+
+    const { data: updated, error: updateErr } = await this.client
+      .from("league_members")
+      .update({ role })
+      .eq("id", memberId)
+      .select("*")
+      .single();
+    if (updateErr) throw updateErr;
+
+    await this.client
+      .from("leagues")
+      .update({ updated_at: nowIso() })
+      .eq("id", leagueId);
+
+    return mapMember(updated);
   }
 
   async getPicksForWeek(leagueId: string, weekId: string): Promise<Pick[]> {
