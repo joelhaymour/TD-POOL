@@ -13,7 +13,15 @@ export type OddsSyncSummary = {
   error?: string;
 };
 
-export const ODDS_SYNC_TTL_MS = 10 * 60_000;
+/**
+ * The Odds API bills one credit per event per market per region, so a single
+ * refresh of a full slate costs roughly one credit per game. At the previous
+ * 10-minute TTL that was ~32 credits every ten minutes of active use, which
+ * exhausted the entire 500/month allowance in about fifteen refreshes and is
+ * why the board went to "Unavailable". Anytime-TD prices barely move day to
+ * day, so a long TTL costs nothing in accuracy.
+ */
+export const ODDS_SYNC_TTL_MS = 12 * 60 * 60_000;
 const inFlightOddsSync = new Map<string, Promise<OddsSyncSummary | null>>();
 
 export { getConfiguredOddsSource };

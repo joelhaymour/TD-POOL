@@ -84,9 +84,12 @@ export const loadLeagueDashboard = cache(async function loadLeagueDashboard(
   const dashboard = await store.getDashboard(slug);
   if (!dashboard) return null;
 
+  const oddsStatus = await readEffectiveOddsSource(store, slug);
+
   return {
     ...slimDashboard(dashboard),
-    odds_source: await readEffectiveOddsSource(store, slug),
+    odds_source: oddsStatus.source,
+    odds_note: oddsStatus.note,
   };
 });
 
@@ -98,17 +101,24 @@ export const loadLeagueDashboard = cache(async function loadLeagueDashboard(
 async function readEffectiveOddsSource(
   store: Store,
   slug: string,
-): Promise<"live" | "mock" | "none"> {
+): Promise<{ source: "live" | "mock" | "none"; note: string | null }> {
   try {
     const state = await store.getSyncState(`odds:${slug}`);
     const source = state?.detail.source;
+    const note =
+      typeof state?.detail.providerError === "string"
+        ? state.detail.providerError
+        : typeof state?.detail.message === "string"
+          ? state.detail.message
+          : null;
     if (source === "live" || source === "mock" || source === "none") {
-      return source;
+      return { source, note };
     }
+    return { source: getConfiguredOddsSource(), note };
   } catch {
     // fall through to the configured value
   }
-  return getConfiguredOddsSource();
+  return { source: getConfiguredOddsSource(), note: null };
 }
 
 async function hasServableBoard(

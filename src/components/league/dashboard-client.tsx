@@ -184,6 +184,7 @@ export function DashboardClient({
         currency={dashboard.league.currency}
         oddsUpdatedAt={dashboard.odds_updated_at}
         oddsSource={dashboard.odds_source}
+        oddsNote={dashboard.odds_note}
       />
 
       <WeeklyResults

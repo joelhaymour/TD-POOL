@@ -18,6 +18,14 @@ import type {
 const SPORT = "americanfootball_nfl";
 const MARKET = "player_anytime_td";
 
+/**
+ * Distinct from a plan/permission failure: the key is valid and has props
+ * access, it has simply spent its monthly credits. Fixed by waiting for the
+ * reset or topping up, not by changing keys.
+ */
+export const ODDS_QUOTA_EXHAUSTED =
+  "The Odds API monthly credit allowance is used up — odds resume when it resets or the plan is topped up";
+
 type OddsApiEvent = {
   id: string;
   commence_time: string;
@@ -71,6 +79,7 @@ function nowIso(): string {
 export class TheOddsApiProvider implements OddsProvider {
   private apiKey: string;
   private regions: string;
+  private quotaRemaining: number | null = null;
   private roster: NonNullable<TheOddsApiProviderOptions["roster"]>;
   private games: NonNullable<TheOddsApiProviderOptions["games"]>;
   private fetchImpl: typeof fetch;
@@ -103,8 +112,17 @@ export class TheOddsApiProvider implements OddsProvider {
     } finally {
       clearTimeout(timer);
     }
+    // The /events endpoint is free and reports the remaining allowance, so
+    // reading it here lets us skip the billed per-event calls entirely once the
+    // quota is gone instead of firing a dozen requests that can only fail.
+    const remaining = Number(res.headers.get("x-requests-remaining"));
+    if (Number.isFinite(remaining)) this.quotaRemaining = remaining;
+
     if (!res.ok) {
       const body = await res.text().catch(() => "");
+      if (body.includes("OUT_OF_USAGE_CREDITS")) {
+        throw new Error(ODDS_QUOTA_EXHAUSTED);
+      }
       throw new Error(
         `The Odds API ${res.status}: ${body.slice(0, 200) || res.statusText}`,
       );
@@ -174,15 +192,22 @@ export class TheOddsApiProvider implements OddsProvider {
       : null;
 
     // Only pull near-term NFL games (this week), not the entire season calendar.
+    // The window is one week rather than two because every extra event in it is
+    // a billed credit, and next week's props are mostly unposted anyway.
     const now = Date.now();
-    const horizonMs = 14 * 24 * 60 * 60_000;
+    const horizonMs = 7 * 24 * 60 * 60_000;
     const upcoming = events.filter((e) => {
       const t = Date.parse(e.commence_time);
       return Number.isFinite(t) && t >= now - 6 * 60 * 60_000 && t <= now + horizonMs;
     });
 
+    if (this.quotaRemaining != null && this.quotaRemaining <= 0) {
+      throw new Error(ODDS_QUOTA_EXHAUSTED);
+    }
+
     const quotes: OddsQuote[] = [];
     let authFailures = 0;
+    let quotaFailures = 0;
     let attempted = 0;
 
     const batchSize = 3;
@@ -198,7 +223,8 @@ export class TheOddsApiProvider implements OddsProvider {
         attempted += 1;
         if (result.status !== "fulfilled") {
           const msg = String(result.reason ?? "");
-          if (msg.includes("401") || msg.includes("403")) authFailures += 1;
+          if (msg.includes(ODDS_QUOTA_EXHAUSTED)) quotaFailures += 1;
+          else if (msg.includes("401") || msg.includes("403")) authFailures += 1;
           continue;
         }
         const eventOdds = result.value;
@@ -246,6 +272,11 @@ export class TheOddsApiProvider implements OddsProvider {
       }
     }
 
+    // Quota exhaustion also returns 401, so it used to be reported as if the
+    // key lacked player-props access. They need different fixes.
+    if (quotaFailures > 0 && quotaFailures === attempted) {
+      throw new Error(ODDS_QUOTA_EXHAUSTED);
+    }
     if (attempted > 0 && authFailures === attempted) {
       throw new Error(
         "The Odds API denied player_anytime_td (401/403) — upgrade plan or use a key with player props access",

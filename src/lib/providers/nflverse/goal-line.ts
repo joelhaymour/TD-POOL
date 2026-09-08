@@ -181,6 +181,8 @@ const str = (v: string | undefined): string | null => {
 export async function fetchSeasonGoalLine(
   season: number,
   signal?: AbortSignal,
+  /** Pre-loaded sleeper_id -> gsis_id map; fetched here when omitted. */
+  crosswalkOverride?: Map<string, string>,
 ): Promise<{ weeks: GoalLineWeekRow[]; seasons: GoalLineSeasonRow[] } | null> {
   const players = new Map<string, Acc>();
   // Team denominators are tracked per week so a player's share can be summed
@@ -280,7 +282,8 @@ export async function fetchSeasonGoalLine(
   }
   if (!rows) return null;
 
-  const crosswalk = await loadSleeperGsisCrosswalk(signal);
+  const crosswalk =
+    crosswalkOverride ?? (await loadSleeperGsisCrosswalk(signal));
   const gsisToSleeper = new Map<string, string>();
   for (const [sleeperId, gsisId] of crosswalk) gsisToSleeper.set(gsisId, sleeperId);
 

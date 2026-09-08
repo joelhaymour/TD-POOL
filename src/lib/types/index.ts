@@ -302,6 +302,8 @@ export interface LeagueDashboard {
   odds_updated_at: string | null;
   /** Where the latest odds snapshot came from. "none" = no prices available. */
   odds_source?: "live" | "mock" | "none";
+  /** Why odds are missing, when they are. Surfaced so "Unavailable" explains itself. */
+  odds_note?: string | null;
 }
 
 export interface CreateLeagueInput {

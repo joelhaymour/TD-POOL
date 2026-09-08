@@ -13,6 +13,7 @@ export type ParlaySummaryProps = {
   currency?: "USD" | "CAD";
   oddsUpdatedAt?: string | null;
   oddsSource?: "live" | "mock" | "none";
+  oddsNote?: string | null;
   className?: string;
 };
 
@@ -53,9 +54,10 @@ export function ParlaySummary({
   currency = "USD",
   oddsUpdatedAt,
   oddsSource,
+  oddsNote,
   className,
 }: ParlaySummaryProps) {
-  const oddsLabel = formatOddsAge(oddsUpdatedAt, oddsSource);
+  const oddsLabel = formatOddsAge(oddsUpdatedAt, oddsSource, oddsNote);
 
   return (
     <section
@@ -128,8 +130,13 @@ export function ParlaySummary({
 function formatOddsAge(
   iso: string | null | undefined,
   source?: "live" | "mock" | "none",
+  note?: string | null,
 ): string | null {
-  if (source === "none") return "No sportsbook odds available";
+  // A bare "unavailable" reads like a bug. Quota exhaustion and a missing key
+  // need different fixes, so say which one happened.
+  if (source === "none") {
+    return note ? `No sportsbook odds — ${note}` : "No sportsbook odds available";
+  }
   if (!iso) return null;
   const ms = Date.now() - new Date(iso).getTime();
   if (Number.isNaN(ms)) return null;

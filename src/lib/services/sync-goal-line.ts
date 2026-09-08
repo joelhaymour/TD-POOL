@@ -1,6 +1,45 @@
 import { createAdminClient } from "@/lib/supabase/admin";
-import { fetchSeasonGoalLine } from "@/lib/providers/nflverse/goal-line";
+import {
+  fetchSeasonGoalLine,
+  loadSleeperGsisCrosswalk,
+} from "@/lib/providers/nflverse/goal-line";
 import { chunk } from "@/lib/concurrency";
+
+/**
+ * DynastyProcess is the only public link between Sleeper and GSIS ids, and it
+ * is a single-maintainer repo. Snapshot every successful fetch so an outage
+ * degrades to the last good copy — losing the crosswalk would silently drop
+ * every measured goal-line number back to the old estimate.
+ */
+async function loadCrosswalkWithFallback(): Promise<Map<string, string>> {
+  const db = createAdminClient();
+  try {
+    const fresh = await loadSleeperGsisCrosswalk();
+    if (fresh.size < 1000) throw new Error(`crosswalk too small: ${fresh.size}`);
+
+    const now = new Date().toISOString();
+    const rows = [...fresh].map(([sleeper_id, gsis_id]) => ({
+      sleeper_id,
+      gsis_id,
+      updated_at: now,
+    }));
+    for (const batch of chunk(rows, 1000)) {
+      await db
+        .from("player_id_crosswalk")
+        .upsert(batch, { onConflict: "sleeper_id" });
+    }
+    return fresh;
+  } catch {
+    const { data } = await db
+      .from("player_id_crosswalk")
+      .select("sleeper_id, gsis_id");
+    const cached = new Map<string, string>();
+    for (const row of data ?? []) {
+      if (row.sleeper_id && row.gsis_id) cached.set(row.sleeper_id, row.gsis_id);
+    }
+    return cached;
+  }
+}
 
 /** Per-player measured goal-line usage, keyed by Sleeper player id. */
 export interface GoalLineUsage {
@@ -22,7 +61,8 @@ export type GoalLineIndex = Map<string, GoalLineUsage>;
 export async function syncSeasonGoalLine(
   season: number,
 ): Promise<{ season: number; weeks: number; players: number } | null> {
-  const result = await fetchSeasonGoalLine(season);
+  const crosswalk = await loadCrosswalkWithFallback();
+  const result = await fetchSeasonGoalLine(season, undefined, crosswalk);
   if (!result) return null;
 
   const db = createAdminClient();
