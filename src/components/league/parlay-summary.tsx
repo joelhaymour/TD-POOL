@@ -12,7 +12,7 @@ export type ParlaySummaryProps = {
   showMoney?: boolean;
   currency?: "USD" | "CAD";
   oddsUpdatedAt?: string | null;
-  oddsSource?: "live" | "mock";
+  oddsSource?: "live" | "mock" | "none";
   className?: string;
 };
 
@@ -127,8 +127,9 @@ export function ParlaySummary({
 
 function formatOddsAge(
   iso: string | null | undefined,
-  source?: "live" | "mock",
+  source?: "live" | "mock" | "none",
 ): string | null {
+  if (source === "none") return "No sportsbook odds available";
   if (!iso) return null;
   const ms = Date.now() - new Date(iso).getTime();
   if (Number.isNaN(ms)) return null;

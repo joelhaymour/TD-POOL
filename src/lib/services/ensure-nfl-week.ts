@@ -158,9 +158,17 @@ export async function ensureNflWeekMaterialized(
           })
         : null;
 
+    // QBs are included: anytime TD counts rushing scores, and designed-run
+    // quarterbacks are among the shortest prices in the league every week.
+    // Passing TDs never enter the model (see touchdownsFromStat).
     const weekPlayers = sleeperPlayers.filter((p) => {
       if (!gamesByTeam.has(p.team)) return false;
-      return p.position === "RB" || p.position === "WR" || p.position === "TE";
+      return (
+        p.position === "RB" ||
+        p.position === "WR" ||
+        p.position === "TE" ||
+        p.position === "QB"
+      );
     });
 
     const playerIdByExternal = await store.upsertPlayers(weekPlayers);

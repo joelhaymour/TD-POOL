@@ -18,7 +18,8 @@ export type BetSlipLeg = {
   memberName: string;
   playerName: string;
   team?: string;
-  americanOdds: number;
+  /** Null when no sportsbook price is available for this pick. */
+  americanOdds: number | null;
 };
 
 export type BetSlipProps = {
@@ -40,13 +41,18 @@ export function BetSlip({
 }: BetSlipProps) {
   const [copied, setCopied] = useState(false);
 
-  const combinedDecimal = combineParlayDecimal(
-    legs.map((l) => americanToDecimal(l.americanOdds)),
-  );
+  // Parlay math needs a real price for every leg; one missing quote makes the
+  // combined number meaningless, so we show nothing rather than a guess.
+  const pricedOdds = legs.map((l) => l.americanOdds);
+  const allPriced =
+    legs.length > 0 && pricedOdds.every((o): o is number => o != null);
+  const combinedDecimal = allPriced
+    ? combineParlayDecimal(pricedOdds.map((o) => americanToDecimal(o!)))
+    : null;
   const combinedAmerican =
-    legs.length > 0 ? decimalToAmerican(combinedDecimal) : null;
+    combinedDecimal != null ? decimalToAmerican(combinedDecimal) : null;
   const payoutEstimate =
-    showMoney && stake != null && legs.length > 0
+    showMoney && stake != null && combinedDecimal != null
       ? estimatePayout(stake, combinedDecimal)
       : null;
 

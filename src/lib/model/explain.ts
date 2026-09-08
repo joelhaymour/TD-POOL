@@ -56,11 +56,6 @@ export function buildDeterministicAnalysis(
       `${features.opponent} ranks #${features.opponentPositionTdRank} vs ${features.position} TDs (${features.opponentDataLabel}).`,
     );
   }
-  if (features.marketConsensusProbability != null && whyWeLike.length < 2) {
-    whyWeLike.push(
-      `Market consensus prices anytime TD near ${pct(features.marketConsensusProbability)}.`,
-    );
-  }
   if (!whyWeLike.length) {
     whyWeLike.push("Balanced profile — no single dominant edge this week.");
   }

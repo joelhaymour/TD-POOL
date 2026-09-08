@@ -1,7 +1,6 @@
 import type { PlayerCardData } from "@/components/players/player-card";
 import type { PlayerDetailData } from "@/components/players/player-detail";
 import type { BetSlipLeg } from "@/components/picks/bet-slip";
-import { buildPlayerHistory } from "@/lib/providers/mock/mock-history";
 import { displayOurProbability, hasMarketOdds } from "@/lib/scoring/rank";
 import type { LeagueDashboard, MemberPickStatus } from "@/lib/types";
 
@@ -95,15 +94,9 @@ export function toPlayerDetail(
       concerns: r.concerns,
       verdict: r.verdict,
     },
-    history:
-      r.history ??
-      buildPlayerHistory({
-        externalPlayerId: row.player.external_player_id ?? row.player.id,
-        team: row.player.team,
-        position: row.player.position,
-        opponent,
-        recentTrend: r.usage.recent_trend,
-      }),
+    // No synthetic fallback: seeded-random game logs render identically to real
+    // ones, so a missing history must read as missing, not as invented games.
+    history: r.history,
     // Replaces the goal-line star rating: the real usage behind it, so the
     // number can be judged instead of taken on faith.
     usage: [
@@ -213,6 +206,8 @@ export function toBetSlipLegs(members: MemberPickStatus[]): BetSlipLeg[] {
       playerName: m.player!.name,
       team: m.player!.team,
       americanOdds:
-        m.player_week?.consensus_american_odds ?? m.pick!.odds_at_selection,
+        m.player_week && hasMarketOdds(m.player_week)
+          ? m.player_week.consensus_american_odds
+          : (m.pick!.odds_at_selection || null),
     }));
 }

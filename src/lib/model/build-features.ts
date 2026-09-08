@@ -168,10 +168,11 @@ export function buildPlayerWeekFeatures(args: {
   const snapRate = snapBlend.value;
 
   // Rough team-share proxies from depth + usage (improved when SportsDataIO RZ available)
-  const inside5Share =
-    args.position === "RB"
-      ? Math.min(0.85, Math.max(0.05, (glPerGame / 2.2) * (depthOrder === 1 ? 1.15 : 0.7)))
-      : Math.min(0.55, Math.max(0.02, (rzPerGame ?? 0) / 8));
+  // QBs share the rushing formula — their goal-line value is carries, not targets.
+  const isRusher = args.position === "RB" || args.position === "QB";
+  const inside5Share = isRusher
+    ? Math.min(0.85, Math.max(0.05, (glPerGame / 2.2) * (depthOrder === 1 ? 1.15 : 0.7)))
+    : Math.min(0.55, Math.max(0.02, (rzPerGame ?? 0) / 8));
 
   const completenessFlags = [
     history.last_5.length > 0,

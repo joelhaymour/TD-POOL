@@ -4,7 +4,7 @@ import type { Store } from "@/lib/store/types";
 import type { ConsensusOdds, OddsQuote } from "@/lib/providers/types";
 
 export type OddsSyncSummary = {
-  source: "live" | "mock";
+  source: "live" | "mock" | "none";
   season: number;
   week: number;
   quotes: number;
@@ -108,7 +108,7 @@ export async function syncWeekOdds(
   let consensus: ConsensusOdds[] = [];
   let quotes: OddsQuote[] = [];
   let error: string | undefined;
-  let effectiveSource: "live" | "mock" = source;
+  let effectiveSource: "live" | "mock" | "none" = source;
 
   try {
     consensus = await provider.getConsensusAnytimeTdOdds(args.season, args.week);
@@ -119,33 +119,12 @@ export async function syncWeekOdds(
       );
     }
   } catch (err) {
+    // No synthetic fallback. A generated price is indistinguishable from a real
+    // one in the UI, so when the provider has nothing we show nothing.
     error = err instanceof Error ? err.message : "Provider fetch failed";
-    if (source === "live") {
-      const { buildSyntheticAnytimeTdConsensus } = await import(
-        "@/lib/providers/odds-fallback"
-      );
-      // Prefer roster-matched synthetic quotes over mock seed IDs (p-gibbs etc).
-      consensus = buildSyntheticAnytimeTdConsensus({
-        roster: players
-          .filter((p) => p.external_player_id)
-          .map((p) => ({
-            external_player_id: p.external_player_id!,
-            name: p.name,
-            team: p.team,
-            position: p.position,
-          })),
-        games: games
-          .filter((g) => g.external_game_id)
-          .map((g) => ({
-            external_game_id: g.external_game_id!,
-            home_team: g.home_team,
-            away_team: g.away_team,
-          })),
-      });
-      quotes = consensus.flatMap((c) => c.books);
-      effectiveSource = "mock";
-      error = `${error} (fell back to roster synthetic odds)`;
-    }
+    consensus = [];
+    quotes = [];
+    effectiveSource = "none";
   }
 
   const playersUpdated = await store.applyOddsRefresh({

@@ -92,17 +92,19 @@ export const loadLeagueDashboard = cache(async function loadLeagueDashboard(
 
 /**
  * Report the source the last sync actually used. `getConfiguredOddsSource()`
- * only says whether a key is set, so it reads "live" even when every price
- * came from the synthetic fallback.
+ * only says whether a key is set, so it reads "live" even when the provider
+ * returned nothing usable.
  */
 async function readEffectiveOddsSource(
   store: Store,
   slug: string,
-): Promise<"live" | "mock"> {
+): Promise<"live" | "mock" | "none"> {
   try {
     const state = await store.getSyncState(`odds:${slug}`);
     const source = state?.detail.source;
-    if (source === "live" || source === "mock") return source;
+    if (source === "live" || source === "mock" || source === "none") {
+      return source;
+    }
   } catch {
     // fall through to the configured value
   }

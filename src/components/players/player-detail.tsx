@@ -304,7 +304,10 @@ export function PlayerDetail({
           <Badge status={player.availability} />
         </div>
 
-        <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
+        {/* Market % is gone: we have no source for real anytime-TD prices, and
+            a generated one is worse than none. The odds box appears only when a
+            sportsbook actually returned a quote. */}
+        <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3">
           <div className="rounded-xl bg-ink px-3 py-2.5 text-chalk">
             <p className="text-[10px] font-bold uppercase tracking-wider text-chalk/55">
               TD Pool Rank
@@ -315,28 +318,22 @@ export function PlayerDetail({
           </div>
           <div className="rounded-xl bg-field px-3 py-2.5">
             <p className="text-[10px] font-bold uppercase tracking-wider text-ink-faint">
-              TD Pool %
+              TD Chance
             </p>
             <p className="font-display text-3xl font-extrabold text-ink">
               {pct(player.ourProbability)}
             </p>
           </div>
-          <div className="rounded-xl bg-field px-3 py-2.5">
-            <p className="text-[10px] font-bold uppercase tracking-wider text-ink-faint">
-              Market %
-            </p>
-            <p className="font-display text-3xl font-extrabold text-ink-muted">
-              {pct(player.marketProbability)}
-            </p>
-          </div>
-          <div className="rounded-xl bg-field px-3 py-2.5">
-            <p className="text-[10px] font-bold uppercase tracking-wider text-ink-faint">
-              Anytime TD
-            </p>
-            <p className="font-display text-3xl font-extrabold text-turf">
-              {formatAmerican(player.americanOdds)}
-            </p>
-          </div>
+          {player.americanOdds != null ? (
+            <div className="rounded-xl bg-field px-3 py-2.5">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-ink-faint">
+                Anytime TD
+              </p>
+              <p className="font-display text-3xl font-extrabold text-turf">
+                {formatAmerican(player.americanOdds)}
+              </p>
+            </div>
+          ) : null}
         </div>
 
         {player.limitedData ? (
@@ -407,8 +404,9 @@ export function PlayerDetail({
         </div>
       </Section>
 
-      <Section title="Betting Market">
-        {player.bookOdds && player.bookOdds.length > 0 ? (
+      {/* Only rendered when a sportsbook actually returned quotes. */}
+      {player.bookOdds && player.bookOdds.length > 0 ? (
+        <Section title="Betting Market">
           <ul className="space-y-2">
             {player.bookOdds.map((q) => (
               <li
@@ -430,18 +428,11 @@ export function PlayerDetail({
               </li>
             ) : null}
           </ul>
-        ) : (
-          <p className="text-sm text-ink-muted">
-            Consensus anytime TD:{" "}
-            <span className="font-display text-lg font-bold text-ink">
-              {formatAmerican(player.americanOdds)}
-            </span>
+          <p className="mt-2 text-[11px] leading-relaxed text-ink-faint">
+            Odds may change and are not guaranteed executable pricing.
           </p>
-        )}
-        <p className="mt-2 text-[11px] leading-relaxed text-ink-faint">
-          Odds may change and are not guaranteed executable pricing.
-        </p>
-      </Section>
+        </Section>
+      ) : null}
 
       {player.usage?.length ? (
         <Section title="Scoring Opportunity">
@@ -480,9 +471,9 @@ export function PlayerDetail({
           <BulletList items={player.analysisNotes} />
         ) : (
           <p className="text-sm leading-relaxed text-ink-muted">
-            Our ranking blends market probability with goal-line usage,
-            matchup, recent opportunity, and game environment. It is a
-            decision-support estimate — not a guarantee.
+            Our ranking blends goal-line and red-zone usage, matchup, recent
+            opportunity, and game environment. It is a decision-support
+            estimate — not a guarantee.
           </p>
         )}
       </Section>

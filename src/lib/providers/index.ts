@@ -34,12 +34,15 @@ function shouldUseEspnNFL(): boolean {
   return mode === "live" || mode === "auto";
 }
 
-export function getConfiguredOddsSource(): "live" | "mock" {
+/**
+ * "mock" is reserved for explicit local development. A live deployment without
+ * a usable key reports "none" rather than quietly serving invented prices.
+ */
+export function getConfiguredOddsSource(): "live" | "mock" | "none" {
   const mode = resolveProviderMode();
   const key = process.env.ODDS_API_KEY?.trim();
   if (mode === "mock") return "mock";
-  if (mode === "live") return key ? "live" : "mock";
-  return key ? "live" : "mock";
+  return key ? "live" : "none";
 }
 
 export function getNFLProvider(): NFLDataProvider {

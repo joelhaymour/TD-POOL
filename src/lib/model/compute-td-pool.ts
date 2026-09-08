@@ -65,6 +65,12 @@ function goalLineRawScore(f: PlayerWeekFeatures): number {
       share10 * 0.25
     );
   }
+
+  // QBs score on designed runs and sneaks, so weight short-yardage rushing and
+  // ignore the target-based terms entirely.
+  if (f.position === "QB") {
+    return inside5 * 0.45 + inside10 * 0.22 + rz * 0.15 + share5 * 0.3;
+  }
   // WR/TE — emphasize RZ/end-zone targets
   const ez = f.redZoneTargetsPerGame ?? rz * 0.7;
   return ez * 0.35 + rz * 0.2 + share5 * 0.25 + share10 * 0.15 + inside10 * 0.1;
@@ -215,11 +221,11 @@ export function computeTdPoolFromFeatures(
   const matchupPercentile = percentileRank(matchRaw, samples.match);
   const usagePercentile = percentileRank(usageRaw, samples.usage);
 
-  const market = features.marketConsensusProbability;
-  const hasMarket = market != null && market > 0;
-  const baseline = hasMarket
-    ? market
-    : neutralBaselineFromRole(features) * (0.75 + usagePercentile * 0.35);
+  // The model is deliberately market-free: it ranks on measured usage,
+  // matchup, and environment. Anchoring to a sportsbook line we do not have
+  // meant anchoring to a synthetic number we generated ourselves.
+  const baseline =
+    neutralBaselineFromRole(features) * (0.75 + usagePercentile * 0.35);
 
   const contributions: FactorContribution[] = [];
 
@@ -231,8 +237,8 @@ export function computeTdPoolFromFeatures(
     detail: string,
     center = 0.5,
   ) => {
-    // Without market, keep adjustments smaller so we don't pin everyone near the ceiling.
-    const effectiveScale = hasMarket ? scale : scale * 0.55;
+    // Adjustments stay modest so a role baseline is not pushed to the ceiling.
+    const effectiveScale = scale * 0.55;
     const delta = (factorScore - center) * effectiveScale;
     contributions.push({
       key,
@@ -246,14 +252,11 @@ export function computeTdPoolFromFeatures(
 
   let total = baseline;
   contributions.push({
-    key: "market",
-    label: "Market baseline",
+    key: "baseline",
+    label: "Role baseline",
     delta: 0,
-    factorScore: market ?? baseline,
-    detail:
-      market != null
-        ? `Consensus anytime TD implied ${(market * 100).toFixed(1)}%`
-        : "Market unavailable — role/history baseline used",
+    factorScore: baseline,
+    detail: `Role and recent scoring baseline ${(baseline * 100).toFixed(1)}%`,
   });
 
   total += pushAdj(
@@ -329,16 +332,16 @@ export function computeTdPoolFromFeatures(
   });
   total += weatherDelta;
 
+  // Usage and matchup alone cannot justify a 90% call, so the ceiling stays low.
   const tdPoolProbability = clamp(
     total,
     TD_POOL_PROBABILITY_BOUNDS.min,
-    // Without a market anchor, refuse absurd ceilings (stars/history alone shouldn't hit 90%).
-    hasMarket ? TD_POOL_PROBABILITY_BOUNDS.max : 0.62,
+    0.62,
   );
 
   return {
     tdPoolProbability: Number(tdPoolProbability.toFixed(4)),
-    marketProbability: market,
+    marketProbability: null,
     goalLineScore: Number(glRaw.toFixed(4)),
     goalLinePercentile: Number(goalLinePercentile.toFixed(4)),
     goalLineStars: percentileToStars(goalLinePercentile),
