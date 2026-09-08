@@ -18,10 +18,14 @@ export type OddsSyncSummary = {
  * refresh of a full slate costs roughly one credit per game. At the previous
  * 10-minute TTL that was ~32 credits every ten minutes of active use, which
  * exhausted the entire 500/month allowance in about fifteen refreshes and is
- * why the board went to "Unavailable". Anytime-TD prices barely move day to
- * day, so a long TTL costs nothing in accuracy.
+ * why the board went to "Unavailable".
+ *
+ * A full slate costs ~16 credits, so the free tier affords roughly one refresh
+ * per day and no more. The daily cron already forces one; this TTL exists to
+ * stop on-demand page loads from spending a second. Raise it only alongside a
+ * paid plan.
  */
-export const ODDS_SYNC_TTL_MS = 12 * 60 * 60_000;
+export const ODDS_SYNC_TTL_MS = 24 * 60 * 60_000;
 const inFlightOddsSync = new Map<string, Promise<OddsSyncSummary | null>>();
 
 export { getConfiguredOddsSource };
