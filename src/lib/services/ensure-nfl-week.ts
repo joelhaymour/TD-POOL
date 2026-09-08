@@ -519,13 +519,17 @@ export async function ensureNflWeekMaterialized(
     // the UI filters and ranks instead.
     await store.replacePlayerWeekBoard(nflWeek.id, scored);
 
-    // The board replace wiped market columns, so re-price immediately rather
-    // than waiting for a client request to notice.
-    try {
-      const { syncWeekOdds } = await import("@/lib/services/sync-odds");
-      await syncWeekOdds(store, { season, week, weekId: nflWeek.id });
-    } catch (err) {
-      console.error("post-materialize odds sync failed", err);
+    // Rebuilds start every row at 0 odds. Re-paint from the last successful
+    // quote snapshot instead of calling The Odds API — that fetch is what
+    // emptied the board whenever credits were already gone.
+    const restored = await store.reapplyStoredOdds(nflWeek.id);
+    if (restored === 0) {
+      try {
+        const { syncWeekOdds } = await import("@/lib/services/sync-odds");
+        await syncWeekOdds(store, { season, week, weekId: nflWeek.id });
+      } catch (err) {
+        console.error("post-materialize odds sync failed", err);
+      }
     }
 
     await store.completeSyncSlot(syncKey, "ok", {

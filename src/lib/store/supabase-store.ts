@@ -1391,6 +1391,72 @@ export class SupabaseStore implements Store {
     if (error) throw error;
   }
 
+  async reapplyStoredOdds(weekId: string): Promise<number> {
+    const { data: quotes, error: quotesErr } = await this.client
+      .from("player_odds")
+      .select("player_id, sportsbook, american_odds, decimal_odds, implied_probability")
+      .eq("week_id", weekId);
+    if (quotesErr) throw quotesErr;
+    if (!quotes?.length) return 0;
+
+    const { consensusImpliedFromAmericans } = await import("@/lib/model/math");
+
+    const byPlayer = new Map<
+      string,
+      Array<{ sportsbook: string; american_odds: number }>
+    >();
+    for (const q of quotes) {
+      const american = num(q.american_odds);
+      if (!american) continue;
+      const list = byPlayer.get(String(q.player_id)) ?? [];
+      list.push({
+        sportsbook: String(q.sportsbook),
+        american_odds: american,
+      });
+      byPlayer.set(String(q.player_id), list);
+    }
+    if (byPlayer.size === 0) return 0;
+
+    const { data: weekRows, error: weekErr } = await this.client
+      .from("player_week_data")
+      .select("*")
+      .eq("week_id", weekId);
+    if (weekErr) throw weekErr;
+
+    const now = nowIso();
+    const updates: Record<string, unknown>[] = [];
+    for (const row of weekRows ?? []) {
+      const books = byPlayer.get(String(row.player_id));
+      if (!books?.length) continue;
+      const agg = consensusImpliedFromAmericans(books.map((b) => b.american_odds));
+      if (!agg) continue;
+      const research = {
+        ...((row.research_json as ResearchJson) ?? {}),
+        market: {
+          consensus_american: agg.american,
+          consensus_implied: agg.implied,
+          books,
+        },
+      };
+      updates.push({
+        ...row,
+        consensus_american_odds: agg.american,
+        consensus_decimal_odds: agg.decimal,
+        market_probability: agg.implied,
+        research_json: research,
+        updated_at: now,
+      });
+    }
+
+    for (const batch of chunk(updates, 150)) {
+      const { error } = await this.client
+        .from("player_week_data")
+        .upsert(batch, { onConflict: "id" });
+      if (error) throw error;
+    }
+    return updates.length;
+  }
+
   async replacePlayerWeekBoard(
     weekId: string,
     rows: Array<{
@@ -1410,6 +1476,24 @@ export class SupabaseStore implements Store {
       consensus_decimal_odds: number;
     }>,
   ): Promise<number> {
+    const { data: previous } = await this.client
+      .from("player_week_data")
+      .select(
+        "player_id, consensus_american_odds, consensus_decimal_odds, market_probability, research_json",
+      )
+      .eq("week_id", weekId);
+    const priorMarket = new Map(
+      (previous ?? []).map((row) => [
+        String(row.player_id),
+        {
+          american: num(row.consensus_american_odds),
+          decimal: num(row.consensus_decimal_odds),
+          implied: num(row.market_probability),
+          market: (row.research_json as ResearchJson | null)?.market,
+        },
+      ]),
+    );
+
     const { error: delErr } = await this.client
       .from("player_week_data")
       .delete()
@@ -1419,25 +1503,42 @@ export class SupabaseStore implements Store {
     if (rows.length === 0) return 0;
 
     const now = nowIso();
-    const payload = rows.map((row) => ({
-      id: randomUUID(),
-      player_id: row.player_id,
-      week_id: weekId,
-      game_id: row.game_id,
-      market_probability: row.market_probability,
-      our_probability: row.our_probability,
-      td_pool_score: row.td_pool_score,
-      td_pool_rank: row.td_pool_rank,
-      matchup_rating: row.matchup_rating,
-      goal_line_rating: row.goal_line_rating,
-      research_json: row.research_json,
-      injury_status: injuryToDb(row.injury_status),
-      availability: row.availability,
-      tier: row.tier,
-      consensus_american_odds: row.consensus_american_odds,
-      consensus_decimal_odds: row.consensus_decimal_odds,
-      updated_at: now,
-    }));
+    const payload = rows.map((row) => {
+      const kept = priorMarket.get(row.player_id);
+      const hasNewOdds = row.consensus_american_odds !== 0;
+      const american = hasNewOdds
+        ? row.consensus_american_odds
+        : (kept?.american ?? 0);
+      const decimal = hasNewOdds
+        ? row.consensus_decimal_odds
+        : (kept?.decimal ?? 0);
+      const implied = hasNewOdds
+        ? row.market_probability
+        : (kept?.implied ?? row.market_probability);
+      const research = { ...row.research_json };
+      if (!hasNewOdds && kept?.market?.consensus_american) {
+        research.market = kept.market;
+      }
+      return {
+        id: randomUUID(),
+        player_id: row.player_id,
+        week_id: weekId,
+        game_id: row.game_id,
+        market_probability: implied,
+        our_probability: row.our_probability,
+        td_pool_score: row.td_pool_score,
+        td_pool_rank: row.td_pool_rank,
+        matchup_rating: row.matchup_rating,
+        goal_line_rating: row.goal_line_rating,
+        research_json: research,
+        injury_status: injuryToDb(row.injury_status),
+        availability: row.availability,
+        tier: row.tier,
+        consensus_american_odds: american,
+        consensus_decimal_odds: decimal,
+        updated_at: now,
+      };
+    });
 
     // Full boards are ~700 rows with research blobs — insert in batches.
     for (const batch of chunk(payload, 150)) {

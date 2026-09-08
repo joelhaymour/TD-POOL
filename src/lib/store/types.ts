@@ -134,6 +134,12 @@ export interface Store {
   resolvePickResults(updates: PickResultUpdate[]): Promise<number>;
   /** Phase 3: write fresh quotes + update consensus on player_week_data. */
   applyOddsRefresh(input: ApplyOddsRefreshInput): Promise<number>;
+  /**
+   * Copy last-good quotes from player_odds back onto the board. Board rebuilds
+   * wipe consensus columns; calling The Odds API to refill them burns credits
+   * and currently fails because the monthly quota is gone.
+   */
+  reapplyStoredOdds(weekId: string): Promise<number>;
 
   /** Ensure nfl_weeks row exists for season/week. */
   ensureWeek(input: {

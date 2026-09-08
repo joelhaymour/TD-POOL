@@ -38,6 +38,7 @@ import {
   availabilityForLeague,
   takenByActiveMembers,
 } from "@/lib/league/availability";
+import { consensusImpliedFromAmericans } from "@/lib/model/math";
 
 const STORE_PATH = path.join(process.cwd(), ".data", "store.json");
 
@@ -877,6 +878,47 @@ export class LocalFileStore implements Store {
     });
   }
 
+  async reapplyStoredOdds(weekId: string): Promise<number> {
+    return this.withData((data) => {
+      const byPlayer = new Map<string, number[]>();
+      const booksByPlayer = new Map<
+        string,
+        Array<{ sportsbook: string; american_odds: number }>
+      >();
+      for (const q of data.player_odds) {
+        if (q.week_id !== weekId || !q.american_odds) continue;
+        const list = byPlayer.get(q.player_id) ?? [];
+        list.push(q.american_odds);
+        byPlayer.set(q.player_id, list);
+        const books = booksByPlayer.get(q.player_id) ?? [];
+        books.push({ sportsbook: q.sportsbook, american_odds: q.american_odds });
+        booksByPlayer.set(q.player_id, books);
+      }
+
+      let updated = 0;
+      for (const pwd of data.player_week_data) {
+        if (pwd.week_id !== weekId) continue;
+        const americans = byPlayer.get(pwd.player_id);
+        if (!americans?.length) continue;
+        const agg = consensusImpliedFromAmericans(americans);
+        if (!agg) continue;
+        pwd.consensus_american_odds = agg.american;
+        pwd.consensus_decimal_odds = agg.decimal;
+        pwd.market_probability = agg.implied;
+        pwd.research_json = {
+          ...pwd.research_json,
+          market: {
+            consensus_american: agg.american,
+            consensus_implied: agg.implied,
+            books: booksByPlayer.get(pwd.player_id) ?? [],
+          },
+        };
+        updated += 1;
+      }
+      return updated;
+    });
+  }
+
   async replacePlayerWeekBoard(
     weekId: string,
     rows: Array<{
@@ -897,16 +939,39 @@ export class LocalFileStore implements Store {
     }>,
   ): Promise<number> {
     return this.withData((data) => {
+      const prior = new Map(
+        data.player_week_data
+          .filter((p) => p.week_id === weekId)
+          .map((p) => [p.player_id, p] as const),
+      );
       data.player_week_data = data.player_week_data.filter(
         (p) => p.week_id !== weekId,
       );
       const now = nowIso();
       for (const row of rows) {
+        const kept = prior.get(row.player_id);
+        const hasNewOdds = row.consensus_american_odds !== 0;
         data.player_week_data.push({
           id: newId("pwd"),
           week_id: weekId,
           updated_at: now,
           ...row,
+          consensus_american_odds: hasNewOdds
+            ? row.consensus_american_odds
+            : (kept?.consensus_american_odds ?? 0),
+          consensus_decimal_odds: hasNewOdds
+            ? row.consensus_decimal_odds
+            : (kept?.consensus_decimal_odds ?? 0),
+          market_probability: hasNewOdds
+            ? row.market_probability
+            : (kept?.market_probability ?? row.market_probability),
+          research_json: {
+            ...row.research_json,
+            market:
+              hasNewOdds || !kept?.research_json.market?.consensus_american
+                ? row.research_json.market
+                : kept.research_json.market,
+          },
         });
       }
       return rows.length;
