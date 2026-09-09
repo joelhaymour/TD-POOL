@@ -1,4 +1,5 @@
 import { weekWindow } from "@/lib/nfl/calendar";
+import { normalizePlayerName } from "@/lib/providers/the-odds-api/maps";
 import { getNFLProvider } from "@/lib/providers";
 import {
   getSleeperPlayersMap,
@@ -213,12 +214,12 @@ export async function ensureNflWeekMaterialized(
       // Depth charts use SportsDataIO player IDs — map by name+team soft key.
       const byNameTeam = new Map<string, string>();
       for (const [id, p] of sleeperMeta) {
-        const name = (p.full_name || "").toLowerCase();
+        const name = normalizePlayerName(p.full_name || "");
         const team = (p.team || "").toUpperCase();
         if (name && team) byNameTeam.set(`${name}|${team}`, id);
       }
       for (const row of depth) {
-        const name = (row.Name || "").toLowerCase();
+        const name = normalizePlayerName(row.Name || "");
         const team = (row.Team || "").toUpperCase();
         const sid = byNameTeam.get(`${name}|${team}`);
         if (sid && row.DepthOrder != null) depthBySleeperId.set(sid, row.DepthOrder);

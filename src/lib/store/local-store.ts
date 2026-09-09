@@ -7,6 +7,7 @@ import {
   decimalOddsForLeg,
   parlayCombinedFields,
 } from "@/lib/utils/odds";
+import { mockToLivePlayerMoves } from "@/lib/providers/the-odds-api/maps";
 import { slugify } from "@/lib/utils/slug";
 import { resolvePoolWeek, weekWindow } from "@/lib/nfl/calendar";
 import { playerWeekRankKey } from "@/lib/scoring/rank";
@@ -878,6 +879,23 @@ export class LocalFileStore implements Store {
 
   async reapplyStoredOdds(weekId: string): Promise<number> {
     return this.withData((data) => {
+      const moves = mockToLivePlayerMoves(data.players);
+      const gameByPlayer = new Map(
+        data.player_week_data
+          .filter((row) => row.week_id === weekId)
+          .map((row) => [row.player_id, row.game_id]),
+      );
+      for (const move of moves) {
+        for (const quote of data.player_odds) {
+          if (quote.week_id !== weekId || quote.player_id !== move.fromId) {
+            continue;
+          }
+          quote.player_id = move.toId;
+          const gameId = gameByPlayer.get(move.toId);
+          if (gameId) quote.game_id = gameId;
+        }
+      }
+
       const byPlayer = new Map<string, number[]>();
       const booksByPlayer = new Map<
         string,

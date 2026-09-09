@@ -9,7 +9,10 @@
  */
 
 import { getNflWeekForDate, resolvePoolWeek } from "@/lib/nfl/calendar";
-import { normalizePlayerName } from "@/lib/providers/the-odds-api/maps";
+import {
+  normalizePlayerName,
+  resolveRosterPlayer,
+} from "@/lib/providers/the-odds-api/maps";
 import type {
   NFLDataProvider,
   PlayerTouchdownResult,
@@ -225,29 +228,16 @@ export function matchPlayerExternalId(
   espnName: string,
   roster: EspnRosterPlayer[],
 ): string | null {
-  const key = normalizePlayerName(espnName);
-  if (!key) return null;
-
-  const index = new Map(
-    roster.map((p) => [normalizePlayerName(p.name), p.external_player_id]),
+  return (
+    resolveRosterPlayer(
+      espnName,
+      roster.map((p) => ({
+        external_player_id: p.external_player_id,
+        name: p.name,
+        team: p.team ?? "",
+      })),
+    )?.external_player_id ?? null
   );
-  if (index.has(key)) return index.get(key)!;
-
-  for (const [norm, id] of index) {
-    if (norm === key) return id;
-    if (norm.includes(key) || key.includes(norm)) return id;
-    const a = norm.split(" ");
-    const b = key.split(" ");
-    if (
-      a.length >= 2 &&
-      b.length >= 2 &&
-      a.at(-1) === b.at(-1) &&
-      a[0]?.[0] === b[0]?.[0]
-    ) {
-      return id;
-    }
-  }
-  return null;
 }
 
 function extractOdds(comp: EspnCompetition | undefined): {

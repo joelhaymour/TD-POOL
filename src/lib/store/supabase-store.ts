@@ -18,6 +18,7 @@ import {
   decimalOddsForLeg,
   parlayCombinedFields,
 } from "@/lib/utils/odds";
+import { mockToLivePlayerMoves } from "@/lib/providers/the-odds-api/maps";
 import { slugify } from "@/lib/utils/slug";
 import { resolvePoolWeek, weekWindow } from "@/lib/nfl/calendar";
 import { playerWeekRankKey } from "@/lib/scoring/rank";
@@ -1390,6 +1391,8 @@ export class SupabaseStore implements Store {
   }
 
   async reapplyStoredOdds(weekId: string): Promise<number> {
+    await this.remapMockOddsOntoLivePlayers(weekId);
+
     const { data: quotes, error: quotesErr } = await this.client
       .from("player_odds")
       .select("player_id, sportsbook, american_odds, decimal_odds, implied_probability")
@@ -1453,6 +1456,47 @@ export class SupabaseStore implements Store {
       if (error) throw error;
     }
     return updates.length;
+  }
+
+  private async remapMockOddsOntoLivePlayers(weekId: string): Promise<void> {
+    const { data: players, error } = await this.client
+      .from("nfl_players")
+      .select("id, name, team, external_player_id");
+    if (error) throw error;
+    const moves = mockToLivePlayerMoves(
+      (players ?? []).map((p) => ({
+        id: String(p.id),
+        name: String(p.name ?? ""),
+        team: String(p.team ?? ""),
+        external_player_id: p.external_player_id
+          ? String(p.external_player_id)
+          : null,
+      })),
+    );
+    if (moves.length === 0) return;
+
+    const { data: pwd } = await this.client
+      .from("player_week_data")
+      .select("player_id, game_id")
+      .eq("week_id", weekId);
+    const gameByPlayer = new Map(
+      (pwd ?? []).map((row) => [
+        String(row.player_id),
+        String(row.game_id),
+      ]),
+    );
+
+    for (const move of moves) {
+      const patch: Record<string, string> = { player_id: move.toId };
+      const gameId = gameByPlayer.get(move.toId);
+      if (gameId) patch.game_id = gameId;
+      const { error: updErr } = await this.client
+        .from("player_odds")
+        .update(patch)
+        .eq("week_id", weekId)
+        .eq("player_id", move.fromId);
+      if (updErr) throw updErr;
+    }
   }
 
   async replacePlayerWeekBoard(

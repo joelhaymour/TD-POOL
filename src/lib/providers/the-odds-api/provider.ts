@@ -5,7 +5,8 @@ import {
 import { consensusImpliedFromAmericans } from "@/lib/model/math";
 import {
   BOOKMAKER_KEY_MAP,
-  normalizePlayerName,
+  livePreferredRoster,
+  resolveRosterPlayer,
   teamFullToAbbr,
 } from "@/lib/providers/the-odds-api/maps";
 import type {
@@ -87,20 +88,13 @@ export class TheOddsApiProvider implements OddsProvider {
   private roster: NonNullable<TheOddsApiProviderOptions["roster"]>;
   private games: NonNullable<TheOddsApiProviderOptions["games"]>;
   private fetchImpl: typeof fetch;
-  private nameIndex: Map<string, string>;
 
   constructor(options: TheOddsApiProviderOptions) {
     this.apiKey = options.apiKey;
     this.regions = options.regions ?? "us";
-    this.roster = options.roster ?? [];
+    this.roster = livePreferredRoster(options.roster ?? []);
     this.games = options.games ?? [];
     this.fetchImpl = options.fetchImpl ?? fetch;
-    this.nameIndex = new Map(
-      this.roster.map((p) => [
-        normalizePlayerName(p.name),
-        p.external_player_id,
-      ]),
-    );
   }
 
   private async getJson<T>(url: string): Promise<T> {
@@ -134,25 +128,15 @@ export class TheOddsApiProvider implements OddsProvider {
     return (await res.json()) as T;
   }
 
-  private resolvePlayerId(description: string | undefined): string | null {
+  private resolvePlayerId(
+    description: string | undefined,
+    eventTeams?: { home?: string | null; away?: string | null },
+  ): string | null {
     if (!description) return null;
-    const key = normalizePlayerName(description);
-    if (this.nameIndex.has(key)) return this.nameIndex.get(key)!;
-
-    // Soft match: last name + first initial only (avoid "includes" false positives).
-    const parts = key.split(" ").filter(Boolean);
-    if (parts.length < 2) return null;
-    const last = parts.at(-1)!;
-    const firstInitial = parts[0]![0];
-    const hits: string[] = [];
-    for (const [norm, id] of this.nameIndex) {
-      const a = norm.split(" ").filter(Boolean);
-      if (a.length < 2) continue;
-      if (a.at(-1) === last && a[0]?.[0] === firstInitial) {
-        hits.push(id);
-      }
-    }
-    return hits.length === 1 ? hits[0]! : null;
+    return (
+      resolveRosterPlayer(description, this.roster, eventTeams)
+        ?.external_player_id ?? null
+    );
   }
 
   private resolveGameId(homeFull: string, awayFull: string): string | null {
@@ -232,11 +216,14 @@ export class TheOddsApiProvider implements OddsProvider {
           continue;
         }
         const eventOdds = result.value;
-        const gameId = this.resolveGameId(
-          eventOdds.home_team ?? eventMeta.home_team,
-          eventOdds.away_team ?? eventMeta.away_team,
-        );
+        const homeFull = eventOdds.home_team ?? eventMeta.home_team;
+        const awayFull = eventOdds.away_team ?? eventMeta.away_team;
+        const gameId = this.resolveGameId(homeFull, awayFull);
         if (!gameId) continue;
+        const eventTeams = {
+          home: teamFullToAbbr(homeFull),
+          away: teamFullToAbbr(awayFull),
+        };
 
         for (const book of eventOdds.bookmakers ?? []) {
           const mapped = BOOKMAKER_KEY_MAP[book.key];
@@ -254,7 +241,10 @@ export class TheOddsApiProvider implements OddsProvider {
             const playerName = outcome.description ?? outcome.name;
             if (!isYes && outcome.name.toLowerCase() === "no") continue;
 
-            const externalPlayerId = this.resolvePlayerId(playerName);
+            const externalPlayerId = this.resolvePlayerId(
+              playerName,
+              eventTeams,
+            );
             if (!externalPlayerId) continue;
             if (typeof outcome.price !== "number") continue;
 

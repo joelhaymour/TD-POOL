@@ -162,6 +162,10 @@ export async function refreshLeagueData(slug: string): Promise<void> {
       autoSyncLeagueOdds(slug).catch(() => null),
     ]);
 
+    if (league.active_week_id) {
+      await store.reapplyStoredOdds(league.active_week_id).catch(() => null);
+    }
+
     await store.completeSyncSlot(`refresh:${slug}`, "ok");
   } catch (err) {
     console.error("refreshLeagueData failed", err);
