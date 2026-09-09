@@ -59,11 +59,11 @@ type OddsApiEventOdds = OddsApiEvent & {
 export type TheOddsApiProviderOptions = {
   apiKey: string;
   /**
-   * Legacy region filter. Ignored when `bookmakers` is set — mixing regions
-   * (`us,ca` / `us,us2`) bills 2 credits per game.
+   * Bookmaker region. Keep this `us` only. `ca`/`uk`/`au`/`us2` each add a
+   * full extra credit per game. Ignored when `bookmakers` is set.
    */
   regions?: string;
-  /** Comma-separated Odds API bookmaker keys. ≤10 keys = 1 credit per event. */
+  /** US bookmaker keys. ≤10 keys = 1 credit per event. */
   bookmakers?: string;
   /** Optional roster for name → external_player_id matching. */
   roster?: Array<{
@@ -189,13 +189,12 @@ export class TheOddsApiProvider implements OddsProvider {
       `https://api.the-odds-api.com/v4/sports/${SPORT}/events/${eventId}/odds`,
     );
     url.searchParams.set("apiKey", this.apiKey);
-    // `bookmakers` takes priority over `regions` and bills 1 credit per 10
-    // keys, even when those books span US/UK/AU. That is how Bet365 can be
-    // requested without paying for a second region.
+    // One country: US books only. `us,ca` (or uk/au) doubles the credit cost
+    // for lines that already track FanDuel/DK/BetMGM.
     if (this.bookmakers) {
       url.searchParams.set("bookmakers", this.bookmakers);
     } else {
-      url.searchParams.set("regions", this.regions);
+      url.searchParams.set("regions", this.regions || "us");
     }
     url.searchParams.set("markets", MARKET);
     url.searchParams.set("oddsFormat", "american");

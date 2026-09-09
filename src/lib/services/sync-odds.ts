@@ -20,15 +20,11 @@ export type OddsSyncSummary = {
 };
 
 /**
- * The Odds API event-odds endpoint bills 1 credit per game per 10 bookmakers
- * (or per region). A 16-game slate should cost 16 credits when we pin ≤10
- * books. The old 32-credit runs were two billed units per game: either a
- * second region (`us,ca` / `us,us2`) or a second league each fetching the
- * same slate.
- *
- * Sync is keyed by NFL week, not league, so opening Dihgenerates after
- * LockAlholics does not pay again. 40h TTL keeps the free 500/month quota
- * from burning out on dashboard refreshes.
+ * The Odds API bills 1 credit per game for one region / ≤10 books.
+ * We request US books only. Canada is a separate region with Ontario skins
+ * whose prices follow the US books — adding `ca` doubles the bill for no
+ * extra coverage we need. Sync is keyed by NFL week so two leagues do not
+ * pay for the same slate.
  */
 export const ODDS_SYNC_TTL_MS = 40 * 60 * 60_000;
 const inFlightOddsSync = new Map<string, Promise<OddsSyncSummary | null>>();
