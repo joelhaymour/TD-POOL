@@ -11,6 +11,7 @@ import {
   estimatePayout,
   formatAmerican,
   formatMoney,
+  isValidAmericanOdds,
 } from "@/lib/utils/odds";
 
 export type BetSlipLeg = {
@@ -45,9 +46,9 @@ export function BetSlip({
   // combined number meaningless, so we show nothing rather than a guess.
   const pricedOdds = legs.map((l) => l.americanOdds);
   const allPriced =
-    legs.length > 0 && pricedOdds.every((o): o is number => o != null);
+    legs.length > 0 && pricedOdds.every(isValidAmericanOdds);
   const combinedDecimal = allPriced
-    ? combineParlayDecimal(pricedOdds.map((o) => americanToDecimal(o!)))
+    ? combineParlayDecimal(pricedOdds.map((o) => americanToDecimal(o)))
     : null;
   const combinedAmerican =
     combinedDecimal != null ? decimalToAmerican(combinedDecimal) : null;

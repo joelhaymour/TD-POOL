@@ -50,6 +50,25 @@ export function formatDecimal(decimal: number): string {
   return decimal.toFixed(2);
 }
 
+export function isValidAmericanOdds(american: number | null | undefined): american is number {
+  return american != null && Number.isFinite(american) && american !== 0;
+}
+
+/** Decimal odds must be greater than 1 (even money is 2.00). */
+export function isValidDecimalOdds(decimal: number | null | undefined): decimal is number {
+  return decimal != null && Number.isFinite(decimal) && decimal > 1;
+}
+
+/** Stored 0 means "no quote", not even-money. */
+export function decimalOddsForLeg(
+  consensusDecimal: number | null | undefined,
+  americanAtSelection: number | null | undefined,
+): number | null {
+  if (isValidDecimalOdds(consensusDecimal)) return consensusDecimal;
+  if (!isValidAmericanOdds(americanAtSelection)) return null;
+  return americanToDecimal(americanAtSelection);
+}
+
 /** Product of independent decimal legs for an approximate parlay. */
 export function combineParlayDecimal(odds: number[]): number {
   if (odds.length === 0) {
@@ -61,6 +80,47 @@ export function combineParlayDecimal(odds: number[]): number {
     }
     return acc * odd;
   }, 1);
+}
+
+/**
+ * Combined parlay price, or null when any leg is unpriced.
+ * Callers must not invent a number from a partial ticket.
+ */
+export function tryCombineParlayDecimal(
+  odds: Array<number | null | undefined>,
+): number | null {
+  if (odds.length === 0) return null;
+  if (!odds.every(isValidDecimalOdds)) return null;
+  return combineParlayDecimal(odds);
+}
+
+export function parlayCombinedFields(
+  decimalLegs: Array<number | null>,
+  stake: number,
+  bettingMode: BettingMode,
+): {
+  combined_decimal: number | null;
+  combined_american: number | null;
+  estimated_payout: number | null;
+  estimated_profit: number | null;
+} {
+  const combined = tryCombineParlayDecimal(decimalLegs);
+  if (combined == null) {
+    return {
+      combined_decimal: null,
+      combined_american: null,
+      estimated_payout: null,
+      estimated_profit: null,
+    };
+  }
+  const money =
+    bettingMode !== "none" ? estimatePayout(stake, combined) : null;
+  return {
+    combined_decimal: Number(combined.toFixed(4)),
+    combined_american: decimalToAmerican(combined),
+    estimated_payout: money ? Number(money.payout.toFixed(2)) : null,
+    estimated_profit: money ? Number(money.profit.toFixed(2)) : null,
+  };
 }
 
 export function estimatePayout(

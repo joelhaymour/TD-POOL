@@ -14,11 +14,9 @@ import {
 } from "@/lib/store/types";
 import { chunk } from "@/lib/concurrency";
 import {
-  americanToDecimal,
   calculateWeeklyStake,
-  combineParlayDecimal,
-  decimalToAmerican,
-  estimatePayout,
+  decimalOddsForLeg,
+  parlayCombinedFields,
 } from "@/lib/utils/odds";
 import { slugify } from "@/lib/utils/slug";
 import { resolvePoolWeek, weekWindow } from "@/lib/nfl/calendar";
@@ -1601,42 +1599,21 @@ export class SupabaseStore implements Store {
     });
 
     const stake = calculateWeeklyStake(league);
-    const decimalLegs = picks.map((p) => {
-      const pwd = pwdByPlayer.get(p.player_id);
-      if (pwd) return pwd.consensus_decimal_odds;
-      return americanToDecimal(p.odds_at_selection);
-    });
+    const decimalLegs = picks.map((p) =>
+      decimalOddsForLeg(
+        pwdByPlayer.get(p.player_id)?.consensus_decimal_odds,
+        p.odds_at_selection,
+      ),
+    );
 
-    let parlay: ParlaySummary = {
+    const parlay: ParlaySummary = {
       picks_submitted: picks.length,
       picks_total: members.length,
       stake,
-      combined_decimal: null,
-      combined_american: null,
-      estimated_payout: null,
-      estimated_profit: null,
       currency: league.currency,
       betting_mode: league.betting_mode,
+      ...parlayCombinedFields(decimalLegs, stake, league.betting_mode),
     };
-
-    if (decimalLegs.length > 0 && league.betting_mode !== "none") {
-      const combined = combineParlayDecimal(decimalLegs);
-      const { payout, profit } = estimatePayout(stake, combined);
-      parlay = {
-        ...parlay,
-        combined_decimal: Number(combined.toFixed(4)),
-        combined_american: decimalToAmerican(combined),
-        estimated_payout: Number(payout.toFixed(2)),
-        estimated_profit: Number(profit.toFixed(2)),
-      };
-    } else if (decimalLegs.length > 0) {
-      const combined = combineParlayDecimal(decimalLegs);
-      parlay = {
-        ...parlay,
-        combined_decimal: Number(combined.toFixed(4)),
-        combined_american: decimalToAmerican(combined),
-      };
-    }
 
     const ranked_players = pwdList
       .map((pwd) => {

@@ -4,11 +4,9 @@ import { storeErrorResponse } from "@/lib/api/store-error";
 import { requireApiMembership } from "@/lib/auth/api";
 import { autoSyncLeagueWeek } from "@/lib/services/sync-nfl-week";
 import {
-  americanToDecimal,
   calculateWeeklyStake,
-  combineParlayDecimal,
-  decimalToAmerican,
-  estimatePayout,
+  decimalOddsForLeg,
+  parlayCombinedFields,
 } from "@/lib/utils/odds";
 
 function weekPhaseStatus(isActive: boolean): "active" | "complete" {
@@ -85,37 +83,21 @@ export async function GET(
           };
         });
 
-        const decimalLegs = picks.map((p) => {
-          const pwd = pwdByPlayer.get(p.player_id);
-          if (pwd) return pwd.consensus_decimal_odds;
-          return americanToDecimal(p.odds_at_selection);
-        });
+        const decimalLegs = picks.map((p) =>
+          decimalOddsForLeg(
+            pwdByPlayer.get(p.player_id)?.consensus_decimal_odds,
+            p.odds_at_selection,
+          ),
+        );
 
-        let parlay = {
+        const parlay = {
           picks_submitted: picks.length,
           picks_total: members.length,
           stake,
-          combined_decimal: null as number | null,
-          combined_american: null as number | null,
-          estimated_payout: null as number | null,
-          estimated_profit: null as number | null,
           currency: league.currency,
           betting_mode: league.betting_mode,
+          ...parlayCombinedFields(decimalLegs, stake, league.betting_mode),
         };
-
-        if (decimalLegs.length > 0) {
-          const combined = combineParlayDecimal(decimalLegs);
-          parlay = {
-            ...parlay,
-            combined_decimal: Number(combined.toFixed(4)),
-            combined_american: decimalToAmerican(combined),
-          };
-          if (league.betting_mode !== "none") {
-            const { payout, profit } = estimatePayout(stake, combined);
-            parlay.estimated_payout = Number(payout.toFixed(2));
-            parlay.estimated_profit = Number(profit.toFixed(2));
-          }
-        }
 
         const isActive = week.id === league.active_week_id;
         const status = weekPhaseStatus(isActive);
