@@ -69,7 +69,7 @@ USE_SUPABASE=true
 PROVIDER_MODE=auto
 NFL_PROVIDER=espn
 ODDS_API_KEY=                # optional
-ODDS_API_BOOKMAKERS=fanduel,draftkings,betmgm,williamhill_us,fanatics
+ODDS_API_BOOKMAKERS=fanduel,draftkings,betmgm,williamhill_us,fanatics,bet365,bet365_au
 ```
 
 ## Deploy (Vercel)

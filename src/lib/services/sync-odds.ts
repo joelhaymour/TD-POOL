@@ -20,11 +20,10 @@ export type OddsSyncSummary = {
 };
 
 /**
- * The Odds API bills 1 credit per game for one region / ≤10 books.
- * We request US books only. Canada is a separate region with Ontario skins
- * whose prices follow the US books — adding `ca` doubles the bill for no
- * extra coverage we need. Sync is keyed by NFL week so two leagues do not
- * pay for the same slate.
+ * The Odds API bills 1 credit per game for ≤10 bookmaker keys. We request
+ * the five US books plus Bet365 in that same list so a 16-game slate stays
+ * ~16 credits. A second region (`uk`/`au`/`ca`) would be ~32. Sync is keyed
+ * by NFL week so two leagues do not pay for the same slate.
  */
 export const ODDS_SYNC_TTL_MS = 40 * 60 * 60_000;
 const inFlightOddsSync = new Map<string, Promise<OddsSyncSummary | null>>();
