@@ -13,20 +13,22 @@ export type OddsSyncSummary = {
   error?: string;
   /** Provider credits left, when metered. Null when unknown or unlimited. */
   creditsRemaining?: number | null;
+  /** Credits spent on this fetch. Null when the provider does not report it. */
+  creditsUsed?: number | null;
+  /** API book keys we received but do not display. */
+  unmappedBookmakers?: string[];
 };
 
 /**
- * The Odds API bills one credit per event per market per region, so a single
- * refresh of a full slate costs roughly one credit per game. At the previous
- * 10-minute TTL that was ~32 credits every ten minutes of active use, which
- * exhausted the entire 500/month allowance in about fifteen refreshes and is
- * why the board went to "Unavailable".
+ * The Odds API event-odds endpoint bills 1 credit per game per 10 bookmakers
+ * (or per region). A 16-game slate should cost 16 credits when we pin ≤10
+ * books. The old 32-credit runs were two billed units per game: either a
+ * second region (`us,ca` / `us,us2`) or a second league each fetching the
+ * same slate.
  *
- * A measured full-slate sync cost 32 credits, not the 16 a one-credit-per-game
- * estimate predicted. At 500/month that makes a daily refresh (~960) impossible
- * and every-other-day (~480) the most the free tier can carry. 40h rather than
- * 48h so a fixed-time daily cron reliably lands on alternate days instead of
- * drifting into a skipped third day.
+ * Sync is keyed by NFL week, not league, so opening Dihgenerates after
+ * LockAlholics does not pay again. 40h TTL keeps the free 500/month quota
+ * from burning out on dashboard refreshes.
  */
 export const ODDS_SYNC_TTL_MS = 40 * 60 * 60_000;
 const inFlightOddsSync = new Map<string, Promise<OddsSyncSummary | null>>();
@@ -42,38 +44,42 @@ export async function autoSyncLeagueOdds(
   slug: string,
   options: { force?: boolean } = {},
 ): Promise<OddsSyncSummary | null> {
-  const existing = inFlightOddsSync.get(slug);
+  const store = getStore();
+  const dashboard = await store.getDashboard(slug);
+  if (!dashboard) return null;
+
+  const weekKey = `odds:week:${dashboard.week.season}:${dashboard.week.week}`;
+  const existing = inFlightOddsSync.get(weekKey);
   if (existing) return existing;
 
   const run = (async () => {
-    const store = getStore();
-    const key = `odds:${slug}`;
     try {
       const claimed = await store.claimSyncSlot(
-        key,
+        weekKey,
         options.force ? 0 : ODDS_SYNC_TTL_MS,
       );
       if (!claimed) return null;
-
-      const dashboard = await store.getDashboard(slug);
-      if (!dashboard) return null;
 
       const summary = await syncWeekOdds(store, {
         season: dashboard.week.season,
         week: dashboard.week.week,
         weekId: dashboard.week.id,
       });
-      await store.completeSyncSlot(key, "ok", {
+      const detail = {
         source: summary.source,
         quotes: summary.quotes,
         playersUpdated: summary.playersUpdated,
         providerError: summary.error ?? null,
         creditsRemaining: summary.creditsRemaining ?? null,
-      });
+        creditsUsed: summary.creditsUsed ?? null,
+        unmappedBookmakers: summary.unmappedBookmakers ?? [],
+      };
+      await store.completeSyncSlot(weekKey, "ok", detail);
+      await store.completeSyncSlot(`odds:${slug}`, "ok", detail);
       return summary;
     } catch (err) {
       await store
-        .completeSyncSlot(key, "error", {
+        .completeSyncSlot(weekKey, "error", {
           message: err instanceof Error ? err.message : "Odds sync failed",
         })
         .catch(() => {});
@@ -87,11 +93,11 @@ export async function autoSyncLeagueOdds(
         error: err instanceof Error ? err.message : "Odds sync failed",
       };
     } finally {
-      inFlightOddsSync.delete(slug);
+      inFlightOddsSync.delete(weekKey);
     }
   })();
 
-  inFlightOddsSync.set(slug, run);
+  inFlightOddsSync.set(weekKey, run);
   return run;
 }
 
@@ -156,6 +162,8 @@ export async function syncWeekOdds(
   }
 
   const creditsRemaining = provider.getQuotaRemaining?.() ?? null;
+  const creditsUsed = provider.getCreditsUsedThisFetch?.() ?? null;
+  const unmappedBookmakers = provider.getUnmappedBookmakers?.() ?? [];
 
   return {
     source: effectiveSource,
@@ -166,5 +174,7 @@ export async function syncWeekOdds(
     fetchedAt: new Date().toISOString(),
     error,
     creditsRemaining,
+    creditsUsed,
+    unmappedBookmakers,
   };
 }

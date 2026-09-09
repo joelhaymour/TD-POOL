@@ -66,6 +66,7 @@ export function getOddsProvider(ctx: OddsProviderContext = {}): OddsProvider {
     return createTheOddsApiProvider({
       apiKey,
       regions: process.env.ODDS_API_REGIONS ?? "us",
+      bookmakers: process.env.ODDS_API_BOOKMAKERS,
       roster: ctx.roster,
       games: ctx.games,
     });

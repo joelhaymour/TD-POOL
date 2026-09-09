@@ -148,6 +148,10 @@ export interface OddsProvider {
    * the board can warn before the allowance runs out instead of going blank.
    */
   getQuotaRemaining?(): number | null;
+  /** Credits spent on the most recent fetch, when the provider reports them. */
+  getCreditsUsedThisFetch?(): number;
+  /** Bookmaker keys returned by the API that we did not map into the UI. */
+  getUnmappedBookmakers?(): string[];
   getPlayerOdds(
     externalPlayerId: string,
     season: number,

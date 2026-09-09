@@ -5,6 +5,7 @@ import {
 import { consensusImpliedFromAmericans } from "@/lib/model/math";
 import {
   BOOKMAKER_KEY_MAP,
+  DEFAULT_ODDS_API_BOOKMAKERS,
   livePreferredRoster,
   resolveRosterPlayer,
   teamFullToAbbr,
@@ -57,7 +58,13 @@ type OddsApiEventOdds = OddsApiEvent & {
 
 export type TheOddsApiProviderOptions = {
   apiKey: string;
+  /**
+   * Legacy region filter. Ignored when `bookmakers` is set — mixing regions
+   * (`us,ca` / `us,us2`) bills 2 credits per game.
+   */
   regions?: string;
+  /** Comma-separated Odds API bookmaker keys. ≤10 keys = 1 credit per event. */
+  bookmakers?: string;
   /** Optional roster for name → external_player_id matching. */
   roster?: Array<{
     external_player_id: string;
@@ -80,11 +87,23 @@ function nowIso(): string {
 export class TheOddsApiProvider implements OddsProvider {
   private apiKey: string;
   private regions: string;
+  private bookmakers: string;
   private quotaRemaining: number | null = null;
+  private creditsUsedThisFetch = 0;
+  private unmappedBookmakers = new Set<string>();
 
   getQuotaRemaining(): number | null {
     return this.quotaRemaining;
   }
+
+  getCreditsUsedThisFetch(): number {
+    return this.creditsUsedThisFetch;
+  }
+
+  getUnmappedBookmakers(): string[] {
+    return [...this.unmappedBookmakers].sort();
+  }
+
   private roster: NonNullable<TheOddsApiProviderOptions["roster"]>;
   private games: NonNullable<TheOddsApiProviderOptions["games"]>;
   private fetchImpl: typeof fetch;
@@ -92,9 +111,12 @@ export class TheOddsApiProvider implements OddsProvider {
   constructor(options: TheOddsApiProviderOptions) {
     this.apiKey = options.apiKey;
     this.regions = options.regions ?? "us";
+    this.bookmakers =
+      options.bookmakers?.trim() || DEFAULT_ODDS_API_BOOKMAKERS.join(",");
     this.roster = livePreferredRoster(options.roster ?? []);
     this.games = options.games ?? [];
     this.fetchImpl = options.fetchImpl ?? fetch;
+    this.creditsUsedThisFetch = 0;
   }
 
   private async getJson<T>(url: string): Promise<T> {
@@ -115,6 +137,11 @@ export class TheOddsApiProvider implements OddsProvider {
     // quota is gone instead of firing a dozen requests that can only fail.
     const remaining = Number(res.headers.get("x-requests-remaining"));
     if (Number.isFinite(remaining)) this.quotaRemaining = remaining;
+    // /events is free; only event-odds calls should count toward the slate cost.
+    if (url.includes("/odds")) {
+      const last = Number(res.headers.get("x-requests-last"));
+      if (Number.isFinite(last) && last > 0) this.creditsUsedThisFetch += last;
+    }
 
     if (!res.ok) {
       const body = await res.text().catch(() => "");
@@ -162,7 +189,14 @@ export class TheOddsApiProvider implements OddsProvider {
       `https://api.the-odds-api.com/v4/sports/${SPORT}/events/${eventId}/odds`,
     );
     url.searchParams.set("apiKey", this.apiKey);
-    url.searchParams.set("regions", this.regions);
+    // `bookmakers` takes priority over `regions` and bills 1 credit per 10
+    // keys, even when those books span US/UK/AU. That is how Bet365 can be
+    // requested without paying for a second region.
+    if (this.bookmakers) {
+      url.searchParams.set("bookmakers", this.bookmakers);
+    } else {
+      url.searchParams.set("regions", this.regions);
+    }
     url.searchParams.set("markets", MARKET);
     url.searchParams.set("oddsFormat", "american");
     return this.getJson<OddsApiEventOdds>(url.toString());
@@ -173,6 +207,8 @@ export class TheOddsApiProvider implements OddsProvider {
     _week: number,
     sportsbooks?: ProviderSportsbook[],
   ): Promise<OddsQuote[]> {
+    this.creditsUsedThisFetch = 0;
+    this.unmappedBookmakers.clear();
     const fetchedAt = nowIso();
     const events = await this.listEvents();
     const allowed = sportsbooks
@@ -227,7 +263,10 @@ export class TheOddsApiProvider implements OddsProvider {
 
         for (const book of eventOdds.bookmakers ?? []) {
           const mapped = BOOKMAKER_KEY_MAP[book.key];
-          if (!mapped) continue;
+          if (!mapped) {
+            this.unmappedBookmakers.add(book.key);
+            continue;
+          }
           if (allowed && !allowed.has(mapped)) continue;
 
           const market = book.markets.find((m) => m.key === MARKET);

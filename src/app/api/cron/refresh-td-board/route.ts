@@ -39,17 +39,17 @@ export async function GET(request: Request) {
   const nflWeek = await ensureNflWeekMaterialized(store, season, week, {
     force: true,
   });
-  // The board rebuild is free and runs daily, but odds are metered: a measured
-  // full-slate sync costs ~31 credits against a 500/month allowance, so only
-  // about 16 syncs a month are affordable. Refreshing on game-adjacent days
-  // buys fresher prices where they matter than spreading them evenly would.
+  // The board rebuild is free and runs daily, but odds are metered: a
+  // 16-game slate is 16 credits when we pin ≤10 books. Game-day refreshes
+  // keep prices fresh where they matter without blowing the 500/month quota.
   //
   // The weekday check lives here rather than in the cron schedule because
   // day-of-week cron expressions need a paid Vercel plan, while a daily trigger
   // works everywhere. The TTL stays as a backstop against double runs.
+  const weekKey = `odds:week:${season}:${week}`;
   const claimed =
     isOddsSyncDay(new Date()) &&
-    (await store.claimSyncSlot("odds:cron", ODDS_SYNC_TTL_MS).catch(() => false));
+    (await store.claimSyncSlot(weekKey, ODDS_SYNC_TTL_MS).catch(() => false));
 
   const odds = claimed
     ? await syncWeekOdds(store, { season, week, weekId: nflWeek.id })
@@ -69,11 +69,21 @@ export async function GET(request: Request) {
             playersUpdated: odds.playersUpdated,
             providerError: odds.error ?? null,
             creditsRemaining: odds.creditsRemaining ?? null,
+            creditsUsed: odds.creditsUsed ?? null,
+            unmappedBookmakers: odds.unmappedBookmakers ?? [],
           })
           .catch(() => {}),
       ),
     );
-    await store.completeSyncSlot("odds:cron", "ok", {}).catch(() => {});
+    await store.completeSyncSlot(weekKey, odds.error ? "error" : "ok", {
+      source: odds.source,
+      quotes: odds.quotes,
+      playersUpdated: odds.playersUpdated,
+      providerError: odds.error ?? null,
+      creditsRemaining: odds.creditsRemaining ?? null,
+      creditsUsed: odds.creditsUsed ?? null,
+      unmappedBookmakers: odds.unmappedBookmakers ?? [],
+    }).catch(() => {});
   }
 
   return NextResponse.json({

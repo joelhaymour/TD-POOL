@@ -177,6 +177,28 @@ export function mockToLivePlayerMoves(
   return moves;
 }
 
+/**
+ * Explicit bookmaker keys sent to The Odds API.
+ *
+ * Cost is 1 credit per event per 10 bookmakers (or per region). Asking for
+ * `regions=us,ca` or `us,us2` is 2 credits per game. Pinning ≤10 books keeps a
+ * 16-game slate at 16 credits and still lets Bet365 through if they list NFL
+ * anytime TDs — `bookmakers` may mix regions without doubling the bill.
+ *
+ * Bet365 is not in the US/CA region catalogs (only `bet365_au` is documented,
+ * and that feed is AFL/NRL featured markets). Including the key is cheap; if
+ * the API has NFL anytime TDs for it they appear, otherwise the book is omitted.
+ */
+export const DEFAULT_ODDS_API_BOOKMAKERS = [
+  "fanduel",
+  "draftkings",
+  "betmgm",
+  "williamhill_us",
+  "fanatics",
+  "bet365",
+  "bet365_au",
+] as const;
+
 /** Map Odds API bookmaker keys to our display sportsbooks. */
 export const BOOKMAKER_KEY_MAP: Record<
   string,
@@ -184,10 +206,8 @@ export const BOOKMAKER_KEY_MAP: Record<
 > = {
   fanduel: "FanDuel",
   draftkings: "DraftKings",
-  // The API has no bet365 for NFL in any region — the sole listing is
-  // bet365_au, which is paid-only and covers AFL and NRL. Kept mapped so the
-  // odds appear automatically if that ever changes.
   bet365: "Bet365",
+  bet365_au: "Bet365",
   betmgm: "BetMGM",
   williamhill_us: "Caesars",
   caesars: "Caesars",
