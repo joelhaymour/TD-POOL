@@ -65,17 +65,47 @@ odds for testing, clearly labeled in the page banner. Paid odds, SportsDataIO,
 and AI calls are disabled, including Vercel's automatic AI Gateway OIDC path.
 Both scheduled refresh endpoints return without touching data.
 
+## Git identity
+
+Vercel blocks a deployment when the commit email does not resolve to a GitHub
+account, and the build never starts — the branch alias keeps serving the last
+good deployment, so the push looks successful until you open the dashboard. Set
+the repository identity once per machine:
+
+```sh
+git config user.email "joelhaymour00@gmail.com"
+git config user.name "Joel Haymour"
+```
+
 ## Bet365 and expanded props
 
-As checked on 2026-09-11, The Odds API documents `bet365_au` only for AFL/NRL
-moneyline, spreads, and totals. NFL anytime-TD coverage is not documented, so
-the default request contains only the five supported target US books. Caesars
-and Fanatics require a paid The Odds API subscription. The mappings remain for
-future coverage, but requesting extra regions cannot manufacture missing odds.
+Confirmed on 2026-09-11 with live calls, not just documentation:
 
-Before selecting an alternative, verify live NFL response samples for the exact
-Bet365 jurisdiction, target props, all six books, update latency, and display
-rights. Same-game parlay pricing is a separate capability from individual odds.
+- `bookmakers=bet365,bet365_au` with `markets=player_anytime_td` on an NFL event
+  returns **no bookmakers at all**.
+- `regions=uk` with `markets=h2h` returns 15 UK books and **bet365 is not among
+  them**, so this is total NFL absence rather than a player-props gap.
+- The bookmaker table lists only `bet365_au`, paid plans only, "coverage
+  currently limited to h2h, spreads and totals for AFL and NRL".
+
+Bet365 NFL odds therefore cannot be bought from The Odds API at any tier, and
+bet365's own share links are server-generated codes with no public format a
+third party can construct. SportsGameOdds carries bet365 only from its $299/mo
+Pro tier. PredictionData.io exposes a bet365 parlay deeplink endpoint at
+quote-based pricing — see `docs/predictiondata-outreach.md`.
+
+Caesars (`williamhill_us`) and Fanatics also require a paid subscription and
+return empty on free keys.
+
+Group betting ships FanDuel only, because FanDuel returns usable `addToBetslip`
+market and selection ids through `includeLinks=true&includeSids=true` at no
+extra credit cost. Adding another book is a new adapter in
+`src/lib/props/fanduel-link.ts`, not a rewrite.
+
+Credits are billed per market **returned**, so requesting markets a book does
+not price is free. A full FanDuel board for one NFL game measured 12-16 credits;
+a 16-game slate is roughly 200-256. Boards cache for six hours, shared by every
+league.
 
 Sources: [Supabase environment guidance](https://supabase.com/docs/guides/deployment/managing-environments),
 [Vercel Git deployment guidance](https://vercel.com/docs/git),
