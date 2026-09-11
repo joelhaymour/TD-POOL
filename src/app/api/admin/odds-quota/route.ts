@@ -8,6 +8,9 @@ import { NextResponse } from "next/server";
  * either side of a run.
  */
 export async function GET() {
+  if (process.env.ENABLE_PAID_PROVIDERS === "false") {
+    return NextResponse.json({ configured: false, disabled: true });
+  }
   const apiKey = process.env.ODDS_API_KEY?.trim();
   if (!apiKey) {
     return NextResponse.json({ configured: false });

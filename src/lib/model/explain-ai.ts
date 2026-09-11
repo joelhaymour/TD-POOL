@@ -22,6 +22,7 @@ export type AiAnalysis = {
 };
 
 export function isOpenAiConfigured(): boolean {
+  if (process.env.ENABLE_PAID_PROVIDERS === "false") return false;
   return Boolean(
     process.env.AI_GATEWAY_API_KEY?.trim() ||
       process.env.VERCEL_OIDC_TOKEN?.trim() ||

@@ -178,14 +178,10 @@ export function mockToLivePlayerMoves(
 }
 
 /**
- * US books plus Bet365. The Odds API bills 1 credit per game per 10 bookmaker
- * keys, and keys may come from any country. Adding `bet365` / `bet365_au` does
- * not add a second region. Adding `uk` or `au` as a region would double the
- * slate (32 credits) and still may not return NFL anytime TDs.
- *
- * Official catalog: Bet365 is not listed under US/CA. `bet365_au` is AFL/NRL
- * featured markets on paid plans. We still request the keys so NFL anytime TDs
- * appear if the API has them.
+ * Documented target US books. One anytime-TD market with up to ten explicit
+ * bookmaker keys costs one credit per game when returned. As of 2026-09-11,
+ * the catalog limits bet365_au to AFL/NRL core markets; it cannot supply NFL
+ * touchdown props. Caesars and Fanatics require a paid subscription.
  */
 export const DEFAULT_ODDS_API_BOOKMAKERS = [
   "fanduel",
@@ -193,8 +189,6 @@ export const DEFAULT_ODDS_API_BOOKMAKERS = [
   "betmgm",
   "williamhill_us",
   "fanatics",
-  "bet365",
-  "bet365_au",
 ] as const;
 
 /** Map Odds API bookmaker keys to our display sportsbooks. */
@@ -204,7 +198,7 @@ export const BOOKMAKER_KEY_MAP: Record<
 > = {
   fanduel: "FanDuel",
   draftkings: "DraftKings",
-  // Requested via bookmakers= so we do not pay for the uk/au regions.
+  // Retain mappings if coverage expands; currently no documented NFL Bet365 feed.
   bet365: "Bet365",
   bet365_au: "Bet365",
   bet365_uk: "Bet365",

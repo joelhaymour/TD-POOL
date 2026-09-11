@@ -1,0 +1,5 @@
+.env*
+.local-backups/
+.data/
+supabase/.temp/
+supabase/.branches/

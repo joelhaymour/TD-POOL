@@ -1,5 +1,8 @@
 import type { NextConfig } from "next";
 import path from "path";
+import { assertEnvironment } from "./scripts/environment.mjs";
+
+assertEnvironment(process.env);
 
 const nextConfig: NextConfig = {
   turbopack: {

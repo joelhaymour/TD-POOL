@@ -188,8 +188,8 @@ export class TheOddsApiProvider implements OddsProvider {
       `https://api.the-odds-api.com/v4/sports/${SPORT}/events/${eventId}/odds`,
     );
     url.searchParams.set("apiKey", this.apiKey);
-    // Bookmaker list (not regions) so Bet365 can sit next to US books at
-    // 1 credit per game. `regions=us,uk` would be 2 credits per game.
+    // Up to ten explicit books count as one region for billing. Request only
+    // documented NFL books by default; extra regions cannot add missing coverage.
     if (this.bookmakers) {
       url.searchParams.set("bookmakers", this.bookmakers);
     } else {

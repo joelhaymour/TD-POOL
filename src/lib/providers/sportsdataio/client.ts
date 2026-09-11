@@ -9,10 +9,12 @@ import { fetchWithTimeout } from "@/lib/concurrency";
 const BASE = "https://api.sportsdata.io/v3/nfl";
 
 export function isSportsDataIoConfigured(): boolean {
+  if (process.env.ENABLE_PAID_PROVIDERS === "false") return false;
   return Boolean(process.env.SPORTSDATAIO_API_KEY?.trim());
 }
 
 async function sdioFetch<T>(path: string): Promise<T | null> {
+  if (!isSportsDataIoConfigured()) return null;
   const key = process.env.SPORTSDATAIO_API_KEY?.trim();
   if (!key) return null;
   const url = `${BASE}${path}${path.includes("?") ? "&" : "?"}key=${encodeURIComponent(key)}`;

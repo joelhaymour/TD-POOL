@@ -33,7 +33,6 @@ export default function PlayerDetailPage() {
   const [selecting, setSelecting] = useState(false);
 
   const refresh = useCallback(async () => {
-    setLoading(true);
     try {
       const res = await fetch(`/api/leagues/${slug}/players/${playerId}`);
       if (!res.ok) {

@@ -26,6 +26,9 @@ function isOddsSyncDay(now: Date): boolean {
  * Secure with CRON_SECRET bearer token when deployed.
  */
 export async function GET(request: Request) {
+  if (process.env.ENABLE_CRON_JOBS === "false") {
+    return NextResponse.json({ skipped: "Scheduled jobs disabled in this environment" });
+  }
   const secret = process.env.CRON_SECRET?.trim();
   if (secret) {
     const auth = request.headers.get("authorization") ?? "";

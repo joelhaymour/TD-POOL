@@ -42,6 +42,7 @@ export function getConfiguredOddsSource(): "live" | "mock" | "none" {
   const mode = resolveProviderMode();
   const key = process.env.ODDS_API_KEY?.trim();
   if (mode === "mock") return "mock";
+  if (process.env.ENABLE_PAID_PROVIDERS === "false") return "none";
   return key ? "live" : "none";
 }
 

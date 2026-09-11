@@ -7,6 +7,12 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "typecheck": "tsc --noEmit --incremental false",
+    "test:environment": "node --test scripts/environment.test.mjs",
+    "db:v2:plan": "node scripts/db-v2.mjs plan",
+    "db:v2:push": "node scripts/db-v2.mjs push",
+    "db:v2:status": "node scripts/db-v2.mjs status",
+    "setup:v2": "node scripts/setup-v2.mjs",
     "seed": "curl -X POST http://localhost:3000/api/seed",
     "test:model": "npx --yes tsx scripts/verify-td-model.ts",
     "backtest": "npx --yes tsx scripts/backtest-td-pool.ts"

@@ -42,12 +42,10 @@ export function DashboardClient({
     initialGameId ? "games" : "players",
   );
 
-  const refresh = useCallback(async (silent = false) => {
-    if (!silent) setLoading(true);
+  const refresh = useCallback(async () => {
     try {
       const res = await fetch(`/api/leagues/${slug}`, { cache: "no-store" });
       if (!res.ok) {
-        if (!silent) setDashboard(null);
         return;
       }
       const data = (await res.json()) as LeagueDashboard;
@@ -55,12 +53,12 @@ export function DashboardClient({
     } catch {
       // Keep last good snapshot on transient errors
     } finally {
-      if (!silent) setLoading(false);
+      setLoading(false);
     }
   }, [slug]);
 
   const onRealtimeInvalidate = useCallback(() => {
-    void refresh(true);
+    void refresh();
   }, [refresh]);
 
   const { connected: realtimeConnected } = useLeagueRealtime(
@@ -69,6 +67,8 @@ export function DashboardClient({
   );
 
   useEffect(() => {
+    // refresh updates state only after awaiting the network request.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (!initialDashboard) void refresh();
   }, [slug, initialDashboard, refresh]);
 
@@ -76,7 +76,7 @@ export function DashboardClient({
   // be slow. Tight intervals used to trigger a provider refresh per request.
   useEffect(() => {
     const ms = realtimeConnected ? 120_000 : 30_000;
-    const id = window.setInterval(() => void refresh(true), ms);
+    const id = window.setInterval(() => void refresh(), ms);
     return () => window.clearInterval(id);
   }, [slug, realtimeConnected, refresh]);
 
@@ -142,7 +142,7 @@ export function DashboardClient({
         title: existing ? "Pick updated" : "Pick locked in",
         tone: "success",
       });
-      await refresh(true);
+      await refresh();
     } catch {
       toast({ title: "Network error", tone: "error" });
     } finally {

@@ -2,6 +2,10 @@
 
 Mobile-first weekly **Anytime Touchdown Pool** for private fantasy leagues.
 
+**Working on V2:** use the isolated setup in [V2 development](docs/V2-DEVELOPMENT.md).
+The deployment and demo instructions below describe the original bootstrap;
+do not use them with production credentials during testing.
+
 ## Quick start
 
 ```bash
@@ -69,7 +73,7 @@ USE_SUPABASE=true
 PROVIDER_MODE=auto
 NFL_PROVIDER=espn
 ODDS_API_KEY=                # optional
-ODDS_API_BOOKMAKERS=fanduel,draftkings,betmgm,williamhill_us,fanatics,bet365,bet365_au
+ODDS_API_BOOKMAKERS=fanduel,draftkings,betmgm,williamhill_us,fanatics
 ```
 
 ## Deploy (Vercel)

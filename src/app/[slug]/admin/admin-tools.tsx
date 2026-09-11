@@ -40,7 +40,6 @@ export function AdminTools({
   } | null>(null);
 
   const refresh = useCallback(async () => {
-    setLoading(true);
     try {
       const res = await fetch(`/api/leagues/${slug}`);
       if (!res.ok) {
