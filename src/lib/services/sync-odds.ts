@@ -69,8 +69,12 @@ export async function autoSyncLeagueOdds(
         creditsUsed: summary.creditsUsed ?? null,
         unmappedBookmakers: summary.unmappedBookmakers ?? [],
       };
-      await store.completeSyncSlot(weekKey, "ok", detail);
-      await store.completeSyncSlot(`odds:${slug}`, "ok", detail);
+      // An empty result must not hold the 40-hour slot, or a missing key or
+      // an unposted market keeps the board blank for two days. Errors retry
+      // after five minutes (see effectiveSyncTtl).
+      const status = summary.playersUpdated > 0 ? "ok" : "error";
+      await store.completeSyncSlot(weekKey, status, detail);
+      await store.completeSyncSlot(`odds:${slug}`, status, detail);
       return summary;
     } catch (err) {
       await store

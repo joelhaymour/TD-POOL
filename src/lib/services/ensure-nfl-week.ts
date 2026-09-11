@@ -526,8 +526,30 @@ export async function ensureNflWeekMaterialized(
     const restored = await store.reapplyStoredOdds(nflWeek.id);
     if (restored === 0) {
       try {
-        const { syncWeekOdds } = await import("@/lib/services/sync-odds");
-        await syncWeekOdds(store, { season, week, weekId: nflWeek.id });
+        const { syncWeekOdds, ODDS_SYNC_TTL_MS } = await import(
+          "@/lib/services/sync-odds"
+        );
+        // Share the week slot with page-load syncs, or a rebuild that lands
+        // while one is running pays for the same slate twice.
+        const weekKey = `odds:week:${season}:${week}`;
+        if (await store.claimSyncSlot(weekKey, ODDS_SYNC_TTL_MS)) {
+          const summary = await syncWeekOdds(store, {
+            season,
+            week,
+            weekId: nflWeek.id,
+          });
+          await store.completeSyncSlot(
+            weekKey,
+            summary.playersUpdated > 0 ? "ok" : "error",
+            {
+              source: summary.source,
+              quotes: summary.quotes,
+              playersUpdated: summary.playersUpdated,
+              creditsUsed: summary.creditsUsed ?? null,
+              creditsRemaining: summary.creditsRemaining ?? null,
+            },
+          );
+        }
       } catch (err) {
         console.error("post-materialize odds sync failed", err);
       }

@@ -42,7 +42,14 @@ export function getConfiguredOddsSource(): "live" | "mock" | "none" {
   const mode = resolveProviderMode();
   const key = process.env.ODDS_API_KEY?.trim();
   if (mode === "mock") return "mock";
-  if (process.env.ENABLE_PAID_PROVIDERS === "false") return "none";
+  // Staging can price odds on its own test key while SportsDataIO and AI
+  // writeups stay off.
+  if (
+    process.env.ENABLE_PAID_PROVIDERS === "false" &&
+    process.env.ENABLE_ODDS_API !== "true"
+  ) {
+    return "none";
+  }
   return key ? "live" : "none";
 }
 
