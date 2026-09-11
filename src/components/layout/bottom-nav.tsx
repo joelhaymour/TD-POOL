@@ -46,7 +46,12 @@ export function BottomNav({
       )}
       aria-label="Primary"
     >
-      <div className="mx-auto grid max-w-lg grid-cols-4">
+      <div
+        className="mx-auto grid max-w-lg"
+        style={{
+          gridTemplateColumns: `repeat(${navItems.length}, minmax(0, 1fr))`,
+        }}
+      >
         {navItems.map((item) => {
           const Icon = iconMap[item.icon];
           const active =

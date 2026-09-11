@@ -1,7 +1,9 @@
-import { NextResponse } from "next/server";
+import { after, NextResponse } from "next/server";
 import { getStore } from "@/lib/store";
 import { storeErrorResponse } from "@/lib/api/store-error";
 import { requireApiMembership } from "@/lib/auth/api";
+import { loadGroupHome } from "@/lib/props/load-group-home";
+import { refreshGroupLeague } from "@/lib/services/refresh-group-league";
 
 function requireGroupBetting(league: { league_type: string }) {
   if (league.league_type !== "group_betting") {
@@ -13,7 +15,7 @@ function requireGroupBetting(league: { league_type: string }) {
   return null;
 }
 
-/** Member: all parlays for the active week, with legs. */
+/** Member: every unsettled slip (Home), with the games their legs sit on. */
 export async function GET(
   _request: Request,
   context: RouteContext<"/api/leagues/[slug]/parlays">,
@@ -25,15 +27,18 @@ export async function GET(
     const blocked = requireGroupBetting(access.league);
     if (blocked) return blocked;
 
+    // Scores and grading ride along with the Home poll.
+    after(() => refreshGroupLeague(slug));
+
     if (!access.league.active_week_id) {
-      return NextResponse.json({ parlays: [] });
+      return NextResponse.json({ slips: [], games: [] });
     }
-    const store = getStore();
-    const parlays = await store.listParlays(
-      access.league.id,
+    const data = await loadGroupHome(
+      getStore(),
+      access.league,
       access.league.active_week_id,
     );
-    return NextResponse.json({ parlays });
+    return NextResponse.json(data);
   } catch (err) {
     return storeErrorResponse(err);
   }
@@ -61,7 +66,7 @@ export async function POST(
     let title = "";
     try {
       const body = (await request.json()) as { title?: string };
-      title = body.title?.trim() ?? "";
+      title = body.title?.trim().slice(0, 60) ?? "";
     } catch {
       // Empty body is fine — default title below.
     }

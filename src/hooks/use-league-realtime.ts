@@ -3,15 +3,21 @@
 import { useEffect, useState } from "react";
 import { createBrowserClient } from "@supabase/ssr";
 
+const PICKS_ONLY = ["picks"] as const;
+
 /**
- * Subscribes to postgres_changes on `picks` when Supabase public env is set.
- * No-ops (connected=false) when Supabase is not configured.
+ * Subscribes to postgres_changes on league-scoped tables (default `picks`)
+ * when Supabase public env is set. No-ops (connected=false) otherwise.
+ * Deletes are not delivered through a filtered subscription, so callers keep
+ * a polling fallback.
  */
 export function useLeagueRealtime(
   leagueId: string | null | undefined,
   onInvalidate?: () => void,
+  tables: readonly string[] = PICKS_ONLY,
 ): { connected: boolean } {
   const [connected, setConnected] = useState(false);
+  const tableKey = tables.join(",");
 
   useEffect(() => {
     const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -21,29 +27,30 @@ export function useLeagueRealtime(
     }
 
     const client = createBrowserClient(url, key);
-    const channel = client
-      .channel(`picks:league:${leagueId}`)
-      .on(
+    let channel = client.channel(`league:${leagueId}:${tableKey}`);
+    for (const table of tableKey.split(",")) {
+      channel = channel.on(
         "postgres_changes",
         {
           event: "*",
           schema: "public",
-          table: "picks",
+          table,
           filter: `league_id=eq.${leagueId}`,
         },
         () => {
           onInvalidate?.();
         },
-      )
-      .subscribe((status) => {
-        setConnected(status === "SUBSCRIBED");
-      });
+      );
+    }
+    channel.subscribe((status) => {
+      setConnected(status === "SUBSCRIBED");
+    });
 
     return () => {
       setConnected(false);
       void client.removeChannel(channel);
     };
-  }, [leagueId, onInvalidate]);
+  }, [leagueId, onInvalidate, tableKey]);
 
   return {
     connected: Boolean(

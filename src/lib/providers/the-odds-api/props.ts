@@ -84,20 +84,30 @@ async function getJson<T>(
  * Find The Odds API event id for one of our games by matching home/away
  * abbreviations. The /events endpoint is free.
  */
+function headerNumber(res: Response, name: string): number | null {
+  const raw = res.headers.get(name);
+  if (raw == null || raw.trim() === "") return null;
+  const n = Number(raw);
+  return Number.isFinite(n) ? n : null;
+}
+
 export async function findEventForGame(
   apiKey: string,
   game: { home_team: string; away_team: string },
-): Promise<ApiEvent | null> {
+): Promise<{ event: ApiEvent | null; creditsRemaining: number | null }> {
   const url = new URL(`https://api.the-odds-api.com/v4/sports/${SPORT}/events`);
   url.searchParams.set("apiKey", apiKey);
-  const events = await getJson<ApiEvent[]>(url.toString(), () => {});
-  return (
+  let creditsRemaining: number | null = null;
+  const events = await getJson<ApiEvent[]>(url.toString(), (res) => {
+    creditsRemaining = headerNumber(res, "x-requests-remaining");
+  });
+  const event =
     events.find(
       (e) =>
         teamFullToAbbr(e.home_team) === game.home_team &&
         teamFullToAbbr(e.away_team) === game.away_team,
-    ) ?? null
-  );
+    ) ?? null;
+  return { event, creditsRemaining };
 }
 
 /** The FanDuel "marketId" is embedded in addToBetslip links; sid is selectionId. */
@@ -179,10 +189,8 @@ export async function fetchEventProps(
   let creditsUsed = 0;
   let quotaRemaining: number | null = null;
   const data = await getJson<ApiEventOdds>(url.toString(), (res) => {
-    const last = Number(res.headers.get("x-requests-last"));
-    if (Number.isFinite(last)) creditsUsed = last;
-    const remaining = Number(res.headers.get("x-requests-remaining"));
-    if (Number.isFinite(remaining)) quotaRemaining = remaining;
+    creditsUsed = headerNumber(res, "x-requests-last") ?? 0;
+    quotaRemaining = headerNumber(res, "x-requests-remaining");
   });
 
   const props: RawGameProp[] = [];

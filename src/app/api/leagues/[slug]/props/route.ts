@@ -2,15 +2,19 @@ import { NextResponse } from "next/server";
 import { getStore } from "@/lib/store";
 import { storeErrorResponse } from "@/lib/api/store-error";
 import { requireApiMembership } from "@/lib/auth/api";
-import { syncGameProps } from "@/lib/services/sync-game-props";
+import {
+  PROPS_SYNC_TTL_MS,
+  syncGameProps,
+} from "@/lib/services/sync-game-props";
+import { gameStarted } from "@/lib/props/slip";
 
 /** A cold game needs a live provider fetch, which can take a few seconds. */
 export const maxDuration = 60;
 
 /**
- * Member: the full FanDuel prop board for one game.
- * Syncs from The Odds API when the board is empty or stale-forced (?refresh=1,
- * admin only — a forced refresh spends ~15 credits).
+ * Member: the full FanDuel prop board for one game. Refreshes from The Odds
+ * API when the saved board is missing or older than the TTL; admins can force
+ * it with ?refresh=1 (~15 credits).
  */
 export async function GET(
   request: Request,
@@ -44,8 +48,18 @@ export async function GET(
       access.member.role === "admin";
 
     let props = await store.listGameProps(gameId);
+    const newest = props.reduce(
+      (max, p) => Math.max(max, Date.parse(p.fetched_at) || 0),
+      0,
+    );
+    const stale = props.length === 0 || Date.now() - newest > PROPS_SYNC_TTL_MS;
+
     let note: string | null = null;
-    if (props.length === 0 || wantsRefresh) {
+    // Pregame markets come down at kickoff, so refreshing then would replace
+    // the board with nothing.
+    if (gameStarted(game)) {
+      if (props.length === 0) note = "This game has kicked off";
+    } else if (stale || wantsRefresh) {
       try {
         const result = await syncGameProps(store, game, {
           force: wantsRefresh,

@@ -1029,14 +1029,21 @@ export class LocalFileStore implements Store {
   async createParlay(): Promise<import("@/lib/types").Parlay> {
     this.groupBettingUnavailable();
   }
-  async listParlays(): Promise<import("@/lib/types").ParlayWithLegs[]> {
+  async listParlaysForLeague(): Promise<import("@/lib/types").ParlayWithLegs[]> {
     this.groupBettingUnavailable();
   }
   async getParlay(): Promise<import("@/lib/types").ParlayWithLegs | null> {
     this.groupBettingUnavailable();
   }
-  async setParlayStatus(): Promise<import("@/lib/types").Parlay> {
+  async updateParlay(): Promise<import("@/lib/types").Parlay> {
     this.groupBettingUnavailable();
+  }
+  async gradeParlayLegs(): Promise<number> {
+    this.groupBettingUnavailable();
+  }
+  async listGamesByIds(ids: string[]) {
+    const db = await this.read();
+    return db.games.filter((g) => ids.includes(g.id));
   }
   async deleteParlay(): Promise<void> {
     this.groupBettingUnavailable();

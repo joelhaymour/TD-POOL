@@ -111,6 +111,36 @@ Sources: [Supabase environment guidance](https://supabase.com/docs/guides/deploy
 [Vercel Git deployment guidance](https://vercel.com/docs/git),
 [The Odds API bookmakers](https://the-odds-api.com/sports-odds-data/bookmaker-apis.html).
 
+## Group betting
+
+A league is either a weekly TD pool or a group betting league (`league_type`).
+Group betting members build shared parlays: each member adds up to
+`max_props_per_member` legs per slip from the full FanDuel board of any game.
+
+- **Prop boards** are fetched per game on demand, shared by every league, and
+  refreshed at most every `PROPS_SYNC_TTL_HOURS` (default 6). Refreshes stop
+  below `ODDS_CREDIT_FLOOR` credits (default 40) and never run after kickoff,
+  when FanDuel pulls pregame markets.
+- **FanDuel links** must carry the bettor's state subdomain
+  (`co.sportsbook.fanduel.com/addToBetslip?...`). Without it FanDuel shows a
+  state picker first and multi-leg selections can be lost. The state is chosen
+  once per device and saved in local storage. Multi-leg links use indexed
+  arrays (`marketId[0]=…&selectionId[0]=…`); "Add one at a time" is the
+  fallback with single-selection links.
+- **Grading** runs on every Home load (throttled to once a minute): scores come
+  from ESPN, then each pending leg on a final game is graded from the ESPN box
+  score. A player absent from the box score counts as zero unless the injury
+  report ruled him out (void). Admins can override any leg once its game has
+  started. A slip settles, and moves to History, only when every leg is graded.
+
+### Staging odds
+
+Staging keeps `ENABLE_PAID_PROVIDERS=false` (no SportsDataIO or AI writeups)
+and turns odds on separately with `ENABLE_ODDS_API=true`, `PROVIDER_MODE=auto`
+and the **test** Odds API key. The test key is a free 500-credit plan, so
+staging sets `PROPS_SYNC_TTL_HOURS=24` and `ODDS_CREDIT_FLOOR=60`. Never put the
+production Odds API key in the staging project.
+
 ## Releasing later
 
 Feature work stays on `v2` or branches based on it. Review and test code and

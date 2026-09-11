@@ -125,7 +125,7 @@ type EspnBoxscoreTeam = {
   statistics?: EspnBoxscoreCategory[];
 };
 
-type EspnSummary = {
+export type EspnSummary = {
   header?: {
     id?: string;
     season?: { year?: number; type?: number };
@@ -139,6 +139,11 @@ type EspnSummary = {
     text?: string;
     type?: { text?: string; abbreviation?: string };
     scoringType?: { name?: string; abbreviation?: string };
+    team?: EspnTeam;
+  }>;
+  injuries?: Array<{
+    team?: EspnTeam;
+    injuries?: Array<{ status?: string; athlete?: EspnAthleteRef }>;
   }>;
   gameInfo?: {
     venue?: { fullName?: string; indoor?: boolean };
@@ -151,7 +156,7 @@ export type EspnRosterPlayer = {
   team?: string;
 };
 
-function mapTeamAbbr(espnAbbr: string | undefined | null): string {
+export function mapTeamAbbr(espnAbbr: string | undefined | null): string {
   if (!espnAbbr) return "";
   const upper = espnAbbr.trim().toUpperCase();
   return ESPN_ABBR_MAP[upper] ?? upper;
@@ -420,6 +425,17 @@ async function espnFetchJson<T>(
   } finally {
     clearTimeout(timer);
   }
+}
+
+/** Box score, scoring plays and injury report for one game. */
+export function fetchEspnSummary(
+  eventId: string,
+  fetchImpl: typeof fetch = fetch,
+): Promise<EspnSummary | null> {
+  return espnFetchJson<EspnSummary>(
+    `${ESPN_BASE}/summary?event=${encodeURIComponent(eventId)}`,
+    fetchImpl,
+  );
 }
 
 export class EspnNFLProvider implements NFLDataProvider {

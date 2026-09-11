@@ -3,6 +3,8 @@
 export type BettingMode = "individual" | "fixed" | "none";
 export type LeagueType = "td_pool" | "group_betting";
 export type ParlayStatus = "open" | "locked";
+export type ParlayResult = "pending" | "won" | "lost" | "push";
+export type LegResult = "pending" | "won" | "lost" | "push" | "void";
 export type PropMarketGroup =
   | "game_lines"
   | "td_scorers"
@@ -369,6 +371,12 @@ export interface Parlay {
   title: string;
   created_by_member_id: string | null;
   status: ParlayStatus;
+  /** Null falls back to the league's weekly stake. */
+  stake: number | null;
+  result: ParlayResult;
+  payout: number | null;
+  /** Set once every leg is graded; the slip then belongs in History. */
+  settled_at: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -393,7 +401,19 @@ export interface ParlayLeg {
   fd_selection_id: string | null;
   deep_link: string | null;
   added_at: string;
+  result: LegResult;
+  /** The graded stat (yards, catches, margin…); null for yes/no markets. */
+  actual_value: number | null;
+  graded_at: string | null;
+  /** An admin set the result by hand. */
+  manual_result: boolean;
 }
+
+/** Fields a new leg is created with; grading fills in the rest. */
+export type NewParlayLeg = Omit<
+  ParlayLeg,
+  "id" | "added_at" | "result" | "actual_value" | "graded_at" | "manual_result"
+>;
 
 export interface ParlayWithLegs {
   parlay: Parlay;

@@ -3,9 +3,10 @@ import type {
   GameProp,
   GameStatus,
   League,
+  LegResult,
+  NewParlayLeg,
   Parlay,
   ParlayLeg,
-  ParlayStatus,
   ParlayWithLegs,
   LeagueDashboard,
   LeagueMember,
@@ -32,6 +33,22 @@ export type PickResultUpdate = {
   pickId: string;
   result: PickResult;
   touchdown_scored: boolean | null;
+};
+
+// Omit rather than Pick: this module imports the domain `Pick` type.
+export type ParlayPatch = Partial<
+  Omit<
+    Parlay,
+    "id" | "league_id" | "week_id" | "created_by_member_id" | "created_at" | "updated_at"
+  >
+>;
+
+export type LegGradeUpdate = {
+  id: string;
+  result: LegResult;
+  actual_value: number | null;
+  graded_at: string | null;
+  manual_result: boolean;
 };
 
 export type ApplyOddsRefreshInput = {
@@ -222,16 +239,17 @@ export interface Store {
     title: string;
     created_by_member_id: string | null;
   }): Promise<Parlay>;
-  listParlays(leagueId: string, weekId: string): Promise<ParlayWithLegs[]>;
+  /** Every slip the league has built, newest first, with legs. */
+  listParlaysForLeague(leagueId: string): Promise<ParlayWithLegs[]>;
   getParlay(parlayId: string): Promise<ParlayWithLegs | null>;
-  setParlayStatus(parlayId: string, status: ParlayStatus): Promise<Parlay>;
+  updateParlay(parlayId: string, patch: ParlayPatch): Promise<Parlay>;
   deleteParlay(parlayId: string): Promise<void>;
 
   /** Insert a leg snapshot. Duplicate selections in one slip are CONFLICT. */
-  addParlayLeg(
-    input: Omit<ParlayLeg, "id" | "added_at">,
-  ): Promise<ParlayLeg>;
+  addParlayLeg(input: NewParlayLeg): Promise<ParlayLeg>;
   removeParlayLeg(parlayId: string, legId: string): Promise<ParlayLeg | null>;
+  gradeParlayLegs(updates: LegGradeUpdate[]): Promise<number>;
+  listGamesByIds(ids: string[]): Promise<NflGame[]>;
 
   /** Read a shared refresh timestamp. Null when the job has never run. */
   getSyncState(key: string): Promise<SyncStateRow | null>;

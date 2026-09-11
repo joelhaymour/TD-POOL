@@ -1,24 +1,42 @@
 import type { Store } from "@/lib/store/types";
 import type { NflGame } from "@/lib/types";
+import { getConfiguredOddsSource } from "@/lib/providers";
 import {
   fetchEventProps,
   findEventForGame,
 } from "@/lib/providers/the-odds-api/props";
 import { resolveRosterPlayer } from "@/lib/providers/the-odds-api/maps";
 
+function envNumber(name: string, fallback: number): number {
+  const n = Number(process.env[name]);
+  return Number.isFinite(n) && n > 0 ? n : fallback;
+}
+
 /**
- * Props refresh at most every 6 hours per game (shared across leagues via
- * sync_state), because a full FanDuel board costs ~14-16 credits per game.
- * Admins can force a refresh from the league page.
+ * A full FanDuel board costs ~12-16 credits per game, so boards are shared by
+ * every league and refreshed at most once per TTL (PROPS_SYNC_TTL_HOURS,
+ * default 6). Admins can force a refresh from the prop sheet.
  */
-export const PROPS_SYNC_TTL_MS = 6 * 60 * 60_000;
+export const PROPS_SYNC_TTL_MS =
+  envNumber("PROPS_SYNC_TTL_HOURS", 6) * 60 * 60_000;
+
+/** Below this many credits, keep serving the saved board instead of refreshing. */
+const CREDIT_FLOOR = envNumber("ODDS_CREDIT_FLOOR", 40);
 
 export type SyncGamePropsResult = {
   synced: boolean;
   propCount: number;
   creditsUsed: number;
+  /** User-facing reason a refresh did not happen; null when there is nothing to say. */
   note: string | null;
 };
+
+const skipped = (note: string | null): SyncGamePropsResult => ({
+  synced: false,
+  propCount: 0,
+  creditsUsed: 0,
+  note,
+});
 
 export async function syncGameProps(
   store: Store,
@@ -26,13 +44,8 @@ export async function syncGameProps(
   options: { force?: boolean } = {},
 ): Promise<SyncGamePropsResult> {
   const apiKey = process.env.ODDS_API_KEY?.trim();
-  if (!apiKey) {
-    return {
-      synced: false,
-      propCount: 0,
-      creditsUsed: 0,
-      note: "ODDS_API_KEY is not set — prop board unavailable",
-    };
+  if (getConfiguredOddsSource() !== "live" || !apiKey) {
+    return skipped("Live odds are turned off in this environment");
   }
 
   const key = `props:game:${game.id}`;
@@ -40,27 +53,21 @@ export async function syncGameProps(
     key,
     options.force ? 0 : PROPS_SYNC_TTL_MS,
   );
-  if (!claimed) {
-    return {
-      synced: false,
-      propCount: 0,
-      creditsUsed: 0,
-      note: "recently refreshed",
-    };
-  }
+  if (!claimed) return skipped(null);
 
   try {
-    const event = await findEventForGame(apiKey, game);
+    const { event, creditsRemaining } = await findEventForGame(apiKey, game);
+    if (creditsRemaining != null && creditsRemaining < CREDIT_FLOOR) {
+      await store.completeSyncSlot(key, "error", { creditsRemaining });
+      return skipped(
+        `Only ${creditsRemaining} odds credits left this month — showing the last saved prices`,
+      );
+    }
     if (!event) {
       await store.completeSyncSlot(key, "error", {
         note: "no matching Odds API event",
       });
-      return {
-        synced: false,
-        propCount: 0,
-        creditsUsed: 0,
-        note: "Sportsbook has not listed this game",
-      };
+      return skipped("FanDuel has not listed this game yet");
     }
 
     const { props, creditsUsed } = await fetchEventProps(apiKey, event.id);
@@ -93,17 +100,22 @@ export async function syncGameProps(
       deep_link: prop.deep_link,
     }));
 
-    const count = await store.replaceGameProps(
-      game.week_id,
-      game.id,
-      "fanduel",
-      rows,
-    );
-    await store.completeSyncSlot(key, "ok", {
+    // An empty response (markets pulled) must not wipe a board people are
+    // still reading from.
+    const count =
+      rows.length > 0
+        ? await store.replaceGameProps(game.week_id, game.id, "fanduel", rows)
+        : 0;
+    await store.completeSyncSlot(key, count > 0 ? "ok" : "error", {
       props: count,
       credits: creditsUsed,
     });
-    return { synced: true, propCount: count, creditsUsed, note: null };
+    return {
+      synced: count > 0,
+      propCount: count,
+      creditsUsed,
+      note: count > 0 ? null : "FanDuel has no props posted for this game yet",
+    };
   } catch (err) {
     await store.completeSyncSlot(key, "error", { message: String(err) });
     throw err;

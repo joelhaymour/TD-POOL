@@ -6,6 +6,8 @@ import {
   type GameStatusUpdate,
   type JoinLeagueInput,
   type JoinLeagueResult,
+  type LegGradeUpdate,
+  type ParlayPatch,
   type PickResultUpdate,
   type Store,
   type SyncStateRow,
@@ -27,9 +29,9 @@ import type {
   GameProp,
   InjuryStatus,
   League,
+  NewParlayLeg,
   Parlay,
   ParlayLeg,
-  ParlayStatus,
   ParlayWithLegs,
   LeagueDashboard,
   LeagueMember,
@@ -163,10 +165,19 @@ function mapParlay(row: Record<string, unknown>): Parlay {
       ? String(row.created_by_member_id)
       : null,
     status: row.status === "locked" ? "locked" : "open",
+    stake: numOrNull(row.stake),
+    result:
+      row.result === "won" || row.result === "lost" || row.result === "push"
+        ? row.result
+        : "pending",
+    payout: numOrNull(row.payout),
+    settled_at: row.settled_at ? String(row.settled_at) : null,
     created_at: String(row.created_at),
     updated_at: String(row.updated_at),
   };
 }
+
+const LEG_RESULTS = new Set(["pending", "won", "lost", "push", "void"]);
 
 function mapParlayLeg(row: Record<string, unknown>): ParlayLeg {
   return {
@@ -189,6 +200,12 @@ function mapParlayLeg(row: Record<string, unknown>): ParlayLeg {
       row.fd_selection_id != null ? String(row.fd_selection_id) : null,
     deep_link: row.deep_link != null ? String(row.deep_link) : null,
     added_at: String(row.added_at),
+    result: LEG_RESULTS.has(String(row.result))
+      ? (row.result as ParlayLeg["result"])
+      : "pending",
+    actual_value: numOrNull(row.actual_value),
+    graded_at: row.graded_at ? String(row.graded_at) : null,
+    manual_result: Boolean(row.manual_result ?? false),
   };
 }
 
@@ -1506,15 +1523,11 @@ export class SupabaseStore implements Store {
     return mapParlay(data);
   }
 
-  async listParlays(
-    leagueId: string,
-    weekId: string,
-  ): Promise<ParlayWithLegs[]> {
+  async listParlaysForLeague(leagueId: string): Promise<ParlayWithLegs[]> {
     const { data: parlayRows, error } = await this.client
       .from("parlays")
       .select("*")
       .eq("league_id", leagueId)
-      .eq("week_id", weekId)
       .order("created_at", { ascending: false });
     if (error) throw error;
     const parlays = (parlayRows ?? []).map(mapParlay);
@@ -1557,13 +1570,10 @@ export class SupabaseStore implements Store {
     };
   }
 
-  async setParlayStatus(
-    parlayId: string,
-    status: ParlayStatus,
-  ): Promise<Parlay> {
+  async updateParlay(parlayId: string, patch: ParlayPatch): Promise<Parlay> {
     const { data, error } = await this.client
       .from("parlays")
-      .update({ status, updated_at: nowIso() })
+      .update({ ...patch, updated_at: nowIso() })
       .eq("id", parlayId)
       .select("*")
       .single();
@@ -1579,9 +1589,7 @@ export class SupabaseStore implements Store {
     if (error) throw error;
   }
 
-  async addParlayLeg(
-    input: Omit<ParlayLeg, "id" | "added_at">,
-  ): Promise<ParlayLeg> {
+  async addParlayLeg(input: NewParlayLeg): Promise<ParlayLeg> {
     const { data, error } = await this.client
       .from("parlay_legs")
       .insert({
@@ -1631,6 +1639,29 @@ export class SupabaseStore implements Store {
       .maybeSingle();
     if (error) throw error;
     return data ? mapParlayLeg(data) : null;
+  }
+
+  async gradeParlayLegs(updates: LegGradeUpdate[]): Promise<number> {
+    for (const batch of chunk(updates, 20)) {
+      const results = await Promise.all(
+        batch.map(({ id, ...fields }) =>
+          this.client.from("parlay_legs").update(fields).eq("id", id),
+        ),
+      );
+      const failed = results.find((r) => r.error);
+      if (failed?.error) throw failed.error;
+    }
+    return updates.length;
+  }
+
+  async listGamesByIds(ids: string[]): Promise<NflGame[]> {
+    if (ids.length === 0) return [];
+    const { data, error } = await this.client
+      .from("nfl_games")
+      .select("*")
+      .in("id", ids);
+    if (error) throw error;
+    return (data ?? []).map(mapGame);
   }
 
   async getSyncState(key: string): Promise<SyncStateRow | null> {

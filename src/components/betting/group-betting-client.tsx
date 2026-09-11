@@ -1,544 +1,573 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
-import { ExternalLink, Lock, Plus, RefreshCw, Trash2, Unlock, X } from "lucide-react";
+import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
+import { ChevronDown, ChevronRight, Lock, Plus, Trash2, Unlock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet } from "@/components/ui/sheet";
 import { useToast } from "@/components/ui/toast";
+import { useLeagueRealtime } from "@/hooks/use-league-realtime";
+import { SlipHero } from "@/components/betting/slip-hero";
+import { FanduelLauncher } from "@/components/betting/fanduel-launcher";
+import { PropPickerSheet } from "@/components/betting/prop-picker-sheet";
+import { LegRow } from "@/components/betting/leg-row";
 import {
-  PROP_GROUP_LABELS,
-  PROP_GROUP_ORDER,
-} from "@/lib/props/markets";
-import { formatAmerican, tryCombineParlayDecimal, decimalToAmerican } from "@/lib/utils/odds";
+  gameStarted,
+  slipEstimate,
+  slipPhase,
+  slipStake,
+  type SlipPhase,
+} from "@/lib/props/slip";
+import { cn } from "@/lib/utils/cn";
+import { calculateWeeklyStake, formatMoney } from "@/lib/utils/odds";
 import type {
   GameProp,
   League,
   LeagueMember,
+  LegResult,
   NflGame,
   NflWeek,
   ParlayWithLegs,
-  PropMarketGroup,
 } from "@/lib/types";
 
-type PropsResponse = {
+const GROUP_TABLES = ["parlays", "parlay_legs"] as const;
+
+type Picker = {
   game: NflGame;
   props: GameProp[];
+  loading: boolean;
   note: string | null;
 };
 
-function kickoffLabel(iso: string): string {
-  const d = new Date(iso);
-  return d.toLocaleString("en-US", {
+type ApiResult = { ok: boolean; status: number; data: Record<string, unknown> };
+
+async function api(path: string, init?: RequestInit): Promise<ApiResult> {
+  const res = await fetch(path, {
+    cache: "no-store",
+    ...init,
+    headers: { "Content-Type": "application/json", ...init?.headers },
+  });
+  const data = (await res.json().catch(() => ({}))) as Record<string, unknown>;
+  return { ok: res.ok, status: res.status, data };
+}
+
+function errorOf(r: ApiResult): string | undefined {
+  return typeof r.data.error === "string" ? r.data.error : undefined;
+}
+
+function gameStatusLabel(game: NflGame): string {
+  if (game.status === "final") return "Final";
+  if (game.status === "in_progress") return "Live";
+  if (game.status === "canceled") return "Canceled";
+  if (game.status === "postponed") return "Postponed";
+  if (gameStarted(game)) return "Kicked off";
+  return new Date(game.kickoff_at).toLocaleString("en-US", {
     weekday: "short",
     hour: "numeric",
     minute: "2-digit",
   });
 }
 
-function legLine(leg: {
-  market_label: string;
-  player_name: string | null;
-  outcome_label: string;
-  line: number | null;
-}): string {
-  const subject = leg.player_name ?? leg.outcome_label;
-  const qualifier = leg.player_name
-    ? leg.outcome_label === "Yes"
-      ? ""
-      : ` ${leg.outcome_label}`
-    : "";
-  const line = leg.line != null ? ` ${leg.line}` : "";
-  return `${subject}${qualifier}${line} — ${leg.market_label}`;
-}
+const PHASE_DOT: Record<SlipPhase, string> = {
+  building: "bg-ink/25",
+  locked: "bg-ink",
+  live: "bg-turf animate-pulse",
+  busted: "bg-danger",
+  settled: "bg-ink/25",
+};
 
 export function GroupBettingClient({
   slug,
   league,
   week,
-  games,
   members,
-  initialParlays,
+  initialSlips,
+  initialGames,
   viewer,
 }: {
   slug: string;
   league: League;
   week: NflWeek;
-  games: NflGame[];
   members: LeagueMember[];
-  initialParlays: ParlayWithLegs[];
+  initialSlips: ParlayWithLegs[];
+  initialGames: NflGame[];
   viewer: { memberId: string; isAdmin: boolean };
 }) {
   const { toast } = useToast();
-  const [parlays, setParlays] = useState<ParlayWithLegs[]>(initialParlays);
+  const [slips, setSlips] = useState(initialSlips);
+  const [games, setGames] = useState(initialGames);
+  const [selectedId, setSelectedId] = useState<string | null>(
+    initialSlips[0]?.parlay.id ?? null,
+  );
   const [creating, setCreating] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [picker, setPicker] = useState<Picker | null>(null);
+  const [stakeDraft, setStakeDraft] = useState<string | null>(null);
+  const [membersOpen, setMembersOpen] = useState(true);
 
-  // Prop picker sheet state
-  const [pickingFor, setPickingFor] = useState<string | null>(null);
-  const [selectedGame, setSelectedGame] = useState<NflGame | null>(null);
-  const [props, setProps] = useState<GameProp[]>([]);
-  const [propsNote, setPropsNote] = useState<string | null>(null);
-  const [loadingProps, setLoadingProps] = useState(false);
-  const [group, setGroup] = useState<PropMarketGroup>("td_scorers");
-
-  const memberName = useCallback(
-    (id: string) =>
-      members.find((m) => m.id === id)?.display_name ?? "Unknown",
-    [members],
-  );
-
-  const refreshParlays = useCallback(async () => {
-    const res = await fetch(`/api/leagues/${slug}/parlays`, {
-      cache: "no-store",
-    });
-    if (res.ok) {
-      const data = (await res.json()) as { parlays: ParlayWithLegs[] };
-      setParlays(data.parlays);
-      return data.parlays;
+  const refresh = useCallback(async () => {
+    try {
+      const r = await api(`/api/leagues/${slug}/parlays`);
+      if (!r.ok) return;
+      setSlips(r.data.slips as ParlayWithLegs[]);
+      setGames(r.data.games as NflGame[]);
+    } catch {
+      // Keep the last good snapshot on a transient error.
     }
-    return null;
   }, [slug]);
 
-  async function createParlay() {
+  const { connected } = useLeagueRealtime(league.id, refresh, GROUP_TABLES);
+
+  // Realtime misses deletes and score changes, so keep a slow poll running.
+  useEffect(() => {
+    const id = window.setInterval(
+      () => void refresh(),
+      connected ? 90_000 : 30_000,
+    );
+    return () => window.clearInterval(id);
+  }, [connected, refresh]);
+
+  const gamesById = useMemo(() => new Map(games.map((g) => [g.id, g])), [games]);
+  const selected =
+    slips.find((s) => s.parlay.id === selectedId) ?? slips[0] ?? null;
+  const legs = useMemo(() => selected?.legs ?? [], [selected]);
+
+  const max = league.max_props_per_member;
+  const stake = selected
+    ? slipStake(selected.parlay, league)
+    : calculateWeeklyStake(league);
+  const estimate = slipEstimate(legs, stake);
+  const phase: SlipPhase = selected
+    ? slipPhase(selected.parlay, legs, gamesById)
+    : "building";
+  const capacity = Math.max(1, members.length) * max;
+  const myLegs = legs.filter((l) => l.member_id === viewer.memberId).length;
+  const picksLeft = Math.max(0, max - myLegs);
+  const slipLocked = selected?.parlay.status === "locked";
+  const canEditSlip =
+    viewer.isAdmin || selected?.parlay.created_by_member_id === viewer.memberId;
+  const showMoney = league.betting_mode !== "none";
+
+  const byMember = useMemo(() => {
+    const rows = members.map((m) => ({
+      id: m.id,
+      name: m.display_name,
+      legs: legs.filter((l) => l.member_id === m.id),
+    }));
+    // Legs from someone who has since left still ride on the slip.
+    const orphaned = legs.filter((l) => !members.some((m) => m.id === l.member_id));
+    if (orphaned.length > 0) {
+      rows.push({ id: "former", name: "Former members", legs: orphaned });
+    }
+    return rows;
+  }, [members, legs]);
+  const membersDone = byMember.filter((m) => m.id !== "former" && m.legs.length >= max).length;
+
+  const upcoming = games.filter((g) => !gameStarted(g));
+  const underway = games.filter((g) => gameStarted(g));
+
+  async function createSlip(): Promise<string | null> {
     setCreating(true);
     try {
-      const res = await fetch(`/api/leagues/${slug}/parlays`, {
+      const r = await api(`/api/leagues/${slug}/parlays`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({}),
+        body: "{}",
       });
-      const data = (await res.json()) as { error?: string };
-      if (!res.ok) {
-        toast({ title: "Could not create parlay", description: data.error, tone: "error" });
-        return;
+      if (!r.ok) {
+        toast({ title: "Couldn't start a parlay", description: errorOf(r), tone: "error" });
+        return null;
       }
-      await refreshParlays();
-      toast({ title: "Parlay started — add your picks", tone: "success" });
+      const id = (r.data.parlay as { id: string }).id;
+      setSelectedId(id);
+      await refresh();
+      return id;
     } finally {
       setCreating(false);
     }
   }
 
-  async function loadProps(game: NflGame, refresh = false) {
-    setSelectedGame(game);
-    setLoadingProps(true);
-    setProps([]);
-    setPropsNote(null);
-    try {
-      const res = await fetch(
-        `/api/leagues/${slug}/props?game=${game.id}${refresh ? "&refresh=1" : ""}`,
-        { cache: "no-store" },
-      );
-      const data = (await res.json()) as PropsResponse & { error?: string };
-      if (!res.ok) {
-        setPropsNote(data.error ?? "Could not load odds");
-        return;
-      }
-      setProps(data.props);
-      setPropsNote(data.note);
-    } catch {
-      setPropsNote("Network error loading odds");
-    } finally {
-      setLoadingProps(false);
-    }
+  async function openGame(game: NflGame, refreshOdds = false) {
+    if (!selected && !(await createSlip())) return;
+    setPicker({ game, props: [], loading: true, note: null });
+    const r = await api(
+      `/api/leagues/${slug}/props?game=${game.id}${refreshOdds ? "&refresh=1" : ""}`,
+    ).catch(() => null);
+    // Ignore a response for a sheet the user already closed or switched.
+    setPicker((cur) =>
+      cur && cur.game.id === game.id
+        ? {
+            game,
+            props: r?.ok ? (r.data.props as GameProp[]) : [],
+            loading: false,
+            note: r?.ok
+              ? ((r.data.note as string | null) ?? null)
+              : (r && errorOf(r)) ?? "Couldn't load odds",
+          }
+        : cur,
+    );
   }
 
   async function addLeg(prop: GameProp) {
-    if (!pickingFor) return;
+    if (!selected) return;
     setBusy(true);
     try {
-      const res = await fetch(
-        `/api/leagues/${slug}/parlays/${pickingFor}/legs`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ game_prop_id: prop.id }),
-        },
+      const r = await api(
+        `/api/leagues/${slug}/parlays/${selected.parlay.id}/legs`,
+        { method: "POST", body: JSON.stringify({ game_prop_id: prop.id }) },
       );
-      const data = (await res.json()) as { error?: string };
-      if (!res.ok) {
-        toast({ title: "Not added", description: data.error, tone: "error" });
+      if (!r.ok) {
+        toast({ title: "Not added", description: errorOf(r), tone: "error" });
+        if (r.status === 404 && picker) void openGame(picker.game);
         return;
       }
-      await refreshParlays();
+      const left = picksLeft - 1;
       toast({
         title: `Added ${prop.player_name ?? prop.outcome_label}`,
+        description: left > 0 ? `${left} pick${left === 1 ? "" : "s"} left` : "Your picks are in",
         tone: "success",
       });
+      if (left <= 0) setPicker(null);
+      await refresh();
     } finally {
       setBusy(false);
     }
   }
 
-  async function removeLeg(parlayId: string, legId: string) {
-    const res = await fetch(
-      `/api/leagues/${slug}/parlays/${parlayId}/legs/${legId}`,
+  async function removeLeg(legId: string) {
+    if (!selected) return;
+    const r = await api(
+      `/api/leagues/${slug}/parlays/${selected.parlay.id}/legs/${legId}`,
       { method: "DELETE" },
     );
-    if (!res.ok) {
-      const data = (await res.json()) as { error?: string };
-      toast({ title: "Could not remove", description: data.error, tone: "error" });
+    if (!r.ok) {
+      toast({ title: "Couldn't remove", description: errorOf(r), tone: "error" });
       return;
     }
-    await refreshParlays();
+    await refresh();
   }
 
-  async function openInFanduel(parlayId: string) {
-    setBusy(true);
-    try {
-      const res = await fetch(`/api/leagues/${slug}/parlays/${parlayId}`, {
-        cache: "no-store",
-      });
-      const data = (await res.json()) as {
-        fanduel_url: string | null;
-        unmatched_legs: string[];
-        error?: string;
-      };
-      if (!res.ok) {
-        toast({ title: "Could not build slip", description: data.error, tone: "error" });
-        return;
-      }
-      if (!data.fanduel_url) {
-        toast({
-          title: "No FanDuel matches",
-          description: "None of these picks are currently on FanDuel's board.",
-          tone: "error",
-        });
-        return;
-      }
-      if (data.unmatched_legs.length > 0) {
-        toast({
-          title: `${data.unmatched_legs.length} pick(s) left off`,
-          description: "FanDuel is not currently offering them — the rest are on the slip.",
-        });
-      }
-      window.open(data.fanduel_url, "_blank", "noopener");
-    } finally {
-      setBusy(false);
+  async function gradeLeg(legId: string, result: LegResult | "auto") {
+    if (!selected) return;
+    const r = await api(
+      `/api/leagues/${slug}/parlays/${selected.parlay.id}/legs/${legId}`,
+      { method: "PATCH", body: JSON.stringify({ result }) },
+    );
+    if (!r.ok) {
+      toast({ title: "Couldn't grade", description: errorOf(r), tone: "error" });
+      return;
     }
+    await refresh();
   }
 
-  async function setStatus(parlayId: string, status: "open" | "locked") {
-    const res = await fetch(`/api/leagues/${slug}/parlays/${parlayId}`, {
+  async function patchSlip(body: Record<string, unknown>): Promise<boolean> {
+    if (!selected) return false;
+    const r = await api(`/api/leagues/${slug}/parlays/${selected.parlay.id}`, {
       method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status }),
+      body: JSON.stringify(body),
     });
-    if (res.ok) await refreshParlays();
+    if (!r.ok) {
+      toast({ title: "Couldn't update the slip", description: errorOf(r), tone: "error" });
+      return false;
+    }
+    await refresh();
+    return true;
   }
 
-  async function deleteParlay(parlayId: string) {
-    const res = await fetch(`/api/leagues/${slug}/parlays/${parlayId}`, {
+  async function deleteSlip() {
+    if (!selected) return;
+    if (!window.confirm(`Delete "${selected.parlay.title}" and all its picks?`)) return;
+    const r = await api(`/api/leagues/${slug}/parlays/${selected.parlay.id}`, {
       method: "DELETE",
     });
-    if (!res.ok) {
-      const data = (await res.json()) as { error?: string };
-      toast({ title: "Could not delete", description: data.error, tone: "error" });
+    if (!r.ok) {
+      toast({ title: "Couldn't delete", description: errorOf(r), tone: "error" });
       return;
     }
-    await refreshParlays();
+    setSelectedId(null);
+    await refresh();
   }
 
-  const pickingParlay = useMemo(
-    () => parlays.find((p) => p.parlay.id === pickingFor) ?? null,
-    [parlays, pickingFor],
-  );
-  const myLegsUsed = pickingParlay
-    ? pickingParlay.legs.filter((l) => l.member_id === viewer.memberId).length
-    : 0;
+  async function saveStake(e: FormEvent) {
+    e.preventDefault();
+    const raw = (stakeDraft ?? "").trim();
+    const ok = await patchSlip({ stake: raw === "" ? null : Number(raw) });
+    if (ok) setStakeDraft(null);
+  }
 
-  const groupedProps = useMemo(() => {
-    const map = new Map<PropMarketGroup, Map<string, GameProp[]>>();
-    for (const prop of props) {
-      const groupMap = map.get(prop.market_group) ?? new Map<string, GameProp[]>();
-      const list = groupMap.get(prop.market_label) ?? [];
-      list.push(prop);
-      groupMap.set(prop.market_label, list);
-      map.set(prop.market_group, groupMap);
-    }
-    return map;
-  }, [props]);
-
-  const availableGroups = PROP_GROUP_ORDER.filter((g) => groupedProps.has(g));
+  const heroActions = selected ? (
+    <>
+      {viewer.isAdmin && phase !== "settled" ? (
+        <button
+          type="button"
+          className="rounded-md p-1.5 text-chalk/60 hover:bg-chalk/10 hover:text-chalk"
+          aria-label={slipLocked ? "Unlock slip" : "Mark bet placed (locks the slip)"}
+          title={slipLocked ? "Unlock slip" : "Mark bet placed"}
+          onClick={() => void patchSlip({ status: slipLocked ? "open" : "locked" })}
+        >
+          {slipLocked ? <Unlock className="h-4 w-4" /> : <Lock className="h-4 w-4" />}
+        </button>
+      ) : null}
+      {canEditSlip ? (
+        <button
+          type="button"
+          className="rounded-md p-1.5 text-chalk/60 hover:bg-chalk/10 hover:text-chalk"
+          aria-label="Delete slip"
+          title="Delete slip"
+          onClick={() => void deleteSlip()}
+        >
+          <Trash2 className="h-4 w-4" />
+        </button>
+      ) : null}
+    </>
+  ) : null;
 
   return (
-    <div className="space-y-4 pb-24">
-      <section className="rounded-2xl border border-border bg-ink p-4 text-chalk shadow-card">
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="font-display text-xs font-bold uppercase tracking-widest text-lime">
-              Week {week.week} group parlays
-            </p>
-            <p className="mt-1 text-sm text-chalk/70">
-              Everyone adds up to {league.max_props_per_member} picks per slip.
-              Open the finished slip in FanDuel to place it together.
-            </p>
-          </div>
+    <div className="space-y-4">
+      {slips.length > 0 ? (
+        <div className="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-0.5 [scrollbar-width:none]">
+          {slips.map((s) => {
+            const p = slipPhase(s.parlay, s.legs, gamesById);
+            const isActive = s.parlay.id === selected?.parlay.id;
+            return (
+              <button
+                key={s.parlay.id}
+                type="button"
+                onClick={() => setSelectedId(s.parlay.id)}
+                className={cn(
+                  "flex max-w-[12rem] shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-bold transition",
+                  isActive
+                    ? "bg-ink text-lime"
+                    : "border border-border bg-chalk text-ink-muted hover:text-ink",
+                )}
+              >
+                <span className={cn("h-1.5 w-1.5 shrink-0 rounded-full", PHASE_DOT[p])} />
+                <span className="truncate">{s.parlay.title}</span>
+              </button>
+            );
+          })}
+          <button
+            type="button"
+            disabled={creating}
+            onClick={() => void createSlip()}
+            className="flex shrink-0 items-center gap-1 rounded-full border border-dashed border-border-strong px-3 py-1.5 text-xs font-bold text-ink-muted hover:text-ink disabled:opacity-50"
+          >
+            <Plus className="h-3.5 w-3.5" /> New slip
+          </button>
         </div>
-        <Button
-          type="button"
-          fullWidth
-          className="mt-3"
-          disabled={creating}
-          onClick={() => void createParlay()}
-        >
-          <Plus className="mr-1 h-4 w-4" />
-          {creating ? "Creating…" : "Create parlay"}
-        </Button>
-      </section>
+      ) : null}
 
-      {parlays.length === 0 ? (
-        <section className="rounded-2xl border border-dashed border-border-strong bg-chalk/60 p-6 text-center">
-          <p className="font-display text-sm font-bold uppercase tracking-wide text-ink">
-            No parlays yet
+      {selected ? (
+        <SlipHero
+          weekNumber={week.week}
+          title={selected.parlay.title}
+          phase={phase}
+          legsIn={legs.length}
+          capacity={capacity}
+          american={estimate.american}
+          stake={stake}
+          payout={estimate.payout}
+          showMoney={showMoney}
+          currency={league.currency}
+          onEditStake={
+            canEditSlip && phase !== "settled"
+              ? () => setStakeDraft(selected.parlay.stake != null ? String(selected.parlay.stake) : "")
+              : undefined
+          }
+          actions={heroActions}
+        >
+          <FanduelLauncher legs={legs} />
+        </SlipHero>
+      ) : (
+        <section className="relative overflow-hidden rounded-2xl bg-ink p-5 text-chalk shadow-card">
+          <h2 className="font-display text-lg font-extrabold uppercase tracking-[0.12em] text-lime">
+            Week {week.week} Parlay
+          </h2>
+          <p className="mt-2 text-sm text-chalk/70">
+            Start the group&apos;s slip. Everyone adds up to {max} pick
+            {max === 1 ? "" : "s"} from any game — TDs, yards, spreads, totals —
+            then one tap opens it in FanDuel.
           </p>
-          <p className="mt-1 text-sm text-ink-muted">
-            Start one and drop it in the group chat.
-          </p>
+          <button
+            type="button"
+            disabled={creating}
+            onClick={() => void createSlip()}
+            className="mt-4 flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-lime font-display text-sm font-extrabold uppercase tracking-wider text-ink transition active:scale-[0.98] disabled:opacity-60"
+          >
+            <Plus className="h-4 w-4" />
+            {creating ? "Starting…" : "Start the parlay"}
+          </button>
+        </section>
+      )}
+
+      {selected ? (
+        <section className="overflow-hidden rounded-2xl border border-border bg-chalk shadow-card">
+          <button
+            type="button"
+            className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left"
+            onClick={() => setMembersOpen((v) => !v)}
+            aria-expanded={membersOpen}
+          >
+            <div>
+              <h2 className="font-display text-base font-bold uppercase tracking-wide text-ink">
+                Member Picks
+              </h2>
+              <p className="text-xs text-ink-muted">
+                {membersDone} of {members.length} done · {max} each
+              </p>
+            </div>
+            <ChevronDown
+              className={cn(
+                "h-5 w-5 text-ink-faint transition-transform",
+                membersOpen && "rotate-180",
+              )}
+            />
+          </button>
+          {membersOpen ? (
+            <ul className="divide-y divide-border border-t border-border">
+              {byMember.map((m) => {
+                const isViewer = m.id === viewer.memberId;
+                const done = m.legs.length >= max;
+                return (
+                  <li key={m.id} className={cn("px-4 py-2.5", isViewer && "bg-turf/5")}>
+                    <div className="flex items-center gap-2.5 text-sm">
+                      <span aria-hidden className="text-base leading-none">
+                        {m.id === "former" ? "👋" : done ? "✅" : "⏳"}
+                      </span>
+                      <span className="min-w-0 flex-1 truncate font-semibold text-ink">
+                        {m.name}
+                        {isViewer ? (
+                          <span className="ml-1.5 text-[10px] font-bold uppercase tracking-wider text-turf">
+                            You
+                          </span>
+                        ) : null}
+                      </span>
+                      {m.id !== "former" ? (
+                        <span className="text-xs font-semibold text-ink-faint">
+                          {m.legs.length === 0 ? "Needs picks" : `${m.legs.length}/${max}`}
+                        </span>
+                      ) : null}
+                    </div>
+                    {m.legs.length > 0 ? (
+                      <ul className="pl-1">
+                        {m.legs.map((leg) => {
+                          const game = gamesById.get(leg.game_id);
+                          const started = gameStarted(game);
+                          const mine = leg.member_id === viewer.memberId;
+                          const removable =
+                            viewer.isAdmin ||
+                            (mine && !started && !slipLocked && phase !== "settled");
+                          return (
+                            <LegRow
+                              key={leg.id}
+                              leg={leg}
+                              game={game}
+                              onRemove={removable ? () => void removeLeg(leg.id) : undefined}
+                              onGrade={
+                                viewer.isAdmin && started
+                                  ? (result) => void gradeLeg(leg.id, result)
+                                  : undefined
+                              }
+                            />
+                          );
+                        })}
+                      </ul>
+                    ) : null}
+                  </li>
+                );
+              })}
+            </ul>
+          ) : null}
         </section>
       ) : null}
 
-      {parlays.map(({ parlay, legs }) => {
-        const combined = tryCombineParlayDecimal(legs.map((l) => l.decimal_odds));
-        const combinedAmerican = combined ? decimalToAmerican(combined) : null;
-        const locked = parlay.status === "locked";
-        const mine = legs.filter((l) => l.member_id === viewer.memberId).length;
-        const canDelete = viewer.isAdmin || parlay.created_by_member_id === viewer.memberId;
-        return (
-          <section
-            key={parlay.id}
-            className="rounded-2xl border border-border bg-chalk/90 p-4 shadow-card"
-          >
-            <div className="flex items-start justify-between gap-2">
-              <div>
-                <h3 className="font-display text-base font-bold uppercase tracking-wide text-ink">
-                  {parlay.title}
-                </h3>
-                <p className="text-xs text-ink-faint">
-                  {legs.length} leg{legs.length === 1 ? "" : "s"}
-                  {combinedAmerican != null
-                    ? ` · est. ${formatAmerican(combinedAmerican)}`
-                    : ""}
-                  {locked ? " · locked" : ""}
-                </p>
-              </div>
-              <div className="flex shrink-0 items-center gap-1">
-                {viewer.isAdmin ? (
-                  <button
-                    type="button"
-                    className="rounded-lg border border-border p-2 text-ink-muted hover:text-ink"
-                    title={locked ? "Unlock slip" : "Lock slip"}
-                    onClick={() => void setStatus(parlay.id, locked ? "open" : "locked")}
-                  >
-                    {locked ? <Unlock className="h-4 w-4" /> : <Lock className="h-4 w-4" />}
-                  </button>
-                ) : null}
-                {canDelete ? (
-                  <button
-                    type="button"
-                    className="rounded-lg border border-border p-2 text-ink-muted hover:text-danger"
-                    title="Delete slip"
-                    onClick={() => void deleteParlay(parlay.id)}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
-                ) : null}
-              </div>
-            </div>
-
-            {legs.length > 0 ? (
-              <ul className="mt-3 space-y-2">
-                {legs.map((leg) => (
-                  <li
-                    key={leg.id}
-                    className="flex items-center justify-between gap-2 rounded-xl border border-border bg-field px-3 py-2"
-                  >
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-semibold text-ink">
-                        {legLine(leg)}
-                      </p>
-                      <p className="text-[11px] uppercase tracking-wide text-ink-faint">
-                        {memberName(leg.member_id)} · {formatAmerican(leg.american_odds)}
-                      </p>
-                    </div>
-                    {(leg.member_id === viewer.memberId || viewer.isAdmin) &&
-                    !locked ? (
-                      <button
-                        type="button"
-                        className="shrink-0 rounded-lg p-1.5 text-ink-faint hover:text-danger"
-                        title="Remove pick"
-                        onClick={() => void removeLeg(parlay.id, leg.id)}
-                      >
-                        <X className="h-4 w-4" />
-                      </button>
-                    ) : null}
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="mt-3 text-sm text-ink-muted">
-                Empty slip — be the first to add a pick.
-              </p>
-            )}
-
-            <div className="mt-3 grid grid-cols-2 gap-2">
-              <Button
-                type="button"
-                variant="secondary"
-                disabled={locked || mine >= league.max_props_per_member}
-                onClick={() => {
-                  setPickingFor(parlay.id);
-                  setSelectedGame(null);
-                  setProps([]);
-                }}
-              >
-                {mine >= league.max_props_per_member
-                  ? "Your picks are in"
-                  : `Add picks (${mine}/${league.max_props_per_member})`}
-              </Button>
-              <Button
-                type="button"
-                disabled={legs.length === 0 || busy}
-                onClick={() => void openInFanduel(parlay.id)}
-              >
-                <ExternalLink className="mr-1 h-4 w-4" />
-                Open in FanDuel
-              </Button>
-            </div>
-          </section>
-        );
-      })}
-
-      <Sheet
-        open={pickingFor != null}
-        onClose={() => setPickingFor(null)}
-        title={
-          selectedGame
-            ? `${selectedGame.away_team} @ ${selectedGame.home_team}`
-            : "Pick a game"
-        }
-        description={
-          pickingParlay
-            ? `Your picks: ${myLegsUsed}/${league.max_props_per_member}`
-            : undefined
-        }
-        className="max-h-[85vh]"
-      >
-        {!selectedGame ? (
-          <ul className="space-y-2 overflow-y-auto pb-6">
-            {games.map((game) => (
+      <section className="overflow-hidden rounded-2xl border border-border bg-chalk shadow-card">
+        <div className="flex items-center justify-between gap-3 px-4 py-3">
+          <div>
+            <h2 className="font-display text-base font-bold uppercase tracking-wide text-ink">
+              Add Picks
+            </h2>
+            <p className="text-xs text-ink-muted">
+              {slipLocked
+                ? "Slip is locked — the bet's placed."
+                : picksLeft > 0
+                  ? `Tap a game for every FanDuel prop · ${picksLeft} left`
+                  : "Your picks are in — browse, or start another slip"}
+            </p>
+          </div>
+        </div>
+        <ul className="divide-y divide-border border-t border-border">
+          {[...upcoming, ...underway].map((game) => {
+            const started = gameStarted(game);
+            return (
               <li key={game.id}>
                 <button
                   type="button"
-                  className="flex w-full items-center justify-between rounded-xl border border-border bg-field px-3 py-3 text-left hover:border-turf"
-                  onClick={() => void loadProps(game)}
+                  disabled={creating}
+                  onClick={() => void openGame(game)}
+                  className={cn(
+                    "flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition hover:bg-field",
+                    started && "opacity-60",
+                  )}
                 >
                   <span className="font-display text-sm font-bold uppercase tracking-wide text-ink">
                     {game.away_team} @ {game.home_team}
                   </span>
-                  <span className="text-xs text-ink-faint">
-                    {game.status === "final"
-                      ? "Final"
-                      : kickoffLabel(game.kickoff_at)}
+                  <span className="flex items-center gap-1 text-xs text-ink-faint">
+                    {gameStatusLabel(game)}
+                    {game.status === "final" &&
+                    game.home_score != null &&
+                    game.away_score != null
+                      ? ` ${game.away_score}-${game.home_score}`
+                      : ""}
+                    <ChevronRight className="h-4 w-4" />
                   </span>
                 </button>
               </li>
-            ))}
-          </ul>
-        ) : (
-          <div className="flex max-h-[70vh] flex-col">
-            <div className="flex items-center gap-2 pb-2">
-              <button
-                type="button"
-                className="text-xs font-bold uppercase tracking-wider text-ink-faint hover:text-ink"
-                onClick={() => setSelectedGame(null)}
-              >
-                ← All games
-              </button>
-              {viewer.isAdmin ? (
-                <button
-                  type="button"
-                  className="ml-auto flex items-center gap-1 text-xs font-bold uppercase tracking-wider text-ink-faint hover:text-ink"
-                  onClick={() => void loadProps(selectedGame, true)}
-                >
-                  <RefreshCw className="h-3 w-3" /> Refresh odds
-                </button>
-              ) : null}
-            </div>
+            );
+          })}
+          {games.length === 0 ? (
+            <li className="px-4 py-6 text-center text-sm text-ink-muted">
+              This week&apos;s schedule isn&apos;t loaded yet.
+            </li>
+          ) : null}
+        </ul>
+      </section>
 
-            {loadingProps ? (
-              <p className="py-8 text-center text-sm text-ink-muted">
-                Loading FanDuel board…
-              </p>
-            ) : props.length === 0 ? (
-              <p className="py-8 text-center text-sm text-ink-muted">
-                {propsNote ?? "No odds available for this game yet."}
-              </p>
-            ) : (
-              <>
-                <div className="flex gap-1 overflow-x-auto pb-2">
-                  {availableGroups.map((g) => (
-                    <button
-                      key={g}
-                      type="button"
-                      className={`shrink-0 rounded-full px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider ${
-                        group === g
-                          ? "bg-ink text-lime"
-                          : "border border-border text-ink-muted"
-                      }`}
-                      onClick={() => setGroup(g)}
-                    >
-                      {PROP_GROUP_LABELS[g]}
-                    </button>
-                  ))}
-                </div>
-                {propsNote ? (
-                  <p className="pb-2 text-xs text-ink-faint">{propsNote}</p>
-                ) : null}
-                <div className="flex-1 space-y-3 overflow-y-auto pb-6">
-                  {[...(groupedProps.get(
-                    availableGroups.includes(group) ? group : availableGroups[0]!,
-                  ) ?? new Map<string, GameProp[]>())].map(
-                    ([marketLabel, options]) => (
-                      <div key={marketLabel}>
-                        <p className="mb-1 text-[11px] font-bold uppercase tracking-widest text-ink-faint">
-                          {marketLabel}
-                        </p>
-                        <ul className="space-y-1">
-                          {options.map((prop) => (
-                            <li key={prop.id}>
-                              <button
-                                type="button"
-                                disabled={
-                                  busy ||
-                                  myLegsUsed >= league.max_props_per_member
-                                }
-                                className="flex w-full items-center justify-between rounded-lg border border-border bg-field px-3 py-2 text-left hover:border-turf disabled:opacity-50"
-                                onClick={() => void addLeg(prop)}
-                              >
-                                <span className="min-w-0 truncate text-sm font-semibold text-ink">
-                                  {prop.player_name ?? prop.outcome_label}
-                                  {prop.player_name &&
-                                  prop.outcome_label !== "Yes"
-                                    ? ` ${prop.outcome_label}`
-                                    : ""}
-                                  {prop.line != null ? ` ${prop.line}` : ""}
-                                </span>
-                                <span className="shrink-0 pl-2 font-display text-sm font-bold text-turf">
-                                  {formatAmerican(prop.american_odds)}
-                                </span>
-                              </button>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    ),
-                  )}
-                </div>
-              </>
-            )}
-          </div>
-        )}
+      <PropPickerSheet
+        key={picker?.game.id ?? "closed"}
+        game={picker?.game ?? null}
+        props={picker?.props ?? []}
+        loading={picker?.loading ?? false}
+        note={picker?.note ?? null}
+        picksLeft={picksLeft}
+        slipLegs={legs}
+        locked={slipLocked || phase === "settled"}
+        busy={busy}
+        onClose={() => setPicker(null)}
+        onAdd={(prop) => void addLeg(prop)}
+        onRefresh={
+          viewer.isAdmin && picker ? () => void openGame(picker.game, true) : undefined
+        }
+      />
+
+      <Sheet
+        open={stakeDraft != null}
+        onClose={() => setStakeDraft(null)}
+        title="Stake"
+        description={`Blank uses the league default (${formatMoney(calculateWeeklyStake(league), league.currency)}).`}
+      >
+        <form onSubmit={saveStake} className="space-y-3 pb-2">
+          <input
+            autoFocus
+            inputMode="decimal"
+            value={stakeDraft ?? ""}
+            onChange={(e) => setStakeDraft(e.target.value)}
+            placeholder={String(calculateWeeklyStake(league))}
+            className="h-11 w-full rounded-xl border border-border-strong bg-field px-3 text-sm font-semibold text-ink outline-none focus:border-turf focus:ring-2 focus:ring-turf/20"
+          />
+          <Button type="submit" fullWidth>
+            Save stake
+          </Button>
+        </form>
       </Sheet>
     </div>
   );

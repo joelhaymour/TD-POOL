@@ -2,10 +2,30 @@ import { NextResponse } from "next/server";
 import { getStore } from "@/lib/store";
 import { storeErrorResponse } from "@/lib/api/store-error";
 import { requireApiMembership } from "@/lib/auth/api";
+import { gameStarted } from "@/lib/props/slip";
+import type { GameProp, ParlayLeg } from "@/lib/types";
+
+function locked(error: string) {
+  return NextResponse.json({ error, code: "LOCKED" }, { status: 409 });
+}
+
+/**
+ * Two legs that cannot both win: either side of one line, two moneylines in
+ * one game, two first-TD scorers. Several anytime scorers can all hit.
+ */
+function conflicts(
+  a: Pick<ParlayLeg, "game_id" | "market_key" | "player_name">,
+  b: Pick<GameProp, "game_id" | "market_key" | "player_name">,
+): boolean {
+  if (a.game_id !== b.game_id || a.market_key !== b.market_key) return false;
+  if (a.market_key === "player_1st_td") return true;
+  if (a.market_key === "player_anytime_td") return false;
+  return (a.player_name ?? "") === (b.player_name ?? "");
+}
 
 /**
  * Member: add one selection from the prop board to a shared slip.
- * Enforces the league's max legs per member and blocks locked slips.
+ * Enforces the league's per-member allowance, kickoff and slip locks.
  */
 export async function POST(
   request: Request,
@@ -32,33 +52,40 @@ export async function POST(
         { status: 404 },
       );
     }
-    if (found.parlay.status === "locked") {
-      return NextResponse.json(
-        { error: "This slip is locked", code: "LOCKED" },
-        { status: 409 },
-      );
-    }
+    if (found.parlay.settled_at) return locked("This slip is settled");
+    if (found.parlay.status === "locked") return locked("This slip is locked");
 
     const mine = found.legs.filter((l) => l.member_id === access.member.id);
     const max = access.league.max_props_per_member;
     if (mine.length >= max) {
-      return NextResponse.json(
-        {
-          error: `You have used all ${max} of your picks on this slip`,
-          code: "LOCKED",
-        },
-        { status: 409 },
-      );
+      return locked(`You have used all ${max} of your picks on this slip`);
     }
 
     const prop = await store.getGameProp(body.game_prop_id);
     if (!prop) {
       return NextResponse.json(
         {
-          error: "That selection is no longer on the board — refresh odds",
+          error: "Those odds just refreshed — reopen the game and pick again",
           code: "NOT_FOUND",
         },
         { status: 404 },
+      );
+    }
+
+    const game = await store.getGameById(prop.game_id);
+    if (gameStarted(game ?? undefined)) {
+      return locked("That game has kicked off — pick from a later game");
+    }
+
+    const clash = found.legs.find((l) => conflicts(l, prop));
+    if (clash) {
+      const subject = clash.player_name ?? clash.outcome_label;
+      return NextResponse.json(
+        {
+          error: `Can't pair with ${subject} ${clash.market_label} already on this slip`,
+          code: "CONFLICT",
+        },
+        { status: 409 },
       );
     }
 
