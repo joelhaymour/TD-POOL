@@ -80,6 +80,8 @@ export async function buildSeedPayload(): Promise<SeedPayload> {
     name: "Sunday TD Club",
     slug: "joels-league",
     admin_user_id: null,
+    league_type: "td_pool",
+    max_props_per_member: 3,
     currency: "USD",
     betting_mode: "individual",
     contribution_per_member: 10,

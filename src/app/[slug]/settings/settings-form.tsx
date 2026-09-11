@@ -40,6 +40,8 @@ export function SettingsForm({
   });
 
   const [joinPin, setJoinPin] = useState<string | null>(null);
+  const [leagueType, setLeagueType] = useState<League["league_type"]>("td_pool");
+  const [maxProps, setMaxProps] = useState("3");
   const [inviteLoading, setInviteLoading] = useState(false);
 
   const inviteUrl = useMemo(() => {
@@ -60,6 +62,8 @@ export function SettingsForm({
         setLeagueName(l.name);
         setAllowPickChanges(l.allow_pick_changes);
         setLockType(l.pick_lock_type);
+        setLeagueType(l.league_type);
+        setMaxProps(String(l.max_props_per_member || 3));
         setMoney({
           betting_mode: l.betting_mode,
           contribution_per_member: l.contribution_per_member ?? 10,
@@ -128,6 +132,14 @@ export function SettingsForm({
           name: leagueName,
           allow_pick_changes: allowPickChanges,
           pick_lock_type: lockType,
+          ...(leagueType === "group_betting"
+            ? {
+                max_props_per_member: Math.min(
+                  25,
+                  Math.max(1, Number(maxProps) || 3),
+                ),
+              }
+            : {}),
           betting_mode: money.betting_mode,
           contribution_per_member: money.contribution_per_member,
           member_count: money.member_count,
@@ -268,6 +280,21 @@ export function SettingsForm({
             onChange={(e) => setLeagueName(e.target.value)}
           />
         </label>
+
+        {leagueType === "group_betting" ? (
+          <label className="block">
+            <span className={labelClass}>Picks per member, per slip</span>
+            <input
+              className={inputClass}
+              value={maxProps}
+              inputMode="numeric"
+              onChange={(e) => setMaxProps(e.target.value)}
+            />
+            <span className="mt-1 block text-xs text-ink-faint">
+              How many props each league member can add to one shared parlay.
+            </span>
+          </label>
+        ) : null}
 
         <MoneySettingsForm value={money} onChange={setMoney} />
 

@@ -30,6 +30,8 @@ export async function POST(request: Request) {
       slug: body.slug,
       admin_display_name: body.admin_display_name.trim(),
       admin_user_id: auth.user.id,
+      league_type: body.league_type === "group_betting" ? "group_betting" : "td_pool",
+      max_props_per_member: body.max_props_per_member,
       join_pin: body.join_pin ?? "0000",
       currency: body.currency,
       betting_mode: body.betting_mode,

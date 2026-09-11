@@ -18,3 +18,8 @@ export function leagueNavItems(basePath: string): BottomNavItem[] {
     { href: `${basePath}/leaderboard`, label: "Board", icon: "board" },
   ];
 }
+
+/** Group betting leagues live on one screen: the shared parlay board. */
+export function groupBettingNavItems(basePath: string): BottomNavItem[] {
+  return [{ href: basePath, label: "Parlays", icon: "slip" }];
+}

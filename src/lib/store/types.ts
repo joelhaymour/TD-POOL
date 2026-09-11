@@ -1,7 +1,12 @@
 import type {
   CreateLeagueInput,
+  GameProp,
   GameStatus,
   League,
+  Parlay,
+  ParlayLeg,
+  ParlayStatus,
+  ParlayWithLegs,
   LeagueDashboard,
   LeagueMember,
   MemberRole,
@@ -190,6 +195,43 @@ export interface Store {
    * decide whether a rebuild is needed, so it must stay cheap.
    */
   countPlayerWeekRows(weekId: string): Promise<number>;
+
+  // --- Group betting -------------------------------------------------------
+
+  /** One game row by id (props sync + slip building need kickoff/teams). */
+  getGameById(gameId: string): Promise<NflGame | null>;
+
+  /**
+   * Replace the prop board for one game+book. Full replace: lines move and
+   * markets appear/disappear between refreshes. Legs are unaffected — they
+   * snapshot their prop at add time.
+   */
+  replaceGameProps(
+    weekId: string,
+    gameId: string,
+    sportsbook: string,
+    rows: Array<Omit<GameProp, "id" | "week_id" | "game_id" | "sportsbook" | "fetched_at">>,
+  ): Promise<number>;
+
+  listGameProps(gameId: string): Promise<GameProp[]>;
+  getGameProp(id: string): Promise<GameProp | null>;
+
+  createParlay(input: {
+    league_id: string;
+    week_id: string;
+    title: string;
+    created_by_member_id: string | null;
+  }): Promise<Parlay>;
+  listParlays(leagueId: string, weekId: string): Promise<ParlayWithLegs[]>;
+  getParlay(parlayId: string): Promise<ParlayWithLegs | null>;
+  setParlayStatus(parlayId: string, status: ParlayStatus): Promise<Parlay>;
+  deleteParlay(parlayId: string): Promise<void>;
+
+  /** Insert a leg snapshot. Duplicate selections in one slip are CONFLICT. */
+  addParlayLeg(
+    input: Omit<ParlayLeg, "id" | "added_at">,
+  ): Promise<ParlayLeg>;
+  removeParlayLeg(parlayId: string, legId: string): Promise<ParlayLeg | null>;
 
   /** Read a shared refresh timestamp. Null when the job has never run. */
   getSyncState(key: string): Promise<SyncStateRow | null>;

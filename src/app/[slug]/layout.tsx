@@ -16,6 +16,7 @@ export default async function LeagueLayout({
       leagueName={dashboard?.league.name ?? "TD Pool"}
       weekNumber={dashboard?.week.week ?? 0}
       viewerName={member.display_name}
+      groupBetting={dashboard?.league.league_type === "group_betting"}
     >
       {children}
     </LeagueShell>

@@ -196,6 +196,8 @@ export class LocalFileStore implements Store {
         name: input.name.trim(),
         slug,
         admin_user_id: input.admin_user_id ?? null,
+        league_type: input.league_type ?? "td_pool",
+        max_props_per_member: input.max_props_per_member ?? 3,
         currency: input.currency ?? "USD",
         betting_mode: input.betting_mode ?? "individual",
         contribution_per_member: input.contribution_per_member ?? 10,
@@ -999,6 +1001,51 @@ export class LocalFileStore implements Store {
       (data) =>
         data.player_week_data.filter((p) => p.week_id === weekId).length,
     );
+  }
+
+  // --- Group betting: hosted-DB only. USE_SUPABASE=true is required. -------
+
+  private groupBettingUnavailable(): never {
+    throw new StoreError(
+      "Group betting requires the hosted database (set USE_SUPABASE=true)",
+      "VALIDATION",
+    );
+  }
+
+  async getGameById(gameId: string) {
+    const db = await this.read();
+    return db.games.find((g) => g.id === gameId) ?? null;
+  }
+
+  async replaceGameProps(): Promise<number> {
+    this.groupBettingUnavailable();
+  }
+  async listGameProps(): Promise<import("@/lib/types").GameProp[]> {
+    this.groupBettingUnavailable();
+  }
+  async getGameProp(): Promise<import("@/lib/types").GameProp | null> {
+    this.groupBettingUnavailable();
+  }
+  async createParlay(): Promise<import("@/lib/types").Parlay> {
+    this.groupBettingUnavailable();
+  }
+  async listParlays(): Promise<import("@/lib/types").ParlayWithLegs[]> {
+    this.groupBettingUnavailable();
+  }
+  async getParlay(): Promise<import("@/lib/types").ParlayWithLegs | null> {
+    this.groupBettingUnavailable();
+  }
+  async setParlayStatus(): Promise<import("@/lib/types").Parlay> {
+    this.groupBettingUnavailable();
+  }
+  async deleteParlay(): Promise<void> {
+    this.groupBettingUnavailable();
+  }
+  async addParlayLeg(): Promise<import("@/lib/types").ParlayLeg> {
+    this.groupBettingUnavailable();
+  }
+  async removeParlayLeg(): Promise<import("@/lib/types").ParlayLeg | null> {
+    this.groupBettingUnavailable();
   }
 
   async getSyncState(key: string): Promise<SyncStateRow | null> {

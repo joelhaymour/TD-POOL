@@ -1,6 +1,15 @@
 /** Domain types for the Anytime TD Pool app. */
 
 export type BettingMode = "individual" | "fixed" | "none";
+export type LeagueType = "td_pool" | "group_betting";
+export type ParlayStatus = "open" | "locked";
+export type PropMarketGroup =
+  | "game_lines"
+  | "td_scorers"
+  | "passing"
+  | "rushing"
+  | "receiving"
+  | "kicking";
 export type PickLockType = "first_kickoff" | "custom" | "individual_game";
 export type OddsFormat = "american" | "decimal";
 export type Currency = "USD" | "CAD";
@@ -43,6 +52,9 @@ export interface League {
   name: string;
   slug: string;
   admin_user_id: string | null;
+  league_type: LeagueType;
+  /** Group betting: max legs each member may add to one parlay. */
+  max_props_per_member: number;
   currency: Currency;
   betting_mode: BettingMode;
   contribution_per_member: number | null;
@@ -309,6 +321,8 @@ export interface LeagueDashboard {
 export interface CreateLeagueInput {
   name: string;
   slug?: string;
+  league_type?: LeagueType;
+  max_props_per_member?: number;
   currency?: Currency;
   betting_mode?: BettingMode;
   contribution_per_member?: number | null;
@@ -327,6 +341,65 @@ export interface CreateLeagueInput {
   logo_url?: string | null;
 }
 
+/** One selectable outcome on the full prop board (single sportsbook row). */
+export interface GameProp {
+  id: string;
+  week_id: string;
+  game_id: string;
+  sportsbook: string;
+  market_key: string;
+  market_label: string;
+  market_group: PropMarketGroup;
+  player_id: string | null;
+  player_name: string | null;
+  outcome_label: string;
+  line: number | null;
+  american_odds: number;
+  decimal_odds: number;
+  fd_market_id: string | null;
+  fd_selection_id: string | null;
+  deep_link: string | null;
+  fetched_at: string;
+}
+
+export interface Parlay {
+  id: string;
+  league_id: string;
+  week_id: string;
+  title: string;
+  created_by_member_id: string | null;
+  status: ParlayStatus;
+  created_at: string;
+  updated_at: string;
+}
+
+/** Snapshot of a selection at the moment it was added to a slip. */
+export interface ParlayLeg {
+  id: string;
+  parlay_id: string;
+  league_id: string;
+  member_id: string;
+  game_prop_id: string | null;
+  game_id: string;
+  sportsbook: string;
+  market_key: string;
+  market_label: string;
+  player_name: string | null;
+  outcome_label: string;
+  line: number | null;
+  american_odds: number;
+  decimal_odds: number;
+  fd_market_id: string | null;
+  fd_selection_id: string | null;
+  deep_link: string | null;
+  added_at: string;
+}
+
+export interface ParlayWithLegs {
+  parlay: Parlay;
+  legs: ParlayLeg[];
+}
+
 export interface SelectPickInput {
   league_id: string;
   member_id: string;
@@ -336,6 +409,7 @@ export interface SelectPickInput {
 
 export interface UpdateLeagueSettingsInput {
   name?: string;
+  max_props_per_member?: number;
   currency?: Currency;
   betting_mode?: BettingMode;
   contribution_per_member?: number | null;

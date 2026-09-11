@@ -68,9 +68,20 @@ export async function PATCH(
       logo_url,
       member_count,
       active_week_id,
+      max_props_per_member,
     } = body;
 
     const settings: UpdateLeagueSettingsInput = {};
+    if (max_props_per_member !== undefined) {
+      const max = Number(max_props_per_member);
+      if (!Number.isInteger(max) || max < 1 || max > 25) {
+        return NextResponse.json(
+          { error: "Picks per member must be 1-25", code: "VALIDATION" },
+          { status: 400 },
+        );
+      }
+      settings.max_props_per_member = max;
+    }
     if (name !== undefined) settings.name = name;
     if (currency !== undefined) settings.currency = currency;
     if (betting_mode !== undefined) settings.betting_mode = betting_mode;

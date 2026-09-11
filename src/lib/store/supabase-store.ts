@@ -24,8 +24,13 @@ import { resolvePoolWeek, weekWindow } from "@/lib/nfl/calendar";
 import { playerWeekRankKey } from "@/lib/scoring/rank";
 import type {
   CreateLeagueInput,
+  GameProp,
   InjuryStatus,
   League,
+  Parlay,
+  ParlayLeg,
+  ParlayStatus,
+  ParlayWithLegs,
   LeagueDashboard,
   LeagueMember,
   MemberPickStatus,
@@ -104,6 +109,9 @@ function mapLeague(row: DbLeague): League {
     name: String(row.name),
     slug: String(row.slug),
     admin_user_id: row.admin_user_id ? String(row.admin_user_id) : null,
+    league_type:
+      row.league_type === "group_betting" ? "group_betting" : "td_pool",
+    max_props_per_member: num(row.max_props_per_member, 3),
     currency: (row.currency as League["currency"]) ?? "USD",
     betting_mode: (row.betting_mode as League["betting_mode"]) ?? "individual",
     contribution_per_member: numOrNull(row.contribution_per_member),
@@ -119,6 +127,68 @@ function mapLeague(row: DbLeague): League {
     member_count: num(row.member_count_setting, 0),
     created_at: String(row.created_at),
     updated_at: String(row.updated_at),
+  };
+}
+
+function mapGameProp(row: Record<string, unknown>): GameProp {
+  return {
+    id: String(row.id),
+    week_id: String(row.week_id),
+    game_id: String(row.game_id),
+    sportsbook: String(row.sportsbook ?? "fanduel"),
+    market_key: String(row.market_key),
+    market_label: String(row.market_label),
+    market_group: (row.market_group as GameProp["market_group"]) ?? "game_lines",
+    player_id: row.player_id ? String(row.player_id) : null,
+    player_name: row.player_name != null ? String(row.player_name) : null,
+    outcome_label: String(row.outcome_label),
+    line: numOrNull(row.line),
+    american_odds: num(row.american_odds),
+    decimal_odds: num(row.decimal_odds),
+    fd_market_id: row.fd_market_id != null ? String(row.fd_market_id) : null,
+    fd_selection_id:
+      row.fd_selection_id != null ? String(row.fd_selection_id) : null,
+    deep_link: row.deep_link != null ? String(row.deep_link) : null,
+    fetched_at: String(row.fetched_at),
+  };
+}
+
+function mapParlay(row: Record<string, unknown>): Parlay {
+  return {
+    id: String(row.id),
+    league_id: String(row.league_id),
+    week_id: String(row.week_id),
+    title: String(row.title),
+    created_by_member_id: row.created_by_member_id
+      ? String(row.created_by_member_id)
+      : null,
+    status: row.status === "locked" ? "locked" : "open",
+    created_at: String(row.created_at),
+    updated_at: String(row.updated_at),
+  };
+}
+
+function mapParlayLeg(row: Record<string, unknown>): ParlayLeg {
+  return {
+    id: String(row.id),
+    parlay_id: String(row.parlay_id),
+    league_id: String(row.league_id),
+    member_id: String(row.member_id),
+    game_prop_id: row.game_prop_id ? String(row.game_prop_id) : null,
+    game_id: String(row.game_id),
+    sportsbook: String(row.sportsbook ?? "fanduel"),
+    market_key: String(row.market_key),
+    market_label: String(row.market_label),
+    player_name: row.player_name != null ? String(row.player_name) : null,
+    outcome_label: String(row.outcome_label),
+    line: numOrNull(row.line),
+    american_odds: num(row.american_odds),
+    decimal_odds: num(row.decimal_odds),
+    fd_market_id: row.fd_market_id != null ? String(row.fd_market_id) : null,
+    fd_selection_id:
+      row.fd_selection_id != null ? String(row.fd_selection_id) : null,
+    deep_link: row.deep_link != null ? String(row.deep_link) : null,
+    added_at: String(row.added_at),
   };
 }
 
@@ -245,6 +315,9 @@ function leagueToDbPatch(settings: UpdateLeagueSettingsInput): Record<string, un
   const patch: Record<string, unknown> = { updated_at: nowIso() };
   if (settings.name !== undefined) patch.name = settings.name;
   if (settings.currency !== undefined) patch.currency = settings.currency;
+  if (settings.max_props_per_member !== undefined) {
+    patch.max_props_per_member = settings.max_props_per_member;
+  }
   if (settings.betting_mode !== undefined) patch.betting_mode = settings.betting_mode;
   if (settings.contribution_per_member !== undefined) {
     patch.contribution_per_member = settings.contribution_per_member;
@@ -347,6 +420,8 @@ export class SupabaseStore implements Store {
         name: input.name.trim(),
         slug,
         admin_user_id: input.admin_user_id ?? null,
+        league_type: input.league_type ?? "td_pool",
+        max_props_per_member: input.max_props_per_member ?? 3,
         currency: input.currency ?? "USD",
         betting_mode: input.betting_mode ?? "individual",
         contribution_per_member: input.contribution_per_member ?? 10,
@@ -1327,6 +1402,235 @@ export class SupabaseStore implements Store {
       .eq("week_id", weekId);
     if (error) throw error;
     return count ?? 0;
+  }
+
+  // --- Group betting -------------------------------------------------------
+
+  async getGameById(gameId: string): Promise<NflGame | null> {
+    const { data, error } = await this.client
+      .from("nfl_games")
+      .select("*")
+      .eq("id", gameId)
+      .maybeSingle();
+    if (error) throw error;
+    return data ? mapGame(data) : null;
+  }
+
+  async replaceGameProps(
+    weekId: string,
+    gameId: string,
+    sportsbook: string,
+    rows: Array<
+      Omit<GameProp, "id" | "week_id" | "game_id" | "sportsbook" | "fetched_at">
+    >,
+  ): Promise<number> {
+    const { error: delErr } = await this.client
+      .from("game_props")
+      .delete()
+      .eq("game_id", gameId)
+      .eq("sportsbook", sportsbook);
+    if (delErr) throw delErr;
+    if (rows.length === 0) return 0;
+
+    const fetchedAt = nowIso();
+    const inserts = rows.map((row) => ({
+      id: randomUUID(),
+      week_id: weekId,
+      game_id: gameId,
+      sportsbook,
+      market_key: row.market_key,
+      market_label: row.market_label,
+      market_group: row.market_group,
+      player_id: row.player_id,
+      player_name: row.player_name,
+      outcome_label: row.outcome_label,
+      line: row.line,
+      american_odds: row.american_odds,
+      decimal_odds: row.decimal_odds,
+      fd_market_id: row.fd_market_id,
+      fd_selection_id: row.fd_selection_id,
+      deep_link: row.deep_link,
+      fetched_at: fetchedAt,
+    }));
+    for (const batch of chunk(inserts, 500)) {
+      const { error } = await this.client.from("game_props").insert(batch);
+      if (error) throw error;
+    }
+    return inserts.length;
+  }
+
+  async listGameProps(gameId: string): Promise<GameProp[]> {
+    const { data, error } = await this.client
+      .from("game_props")
+      .select("*")
+      .eq("game_id", gameId)
+      .order("market_key")
+      .order("line", { ascending: true, nullsFirst: true })
+      .order("american_odds");
+    if (error) throw error;
+    return (data ?? []).map(mapGameProp);
+  }
+
+  async getGameProp(id: string): Promise<GameProp | null> {
+    const { data, error } = await this.client
+      .from("game_props")
+      .select("*")
+      .eq("id", id)
+      .maybeSingle();
+    if (error) throw error;
+    return data ? mapGameProp(data) : null;
+  }
+
+  async createParlay(input: {
+    league_id: string;
+    week_id: string;
+    title: string;
+    created_by_member_id: string | null;
+  }): Promise<Parlay> {
+    const createdAt = nowIso();
+    const { data, error } = await this.client
+      .from("parlays")
+      .insert({
+        id: randomUUID(),
+        league_id: input.league_id,
+        week_id: input.week_id,
+        title: input.title,
+        created_by_member_id: input.created_by_member_id,
+        status: "open",
+        created_at: createdAt,
+        updated_at: createdAt,
+      })
+      .select("*")
+      .single();
+    if (error) throw error;
+    return mapParlay(data);
+  }
+
+  async listParlays(
+    leagueId: string,
+    weekId: string,
+  ): Promise<ParlayWithLegs[]> {
+    const { data: parlayRows, error } = await this.client
+      .from("parlays")
+      .select("*")
+      .eq("league_id", leagueId)
+      .eq("week_id", weekId)
+      .order("created_at", { ascending: false });
+    if (error) throw error;
+    const parlays = (parlayRows ?? []).map(mapParlay);
+    if (parlays.length === 0) return [];
+
+    const { data: legRows, error: legErr } = await this.client
+      .from("parlay_legs")
+      .select("*")
+      .in(
+        "parlay_id",
+        parlays.map((p) => p.id),
+      )
+      .order("added_at");
+    if (legErr) throw legErr;
+    const legs = (legRows ?? []).map(mapParlayLeg);
+
+    return parlays.map((parlay) => ({
+      parlay,
+      legs: legs.filter((l) => l.parlay_id === parlay.id),
+    }));
+  }
+
+  async getParlay(parlayId: string): Promise<ParlayWithLegs | null> {
+    const { data, error } = await this.client
+      .from("parlays")
+      .select("*")
+      .eq("id", parlayId)
+      .maybeSingle();
+    if (error) throw error;
+    if (!data) return null;
+    const { data: legRows, error: legErr } = await this.client
+      .from("parlay_legs")
+      .select("*")
+      .eq("parlay_id", parlayId)
+      .order("added_at");
+    if (legErr) throw legErr;
+    return {
+      parlay: mapParlay(data),
+      legs: (legRows ?? []).map(mapParlayLeg),
+    };
+  }
+
+  async setParlayStatus(
+    parlayId: string,
+    status: ParlayStatus,
+  ): Promise<Parlay> {
+    const { data, error } = await this.client
+      .from("parlays")
+      .update({ status, updated_at: nowIso() })
+      .eq("id", parlayId)
+      .select("*")
+      .single();
+    if (error) throw error;
+    return mapParlay(data);
+  }
+
+  async deleteParlay(parlayId: string): Promise<void> {
+    const { error } = await this.client
+      .from("parlays")
+      .delete()
+      .eq("id", parlayId);
+    if (error) throw error;
+  }
+
+  async addParlayLeg(
+    input: Omit<ParlayLeg, "id" | "added_at">,
+  ): Promise<ParlayLeg> {
+    const { data, error } = await this.client
+      .from("parlay_legs")
+      .insert({
+        id: randomUUID(),
+        parlay_id: input.parlay_id,
+        league_id: input.league_id,
+        member_id: input.member_id,
+        game_prop_id: input.game_prop_id,
+        game_id: input.game_id,
+        sportsbook: input.sportsbook,
+        market_key: input.market_key,
+        market_label: input.market_label,
+        player_name: input.player_name,
+        outcome_label: input.outcome_label,
+        line: input.line,
+        american_odds: input.american_odds,
+        decimal_odds: input.decimal_odds,
+        fd_market_id: input.fd_market_id,
+        fd_selection_id: input.fd_selection_id,
+        deep_link: input.deep_link,
+        added_at: nowIso(),
+      })
+      .select("*")
+      .single();
+    if (error) {
+      if (isUniqueViolation(error)) {
+        throw new StoreError(
+          "That selection is already on this slip",
+          "CONFLICT",
+        );
+      }
+      throw error;
+    }
+    return mapParlayLeg(data);
+  }
+
+  async removeParlayLeg(
+    parlayId: string,
+    legId: string,
+  ): Promise<ParlayLeg | null> {
+    const { data, error } = await this.client
+      .from("parlay_legs")
+      .delete()
+      .eq("id", legId)
+      .eq("parlay_id", parlayId)
+      .select("*")
+      .maybeSingle();
+    if (error) throw error;
+    return data ? mapParlayLeg(data) : null;
   }
 
   async getSyncState(key: string): Promise<SyncStateRow | null> {
