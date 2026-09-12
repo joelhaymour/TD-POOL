@@ -124,6 +124,31 @@ export function propMarketDef(key: string): PropMarketDef | null {
   return BY_KEY.get(key) ?? null;
 }
 
+/** Display order: every market, with its alternate ladder right underneath. */
+const MARKET_DISPLAY_ORDER: string[] = (() => {
+  const order: string[] = [];
+  const seen = new Set<string>();
+  const push = (key: string) => {
+    if (!seen.has(key) && BY_KEY.has(key)) {
+      order.push(key);
+      seen.add(key);
+    }
+  };
+  for (const market of PROP_MARKETS) {
+    if (isAlternateMarket(market.key)) continue;
+    push(market.key);
+    push(`${market.key}_alternate`);
+  }
+  // Any ladder whose main line this book does not price.
+  for (const market of PROP_MARKETS) push(market.key);
+  return order;
+})();
+
+export function marketOrderIndex(key: string): number {
+  const i = MARKET_DISPLAY_ORDER.indexOf(key);
+  return i < 0 ? MARKET_DISPLAY_ORDER.length : i;
+}
+
 export const PROP_GROUP_LABELS: Record<PropMarketGroup, string> = {
   game_lines: "Game Lines",
   td_scorers: "TD Scorers",

@@ -1,12 +1,13 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Check, Plus, RefreshCw } from "lucide-react";
+import { Check, ChevronDown, Plus, RefreshCw, Search } from "lucide-react";
 import { Sheet } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils/cn";
 import { formatAmerican } from "@/lib/utils/odds";
 import {
   isAlternateMarket,
+  marketOrderIndex,
   PROP_GROUP_LABELS,
   PROP_GROUP_ORDER,
 } from "@/lib/props/markets";
@@ -15,6 +16,14 @@ import { teamFullToAbbr } from "@/lib/providers/the-odds-api/maps";
 import type { GameProp, NflGame, ParlayLeg, PropMarketGroup } from "@/lib/types";
 
 type Row = { key: string; label: string; alternate: boolean; options: GameProp[] };
+
+type Section = {
+  key: string;
+  label: string;
+  rows: Row[];
+  /** A pick from this market is already on the slip. */
+  picked: boolean;
+};
 
 const OVER_UNDER = new Set(["Over", "Under"]);
 
@@ -89,6 +98,11 @@ function marketRows(options: GameProp[]): Row[] {
   return list;
 }
 
+function matchesQuery(p: GameProp, query: string): boolean {
+  const haystack = `${p.player_name ?? ""} ${p.outcome_label} ${p.market_label}`;
+  return haystack.toLowerCase().includes(query);
+}
+
 export function PropPickerSheet({
   game,
   props,
@@ -121,26 +135,42 @@ export function PropPickerSheet({
   onLoadExtended: () => void;
 }) {
   const [group, setGroup] = useState<PropMarketGroup>("td_scorers");
-
-  const grouped = useMemo(() => {
-    const byGroup = new Map<PropMarketGroup, Map<string, GameProp[]>>();
-    for (const p of props) {
-      const markets = byGroup.get(p.market_group) ?? new Map<string, GameProp[]>();
-      const list = markets.get(p.market_label) ?? [];
-      list.push(p);
-      markets.set(p.market_label, list);
-      byGroup.set(p.market_group, markets);
-    }
-    return byGroup;
-  }, [props]);
+  const [expanded, setExpanded] = useState<ReadonlySet<string>>(new Set());
+  const [query, setQuery] = useState("");
+  const search = query.trim().toLowerCase();
 
   const onSlip = useMemo(
     () => new Set(slipLegs.map((l) => selectionKey(l))),
     [slipLegs],
   );
 
-  const available = PROP_GROUP_ORDER.filter((g) => grouped.has(g));
-  const active = available.includes(group) ? group : available[0];
+  const groups = useMemo(() => {
+    const found = new Set<PropMarketGroup>();
+    for (const p of props) found.add(p.market_group);
+    return PROP_GROUP_ORDER.filter((g) => found.has(g));
+  }, [props]);
+  const active = groups.includes(group) ? group : groups[0];
+
+  // A search runs across every market, since hunting for one player is the
+  // reason to search at all.
+  const sections = useMemo<Section[]>(() => {
+    const byMarket = new Map<string, GameProp[]>();
+    for (const p of props) {
+      if (search ? !matchesQuery(p, search) : p.market_group !== active) continue;
+      const list = byMarket.get(p.market_key) ?? [];
+      list.push(p);
+      byMarket.set(p.market_key, list);
+    }
+    return [...byMarket.entries()]
+      .map(([key, options]) => ({
+        key,
+        label: options[0]!.market_label,
+        rows: marketRows(options),
+        picked: options.some((p) => onSlip.has(selectionKey(p))),
+      }))
+      .sort((a, b) => marketOrderIndex(a.key) - marketOrderIndex(b.key));
+  }, [props, active, search, onSlip]);
+
   const started = gameStarted(game ?? undefined);
   const closedReason = started
     ? "Kicked off — picks are closed"
@@ -150,6 +180,14 @@ export function PropPickerSheet({
         ? "Your picks are in"
         : `${picksLeft} pick${picksLeft === 1 ? "" : "s"} left on this slip`;
   const addDisabled = busy || started || locked || picksLeft <= 0;
+
+  function toggle(key: string) {
+    setExpanded((cur) => {
+      const next = new Set(cur);
+      if (!next.delete(key)) next.add(key);
+      return next;
+    });
+  }
 
   return (
     <Sheet
@@ -179,26 +217,45 @@ export function PropPickerSheet({
         </div>
       ) : (
         <>
-          <div className="sticky -top-4 z-10 -mx-4 -mt-4 bg-chalk px-4 pb-2 pt-4">
-            <div className="flex gap-1.5 overflow-x-auto pb-1 [scrollbar-width:none]">
-              {available.map((g) => (
-                <button
-                  key={g}
-                  type="button"
-                  className={cn(
-                    "shrink-0 rounded-full px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider transition",
-                    active === g
-                      ? "bg-ink text-lime"
-                      : "border border-border text-ink-muted hover:text-ink",
-                  )}
-                  onClick={() => setGroup(g)}
-                >
-                  {PROP_GROUP_LABELS[g]}
-                </button>
-              ))}
+          <div className="sticky -top-4 z-10 -mx-4 -mt-4 space-y-2 bg-chalk px-4 pb-2 pt-4">
+            <div className="relative">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-faint" />
+              <input
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Search a player or market"
+                className="h-10 w-full rounded-xl border border-border-strong bg-field pl-9 pr-3 text-sm font-semibold text-ink outline-none focus:border-turf focus:ring-2 focus:ring-turf/20"
+              />
             </div>
+
+            {search ? (
+              <p className="text-[11px] font-medium text-ink-faint">
+                {sections.length === 0
+                  ? "No markets match"
+                  : `Matches in ${sections.length} market${sections.length === 1 ? "" : "s"}`}
+              </p>
+            ) : (
+              <div className="flex gap-1.5 overflow-x-auto pb-1 [scrollbar-width:none]">
+                {groups.map((g) => (
+                  <button
+                    key={g}
+                    type="button"
+                    className={cn(
+                      "shrink-0 rounded-full px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider transition",
+                      active === g
+                        ? "bg-ink text-lime"
+                        : "border border-border text-ink-muted hover:text-ink",
+                    )}
+                    onClick={() => setGroup(g)}
+                  >
+                    {PROP_GROUP_LABELS[g]}
+                  </button>
+                ))}
+              </div>
+            )}
+
             {note || onRefresh ? (
-              <div className="mt-1 flex items-center justify-between gap-2 text-[11px] text-ink-faint">
+              <div className="flex items-center justify-between gap-2 text-[11px] text-ink-faint">
                 <span className="min-w-0 truncate">{note ?? "FanDuel prices"}</span>
                 {onRefresh ? (
                   <button
@@ -213,85 +270,111 @@ export function PropPickerSheet({
             ) : null}
           </div>
 
-          {[...(grouped.get(active!) ?? new Map<string, GameProp[]>())].map(
-            ([marketLabel, options]) => (
-              <section key={marketLabel} className="mb-4">
-                <h3 className="mb-1 text-[11px] font-bold uppercase tracking-widest text-ink-faint">
-                  {marketLabel}
-                </h3>
-                <ul>
-                  {marketRows(options).map((row) => (
-                    <li
-                      key={row.key}
+          <ul className="space-y-1.5">
+            {sections.map((section) => {
+              const open = Boolean(search) || expanded.has(section.key);
+              return (
+                <li
+                  key={section.key}
+                  className="overflow-hidden rounded-xl border border-border bg-field"
+                >
+                  <button
+                    type="button"
+                    className="flex w-full items-center gap-2 px-3 py-3 text-left"
+                    aria-expanded={open}
+                    onClick={() => toggle(section.key)}
+                  >
+                    <span className="min-w-0 flex-1 truncate font-display text-sm font-bold uppercase tracking-wide text-ink">
+                      {section.label}
+                    </span>
+                    {section.picked ? (
+                      <Check className="h-3.5 w-3.5 shrink-0 text-turf" aria-label="On the slip" />
+                    ) : null}
+                    <span className="shrink-0 text-[11px] font-semibold text-ink-faint">
+                      {section.rows.length}
+                    </span>
+                    <ChevronDown
                       className={cn(
-                        "gap-2 border-b border-border py-2 last:border-b-0",
-                        row.alternate
-                          ? "block"
-                          : "flex items-center justify-between",
+                        "h-4 w-4 shrink-0 text-ink-faint transition-transform",
+                        open && "rotate-180",
                       )}
-                    >
-                      {row.label ? (
-                        <span
+                    />
+                  </button>
+
+                  {open ? (
+                    <ul className="border-t border-border bg-chalk px-3">
+                      {section.rows.map((row) => (
+                        <li
+                          key={row.key}
                           className={cn(
-                            "min-w-0 truncate text-sm font-semibold text-ink",
-                            row.alternate && "mb-1.5 block",
+                            "gap-2 border-b border-border py-2 last:border-b-0",
+                            row.alternate ? "block" : "flex items-center justify-between",
                           )}
                         >
-                          {row.label}
-                        </span>
-                      ) : null}
-                      <div
-                        className={cn(
-                          "flex gap-1.5",
-                          row.alternate
-                            ? "flex-wrap"
-                            : row.label
-                              ? "shrink-0"
-                              : "grid w-full grid-cols-2",
-                        )}
-                      >
-                        {row.options.map((p) => {
-                          const added = onSlip.has(selectionKey(p));
-                          const label = optionLabel(p);
-                          return (
-                            <button
-                              key={p.id}
-                              type="button"
-                              disabled={addDisabled || added}
-                              onClick={() => onAdd(p)}
+                          {row.label ? (
+                            <span
                               className={cn(
-                                "flex min-w-[4.75rem] items-center justify-center gap-1 rounded-lg border px-2.5 py-2 text-sm font-bold transition",
-                                added
-                                  ? "border-turf bg-turf text-chalk"
-                                  : "border-border-strong bg-chalk text-ink hover:border-turf disabled:opacity-45",
+                                "min-w-0 truncate text-sm font-semibold text-ink",
+                                row.alternate && "mb-1.5 block",
                               )}
                             >
-                              {added ? <Check className="h-3.5 w-3.5" /> : null}
-                              {label ? (
-                                <span className={added ? "text-chalk/80" : "text-ink-muted"}>
-                                  {label}
-                                </span>
-                              ) : null}
-                              <span className="font-display">
-                                {formatAmerican(p.american_odds)}
-                              </span>
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              </section>
-            ),
-          )}
+                              {row.label}
+                            </span>
+                          ) : null}
+                          <div
+                            className={cn(
+                              "flex gap-1.5",
+                              row.alternate
+                                ? "flex-wrap"
+                                : row.label
+                                  ? "shrink-0"
+                                  : "grid w-full grid-cols-2",
+                            )}
+                          >
+                            {row.options.map((p) => {
+                              const added = onSlip.has(selectionKey(p));
+                              const label = optionLabel(p);
+                              return (
+                                <button
+                                  key={p.id}
+                                  type="button"
+                                  disabled={addDisabled || added}
+                                  onClick={() => onAdd(p)}
+                                  className={cn(
+                                    "flex min-w-[4.75rem] items-center justify-center gap-1 rounded-lg border px-2.5 py-2 text-sm font-bold transition",
+                                    added
+                                      ? "border-turf bg-turf text-chalk"
+                                      : "border-border-strong bg-chalk text-ink hover:border-turf disabled:opacity-45",
+                                  )}
+                                >
+                                  {added ? <Check className="h-3.5 w-3.5" /> : null}
+                                  {label ? (
+                                    <span className={added ? "text-chalk/80" : "text-ink-muted"}>
+                                      {label}
+                                    </span>
+                                  ) : null}
+                                  <span className="font-display">
+                                    {formatAmerican(p.american_odds)}
+                                  </span>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : null}
+                </li>
+              );
+            })}
+          </ul>
 
           {!extendedLoaded && !started ? (
             <button
               type="button"
               disabled={loading}
               onClick={onLoadExtended}
-              className="mb-2 flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-border-strong py-3 text-xs font-bold uppercase tracking-wider text-ink-muted transition hover:border-turf hover:text-ink disabled:opacity-50"
+              className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-border-strong py-3 text-xs font-bold uppercase tracking-wider text-ink-muted transition hover:border-turf hover:text-ink disabled:opacity-50"
             >
               <Plus className="h-3.5 w-3.5" />
               {loading ? "Loading…" : "Alt lines, defense & more markets"}
