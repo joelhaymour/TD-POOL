@@ -1440,12 +1440,14 @@ export class SupabaseStore implements Store {
     rows: Array<
       Omit<GameProp, "id" | "week_id" | "game_id" | "sportsbook" | "fetched_at">
     >,
+    marketKeys: string[],
   ): Promise<number> {
     const { error: delErr } = await this.client
       .from("game_props")
       .delete()
       .eq("game_id", gameId)
-      .eq("sportsbook", sportsbook);
+      .eq("sportsbook", sportsbook)
+      .in("market_key", marketKeys);
     if (delErr) throw delErr;
     if (rows.length === 0) return 0;
 

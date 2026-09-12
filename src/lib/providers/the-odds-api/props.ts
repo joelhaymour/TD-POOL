@@ -3,7 +3,7 @@ import {
 } from "@/lib/utils/odds";
 import { teamFullToAbbr } from "@/lib/providers/the-odds-api/maps";
 import { ODDS_QUOTA_EXHAUSTED } from "@/lib/providers/the-odds-api/provider";
-import { PROP_MARKET_KEYS, propMarketDef } from "@/lib/props/markets";
+import { propMarketDef } from "@/lib/props/markets";
 
 const SPORT = "americanfootball_nfl";
 
@@ -132,17 +132,21 @@ function outcomeToProp(
   if (typeof outcome.price !== "number") return null;
 
   const american = Math.round(outcome.price);
-  const isPlayerMarket = market.key.startsWith("player_");
   // Player markets put the player in `description` and Over/Under/Yes in
-  // `name`; game markets put the team (or Over/Under) in `name`.
-  const playerName = isPlayerMarket
-    ? (outcome.description ?? outcome.name)
-    : null;
+  // `name`; team totals do the same with the team. Other game markets put the
+  // team (or Over/Under) in `name`.
+  const isPlayerMarket = market.key.startsWith("player_");
+  const subject =
+    isPlayerMarket || market.key === "team_totals"
+      ? (outcome.description ?? outcome.name)
+      : null;
   let outcomeLabel = outcome.name;
-  if (isPlayerMarket && outcome.name === playerName) outcomeLabel = "Yes";
-  // Anytime/1st TD "No" side is noise for a pick-to-happen slip.
+  if (isPlayerMarket && outcome.name === subject) outcomeLabel = "Yes";
+  // The "No" side of a scorer market is noise on a pick-to-happen slip.
   if (
-    (market.key === "player_anytime_td" || market.key === "player_1st_td") &&
+    (market.key === "player_anytime_td" ||
+      market.key === "player_1st_td" ||
+      market.key === "player_last_td") &&
     outcomeLabel.toLowerCase() === "no"
   ) {
     return null;
@@ -157,7 +161,7 @@ function outcomeToProp(
     market_key: market.key,
     market_label: def.label,
     market_group: def.group,
-    player_name: playerName,
+    player_name: subject,
     outcome_label: outcomeLabel,
     line: typeof outcome.point === "number" ? outcome.point : null,
     american_odds: american,
@@ -169,19 +173,20 @@ function outcomeToProp(
 }
 
 /**
- * Fetch the full FanDuel prop board for one event. Cost: one credit per market
- * FanDuel actually prices (~14-16 for a typical NFL game).
+ * Fetch a FanDuel prop board for one event. Cost: one credit per requested
+ * market FanDuel actually prices (~12-16 for the core set).
  */
 export async function fetchEventProps(
   apiKey: string,
   eventId: string,
+  marketKeys: string[],
 ): Promise<GamePropsFetchResult> {
   const url = new URL(
     `https://api.the-odds-api.com/v4/sports/${SPORT}/events/${eventId}/odds`,
   );
   url.searchParams.set("apiKey", apiKey);
   url.searchParams.set("bookmakers", PROPS_BOOKMAKER);
-  url.searchParams.set("markets", PROP_MARKET_KEYS.join(","));
+  url.searchParams.set("markets", marketKeys.join(","));
   url.searchParams.set("oddsFormat", "american");
   url.searchParams.set("includeLinks", "true");
   url.searchParams.set("includeSids", "true");

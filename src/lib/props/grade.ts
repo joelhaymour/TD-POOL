@@ -7,6 +7,7 @@ import {
   type GameBoxScore,
   type PlayerStatLine,
 } from "@/lib/props/box-score";
+import { isAlternateMarket } from "@/lib/props/markets";
 import type { LegResult } from "@/lib/types";
 
 export type GradableLeg = {
@@ -23,7 +24,7 @@ export function scoredTouchdowns(s: PlayerStatLine): number {
   return s.rushTds + s.recTds + s.retTds + s.defTds;
 }
 
-const STAT_MARKETS: Record<string, (s: PlayerStatLine) => number> = {
+const PLAYER_STATS: Record<string, (s: PlayerStatLine) => number> = {
   player_pass_yds: (s) => s.passYds,
   player_pass_tds: (s) => s.passTds,
   player_pass_attempts: (s) => s.passAtt,
@@ -31,13 +32,31 @@ const STAT_MARKETS: Record<string, (s: PlayerStatLine) => number> = {
   player_pass_interceptions: (s) => s.passInt,
   player_rush_yds: (s) => s.rushYds,
   player_rush_attempts: (s) => s.rushAtt,
-  player_rush_reception_yds: (s) => s.rushYds + s.recYds,
+  player_rush_tds: (s) => s.rushTds,
+  player_rush_longest: (s) => s.longRush,
   player_receptions: (s) => s.rec,
   player_reception_yds: (s) => s.recYds,
+  player_reception_tds: (s) => s.recTds,
+  player_reception_longest: (s) => s.longRec,
+  player_rush_reception_yds: (s) => s.rushYds + s.recYds,
+  player_rush_reception_tds: (s) => s.rushTds + s.recTds,
+  player_pass_rush_yds: (s) => s.passYds + s.rushYds,
+  player_pass_rush_reception_yds: (s) => s.passYds + s.rushYds + s.recYds,
+  player_pass_rush_reception_tds: (s) => s.passTds + s.rushTds + s.recTds,
   player_field_goals: (s) => s.fgMade,
   player_kicking_points: (s) => s.kickPts,
+  player_pats: (s) => s.pats,
+  player_sacks: (s) => s.sacks,
+  player_solo_tackles: (s) => s.soloTackles,
+  player_tackles_assists: (s) => s.tackles,
+  player_assists: (s) => Math.max(0, s.tackles - s.soloTackles),
+  player_defensive_interceptions: (s) => s.defInts,
   player_tds_over: scoredTouchdowns,
 };
+
+const MONEYLINE = new Set(["h2h", "h2h_h1", "h2h_q1"]);
+const SPREAD = new Set(["spreads", "spreads_h1", "spreads_q1", "alternate_spreads"]);
+const TOTAL = new Set(["totals", "totals_h1", "totals_q1", "alternate_totals"]);
 
 function compareLine(actual: number, line: number | null, side: string): LegResult {
   if (line == null) return "void";
@@ -45,6 +64,12 @@ function compareLine(actual: number, line: number | null, side: string): LegResu
   const over = actual > line;
   if (side === "under") return over ? "lost" : "won";
   return over ? "won" : "lost";
+}
+
+/** "30+ yards" wins on the number, so it has no push. */
+function atLeast(actual: number, line: number | null): LegResult {
+  if (line == null) return "void";
+  return actual >= line ? "won" : "lost";
 }
 
 function yesNo(happened: boolean, side: string): LegResult {
@@ -83,6 +108,26 @@ function findPlayer(name: string, box: GameBoxScore): PlayerStatLine | null {
   return soft.length === 1 ? soft[0]![1] : null;
 }
 
+/** Full game, first half, or first quarter, depending on the market. */
+function scoreScope(
+  box: GameBoxScore,
+  marketKey: string,
+): { home: number; away: number } | null {
+  const sum = (points: number[], upTo: number) =>
+    points.slice(0, upTo).reduce((a, b) => a + b, 0);
+  if (marketKey.endsWith("_q1") || marketKey.endsWith("_h1")) {
+    const quarters = marketKey.endsWith("_q1") ? 1 : 2;
+    if (box.periods.home.length < quarters || box.periods.away.length < quarters) {
+      return null;
+    }
+    return {
+      home: sum(box.periods.home, quarters),
+      away: sum(box.periods.away, quarters),
+    };
+  }
+  return { home: box.home.score, away: box.away.score };
+}
+
 /**
  * Grade one leg against a final box score. Returns null when the market or
  * team cannot be resolved, which leaves the leg pending for an admin to grade.
@@ -94,39 +139,68 @@ function findPlayer(name: string, box: GameBoxScore): PlayerStatLine | null {
  */
 export function gradeLeg(leg: GradableLeg, box: GameBoxScore): LegGrade | null {
   const side = leg.outcome_label.trim().toLowerCase();
+  const key = leg.market_key;
 
-  if (leg.market_key === "h2h" || leg.market_key === "spreads") {
+  if (MONEYLINE.has(key) || SPREAD.has(key)) {
+    const scope = scoreScope(box, key);
+    if (!scope) return null;
+    if (side === "draw") {
+      return { result: yesNo(scope.home === scope.away, "yes"), actual: 0 };
+    }
     const team = teamFullToAbbr(leg.outcome_label);
     const mine =
-      team === box.home.abbr ? box.home : team === box.away.abbr ? box.away : null;
-    if (!mine) return null;
-    const theirs = mine === box.home ? box.away : box.home;
-    const margin = mine.score - theirs.score;
-    const covered =
-      leg.market_key === "spreads" ? margin + (leg.line ?? 0) : margin;
+      team === box.home.abbr
+        ? scope.home
+        : team === box.away.abbr
+          ? scope.away
+          : null;
+    if (mine == null) return null;
+    const theirs = team === box.home.abbr ? scope.away : scope.home;
+    const margin = mine - theirs;
+    const covered = SPREAD.has(key) ? margin + (leg.line ?? 0) : margin;
     return {
       result: covered > 0 ? "won" : covered < 0 ? "lost" : "push",
       actual: margin,
     };
   }
 
-  if (leg.market_key === "totals") {
-    const total = box.home.score + box.away.score;
+  if (TOTAL.has(key)) {
+    const scope = scoreScope(box, key);
+    if (!scope) return null;
+    const total = scope.home + scope.away;
     return { result: compareLine(total, leg.line, side), actual: total };
+  }
+
+  // Team totals name the team in the same field player props use.
+  if (key === "team_totals") {
+    const team = leg.player_name ? teamFullToAbbr(leg.player_name) : null;
+    const points =
+      team === box.home.abbr
+        ? box.home.score
+        : team === box.away.abbr
+          ? box.away.score
+          : null;
+    if (points == null) return null;
+    return { result: compareLine(points, leg.line, side), actual: points };
   }
 
   if (!leg.player_name) return null;
 
+  const alternate = isAlternateMarket(key);
+  const base = alternate ? key.slice(0, -"_alternate".length) : key;
+
   const dst = defenseTeam(leg.player_name);
   if (dst) {
-    if (leg.market_key === "player_anytime_td") {
+    if (base === "player_anytime_td") {
       const tds = box.dstTouchdowns[dst] ?? 0;
       return { result: yesNo(tds > 0, side), actual: tds };
     }
-    if (leg.market_key === "player_1st_td") {
-      const first = box.firstTouchdown;
-      const scored = Boolean(first?.defensive && first.team === dst);
-      return { result: yesNo(scored, side), actual: null };
+    if (base === "player_1st_td" || base === "player_last_td") {
+      const play = base === "player_1st_td" ? box.firstTouchdown : box.lastTouchdown;
+      return {
+        result: yesNo(Boolean(play?.defensive && play.team === dst), side),
+        actual: null,
+      };
     }
     return null;
   }
@@ -137,21 +211,26 @@ export function gradeLeg(leg: GradableLeg, box: GameBoxScore): LegGrade | null {
   }
   const stats = found ?? emptyStatLine(leg.player_name);
 
-  if (leg.market_key === "player_anytime_td") {
+  if (base === "player_anytime_td") {
     const tds = scoredTouchdowns(stats);
     return { result: yesNo(tds > 0, side), actual: tds };
   }
 
-  if (leg.market_key === "player_1st_td") {
-    const first = box.firstTouchdown;
+  if (base === "player_1st_td" || base === "player_last_td") {
+    const play = base === "player_1st_td" ? box.firstTouchdown : box.lastTouchdown;
     const scored = Boolean(
-      first && !first.defensive && sameName(first.scorer, leg.player_name),
+      play && !play.defensive && sameName(play.scorer, leg.player_name),
     );
     return { result: yesNo(scored, side), actual: null };
   }
 
-  const accessor = STAT_MARKETS[leg.market_key];
+  const accessor = PLAYER_STATS[base];
   if (!accessor) return null;
   const actual = accessor(stats);
-  return { result: compareLine(actual, leg.line, side), actual };
+  return {
+    result: alternate
+      ? atLeast(actual, leg.line)
+      : compareLine(actual, leg.line, side),
+    actual,
+  };
 }

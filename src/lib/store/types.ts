@@ -219,15 +219,17 @@ export interface Store {
   getGameById(gameId: string): Promise<NflGame | null>;
 
   /**
-   * Replace the prop board for one game+book. Full replace: lines move and
-   * markets appear/disappear between refreshes. Legs are unaffected — they
-   * snapshot their prop at add time.
+   * Replace the given markets on one game's board. Lines move and markets
+   * appear and disappear between refreshes, so the listed markets are cleared
+   * before the new rows land; markets outside `marketKeys` (another tier) are
+   * left alone. Legs are unaffected — they snapshot their prop at add time.
    */
   replaceGameProps(
     weekId: string,
     gameId: string,
     sportsbook: string,
     rows: Array<Omit<GameProp, "id" | "week_id" | "game_id" | "sportsbook" | "fetched_at">>,
+    marketKeys: string[],
   ): Promise<number>;
 
   listGameProps(gameId: string): Promise<GameProp[]>;

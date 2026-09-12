@@ -11,7 +11,8 @@ export type PropMarketGroup =
   | "passing"
   | "rushing"
   | "receiving"
-  | "kicking";
+  | "kicking"
+  | "defense";
 export type PickLockType = "first_kickoff" | "custom" | "individual_game";
 export type OddsFormat = "american" | "decimal";
 export type Currency = "USD" | "CAD";

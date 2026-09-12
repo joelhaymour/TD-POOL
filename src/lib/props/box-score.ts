@@ -15,23 +15,33 @@ export type PlayerStatLine = {
   rushAtt: number;
   rushYds: number;
   rushTds: number;
+  longRush: number;
   rec: number;
   recYds: number;
   recTds: number;
+  longRec: number;
   /** Kick and punt return touchdowns. */
   retTds: number;
   /** Fumble and interception return touchdowns. */
   defTds: number;
   fgMade: number;
   kickPts: number;
+  pats: number;
+  sacks: number;
+  tackles: number;
+  soloTackles: number;
+  defInts: number;
 };
 
 export type GameBoxScore = {
   home: { abbr: string; score: number };
   away: { abbr: string; score: number };
+  /** Points per quarter, for first-half and first-quarter markets. */
+  periods: { home: number[]; away: number[] };
   /** Keyed by normalized player name. */
   players: Map<string, PlayerStatLine>;
   firstTouchdown: { scorer: string; team: string; defensive: boolean } | null;
+  lastTouchdown: { scorer: string; team: string; defensive: boolean } | null;
   /** Defense and special-teams touchdowns, by team abbreviation. */
   dstTouchdowns: Record<string, number>;
   /** Normalized names the pregame injury report listed as out. */
@@ -50,13 +60,20 @@ export function emptyStatLine(name = "", team = ""): PlayerStatLine {
     rushAtt: 0,
     rushYds: 0,
     rushTds: 0,
+    longRush: 0,
     rec: 0,
     recYds: 0,
     recTds: 0,
+    longRec: 0,
     retTds: 0,
     defTds: 0,
     fgMade: 0,
     kickPts: 0,
+    pats: 0,
+    sacks: 0,
+    tackles: 0,
+    soloTackles: 0,
+    defInts: 0,
   };
 }
 
@@ -122,11 +139,13 @@ export function parseEspnBoxScore(summary: EspnSummary): GameBoxScore | null {
             line.rushAtt += num(stat("rushingAttempts"));
             line.rushYds += num(stat("rushingYards"));
             line.rushTds += num(stat("rushingTouchdowns"));
+            line.longRush = Math.max(line.longRush, num(stat("longRushing")));
             break;
           case "receiving":
             line.rec += num(stat("receptions"));
             line.recYds += num(stat("receivingYards"));
             line.recTds += num(stat("receivingTouchdowns"));
+            line.longRec = Math.max(line.longRec, num(stat("longReception")));
             break;
           case "kickReturns":
             line.retTds += num(stat("kickReturnTouchdowns"));
@@ -134,11 +153,15 @@ export function parseEspnBoxScore(summary: EspnSummary): GameBoxScore | null {
           case "puntReturns":
             line.retTds += num(stat("puntReturnTouchdowns"));
             break;
-          // Both tables can carry the same interception-return score.
           case "defensive":
+            line.tackles += num(stat("totalTackles"));
+            line.soloTackles += num(stat("soloTackles"));
+            line.sacks += num(stat("sacks"));
+            // Both tables can carry the same interception-return score.
             line.defTds = Math.max(line.defTds, num(stat("defensiveTouchdowns")));
             break;
           case "interceptions":
+            line.defInts += num(stat("interceptions"));
             line.defTds = Math.max(
               line.defTds,
               num(stat("interceptionTouchdowns")),
@@ -147,6 +170,7 @@ export function parseEspnBoxScore(summary: EspnSummary): GameBoxScore | null {
           case "kicking":
             line.fgMade += madeOf(stat("fieldGoalsMade/fieldGoalAttempts")).made;
             line.kickPts += num(stat("totalKickingPoints"));
+            line.pats += madeOf(stat("extraPointsMade/extraPointAttempts")).made;
             break;
         }
         players.set(norm, line);
@@ -155,6 +179,7 @@ export function parseEspnBoxScore(summary: EspnSummary): GameBoxScore | null {
   }
 
   let firstTouchdown: GameBoxScore["firstTouchdown"] = null;
+  let lastTouchdown: GameBoxScore["lastTouchdown"] = null;
   const dstTouchdowns: Record<string, number> = {};
   for (const play of summary.scoringPlays ?? []) {
     const typeText = play.type?.text ?? "";
@@ -164,10 +189,10 @@ export function parseEspnBoxScore(summary: EspnSummary): GameBoxScore | null {
     const team = mapTeamAbbr(play.team?.abbreviation);
     const defensive = isDefensiveTouchdown(typeText);
     if (defensive && team) dstTouchdowns[team] = (dstTouchdowns[team] ?? 0) + 1;
-    if (!firstTouchdown) {
-      const scorer = scorerFromPlayText(play.text ?? "");
-      if (scorer) firstTouchdown = { scorer, team, defensive };
-    }
+    const scorer = scorerFromPlayText(play.text ?? "");
+    if (!scorer) continue;
+    if (!firstTouchdown) firstTouchdown = { scorer, team, defensive };
+    lastTouchdown = { scorer, team, defensive };
   }
 
   const ruledOut = new Set<string>();
@@ -181,6 +206,9 @@ export function parseEspnBoxScore(summary: EspnSummary): GameBoxScore | null {
     }
   }
 
+  const periodPoints = (c: typeof homeTeam) =>
+    (c?.linescores ?? []).map((p) => num(p.value ?? p.displayValue));
+
   return {
     home: {
       abbr: mapTeamAbbr(homeTeam.team.abbreviation),
@@ -190,8 +218,10 @@ export function parseEspnBoxScore(summary: EspnSummary): GameBoxScore | null {
       abbr: mapTeamAbbr(awayTeam.team.abbreviation),
       score: num(awayTeam.score),
     },
+    periods: { home: periodPoints(homeTeam), away: periodPoints(awayTeam) },
     players,
     firstTouchdown,
+    lastTouchdown,
     dstTouchdowns,
     ruledOut,
   };

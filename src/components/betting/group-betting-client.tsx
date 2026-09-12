@@ -36,6 +36,8 @@ type Picker = {
   props: GameProp[];
   loading: boolean;
   note: string | null;
+  /** Alternate lines and the long-tail markets are loaded. */
+  extended: boolean;
 };
 
 type ApiResult = { ok: boolean; status: number; data: Record<string, unknown> };
@@ -185,19 +187,33 @@ export function GroupBettingClient({
     }
   }
 
-  async function openGame(game: NflGame, refreshOdds = false) {
+  async function openGame(
+    game: NflGame,
+    options: { refresh?: boolean; tier?: "core" | "extended" } = {},
+  ) {
     if (!selected && !(await createSlip())) return;
-    setPicker({ game, props: [], loading: true, note: null });
-    const r = await api(
-      `/api/leagues/${slug}/props?game=${game.id}${refreshOdds ? "&refresh=1" : ""}`,
-    ).catch(() => null);
+    // Loading the extra markets keeps the board on screen underneath.
+    setPicker((cur) => ({
+      game,
+      props: cur?.game.id === game.id ? cur.props : [],
+      loading: true,
+      note: null,
+      extended: cur?.game.id === game.id ? cur.extended : false,
+    }));
+
+    const query = new URLSearchParams({ game: game.id });
+    if (options.refresh) query.set("refresh", "1");
+    if (options.tier === "extended") query.set("tier", "extended");
+    const r = await api(`/api/leagues/${slug}/props?${query}`).catch(() => null);
+
     // Ignore a response for a sheet the user already closed or switched.
     setPicker((cur) =>
       cur && cur.game.id === game.id
         ? {
             game,
-            props: r?.ok ? (r.data.props as GameProp[]) : [],
+            props: r?.ok ? (r.data.props as GameProp[]) : cur.props,
             loading: false,
+            extended: r?.ok ? Boolean(r.data.extended) : cur.extended,
             note: r?.ok
               ? ((r.data.note as string | null) ?? null)
               : (r && errorOf(r)) ?? "Couldn't load odds",
@@ -542,11 +558,17 @@ export function GroupBettingClient({
         slipLegs={legs}
         locked={slipLocked || phase === "settled"}
         busy={busy}
+        extendedLoaded={picker?.extended ?? false}
         onClose={() => setPicker(null)}
         onAdd={(prop) => void addLeg(prop)}
         onRefresh={
-          viewer.isAdmin && picker ? () => void openGame(picker.game, true) : undefined
+          viewer.isAdmin && picker
+            ? () => void openGame(picker.game, { refresh: true })
+            : undefined
         }
+        onLoadExtended={() => {
+          if (picker) void openGame(picker.game, { tier: "extended" });
+        }}
       />
 
       <Sheet

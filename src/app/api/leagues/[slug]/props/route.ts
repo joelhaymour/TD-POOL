@@ -5,16 +5,26 @@ import { requireApiMembership } from "@/lib/auth/api";
 import {
   PROPS_SYNC_TTL_MS,
   syncGameProps,
+  type PropTier,
 } from "@/lib/services/sync-game-props";
 import { gameStarted } from "@/lib/props/slip";
+import { isCoreMarket, isExtendedMarket } from "@/lib/props/markets";
+import type { GameProp } from "@/lib/types";
 
 /** A cold game needs a live provider fetch, which can take a few seconds. */
 export const maxDuration = 60;
 
+function newestFetch(props: GameProp[], match: (key: string) => boolean): number {
+  return props.reduce(
+    (max, p) => (match(p.market_key) ? Math.max(max, Date.parse(p.fetched_at) || 0) : max),
+    0,
+  );
+}
+
 /**
- * Member: the full FanDuel prop board for one game. Refreshes from The Odds
- * API when the saved board is missing or older than the TTL; admins can force
- * it with ?refresh=1 (~15 credits).
+ * Member: one game's FanDuel board. `tier=extended` adds alternate lines and
+ * the rest of the markets — a second, larger pull, so it only happens when
+ * someone asks. Admins can force a refresh with `refresh=1`.
  */
 export async function GET(
   request: Request,
@@ -43,16 +53,16 @@ export async function GET(
       );
     }
 
+    const tier: PropTier =
+      url.searchParams.get("tier") === "extended" ? "extended" : "core";
     const wantsRefresh =
-      url.searchParams.get("refresh") === "1" &&
-      access.member.role === "admin";
+      url.searchParams.get("refresh") === "1" && access.member.role === "admin";
 
     let props = await store.listGameProps(gameId);
-    const newest = props.reduce(
-      (max, p) => Math.max(max, Date.parse(p.fetched_at) || 0),
-      0,
-    );
-    const stale = props.length === 0 || Date.now() - newest > PROPS_SYNC_TTL_MS;
+    const match = tier === "core" ? isCoreMarket : isExtendedMarket;
+    const loaded = props.some((p) => match(p.market_key));
+    const stale =
+      !loaded || Date.now() - newestFetch(props, match) > PROPS_SYNC_TTL_MS;
 
     let note: string | null = null;
     // Pregame markets come down at kickoff, so refreshing then would replace
@@ -63,6 +73,7 @@ export async function GET(
       try {
         const result = await syncGameProps(store, game, {
           force: wantsRefresh,
+          tier,
         });
         note = result.note;
         if (result.synced) props = await store.listGameProps(gameId);
@@ -72,7 +83,12 @@ export async function GET(
       }
     }
 
-    return NextResponse.json({ game, props, note });
+    return NextResponse.json({
+      game,
+      props,
+      note,
+      extended: props.some((p) => isExtendedMarket(p.market_key)),
+    });
   } catch (err) {
     return storeErrorResponse(err);
   }

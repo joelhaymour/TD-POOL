@@ -121,6 +121,20 @@ Group betting members build shared parlays: each member adds up to
   refreshed at most every `PROPS_SYNC_TTL_HOURS` (default 6). Refreshes stop
   below `ODDS_CREDIT_FLOOR` credits (default 40) and never run after kickoff,
   when FanDuel pulls pregame markets.
+- **Two market tiers.** `CORE_PROP_MARKETS` (18) load when a game is opened;
+  `EXTENDED_PROP_MARKETS` (alternate ladders, defence, longest, last TD,
+  team totals, first-half and first-quarter lines) load when someone taps
+  "Alt lines, defense & more markets". The Odds API bills per market a book
+  prices, so a measured TB@CIN board cost 11 credits for core (154
+  selections) and 17 more for extended (567 selections). Each tier replaces
+  only its own markets, so one does not wipe the other. Only markets an ESPN
+  box score can settle are listed — an ungradeable market would keep its slip
+  out of History forever.
+- **FanDuel reuses one selection id per player across markets**: Cade Otton's
+  receptions Over and receiving-yards Over are both `41346941`, differing only
+  by market id. Identify a selection by market + player + side + line, never
+  by `fd_selection_id` alone. Deep links are unaffected, since they send the
+  market id alongside.
 - **FanDuel links** must carry the bettor's state subdomain
   (`co.sportsbook.fanduel.com/addToBetslip?...`). Without it FanDuel shows a
   state picker first and multi-leg selections can be lost. The state is chosen

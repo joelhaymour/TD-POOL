@@ -69,6 +69,8 @@ type EspnCompetitor = {
   score?: string | number;
   team?: EspnTeam;
   statistics?: unknown[];
+  /** Points per quarter, used for first-half and first-quarter markets. */
+  linescores?: Array<{ value?: number; displayValue?: string }>;
 };
 
 type EspnOdds = {

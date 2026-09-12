@@ -6,6 +6,13 @@ import {
   findEventForGame,
 } from "@/lib/providers/the-odds-api/props";
 import { resolveRosterPlayer } from "@/lib/providers/the-odds-api/maps";
+import {
+  CORE_MARKET_KEYS,
+  EXTENDED_MARKET_KEYS,
+} from "@/lib/props/markets";
+
+/** Core markets load on open; the long tail loads when someone asks for it. */
+export type PropTier = "core" | "extended";
 
 function envNumber(name: string, fallback: number): number {
   const n = Number(process.env[name]);
@@ -13,7 +20,8 @@ function envNumber(name: string, fallback: number): number {
 }
 
 /**
- * A full FanDuel board costs ~12-16 credits per game, so boards are shared by
+ * The Odds API bills per market a book prices, so the core board is ~12-16
+ * credits per game and the extended pull is ~30-45 more. Boards are shared by
  * every league and refreshed at most once per TTL (PROPS_SYNC_TTL_HOURS,
  * default 6). Admins can force a refresh from the prop sheet.
  */
@@ -41,14 +49,17 @@ const skipped = (note: string | null): SyncGamePropsResult => ({
 export async function syncGameProps(
   store: Store,
   game: NflGame,
-  options: { force?: boolean } = {},
+  options: { force?: boolean; tier?: PropTier } = {},
 ): Promise<SyncGamePropsResult> {
   const apiKey = process.env.ODDS_API_KEY?.trim();
   if (getConfiguredOddsSource() !== "live" || !apiKey) {
     return skipped("Live odds are turned off in this environment");
   }
 
-  const key = `props:game:${game.id}`;
+  const tier = options.tier ?? "core";
+  const marketKeys = tier === "core" ? CORE_MARKET_KEYS : EXTENDED_MARKET_KEYS;
+  const key =
+    tier === "core" ? `props:game:${game.id}` : `props:game:${game.id}:extended`;
   const claimed = await store.claimSyncSlot(
     key,
     options.force ? 0 : PROPS_SYNC_TTL_MS,
@@ -70,7 +81,11 @@ export async function syncGameProps(
       return skipped("FanDuel has not listed this game yet");
     }
 
-    const { props, creditsUsed } = await fetchEventProps(apiKey, event.id);
+    const { props, creditsUsed } = await fetchEventProps(
+      apiKey,
+      event.id,
+      marketKeys,
+    );
 
     // Match player prop names to our roster so the board can show headshots
     // and positions. Unmatched names still land on the board as text.
@@ -101,12 +116,19 @@ export async function syncGameProps(
     }));
 
     // An empty response (markets pulled) must not wipe a board people are
-    // still reading from.
+    // still reading from. Only this tier's markets are replaced.
     const count =
       rows.length > 0
-        ? await store.replaceGameProps(game.week_id, game.id, "fanduel", rows)
+        ? await store.replaceGameProps(
+            game.week_id,
+            game.id,
+            "fanduel",
+            rows,
+            marketKeys,
+          )
         : 0;
     await store.completeSyncSlot(key, count > 0 ? "ok" : "error", {
+      tier,
       props: count,
       credits: creditsUsed,
     });
@@ -114,7 +136,12 @@ export async function syncGameProps(
       synced: count > 0,
       propCount: count,
       creditsUsed,
-      note: count > 0 ? null : "FanDuel has no props posted for this game yet",
+      note:
+        count > 0
+          ? null
+          : tier === "extended"
+            ? "FanDuel has no extra markets posted for this game yet"
+            : "FanDuel has no props posted for this game yet",
     };
   } catch (err) {
     await store.completeSyncSlot(key, "error", { message: String(err) });
