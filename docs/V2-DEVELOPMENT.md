@@ -141,11 +141,36 @@ Group betting members build shared parlays: each member adds up to
   once per device and saved in local storage. Multi-leg links use indexed
   arrays (`marketId[0]=…&selectionId[0]=…`); "Add one at a time" is the
   fallback with single-selection links.
+- **Boards pulled before props post.** FanDuel lists a Sunday game's lines as
+  soon as the previous week ends and its player markets midweek. A board with
+  lines but no player markets asks again for just the player markets every 30
+  minutes; The Odds API charges nothing when no requested market comes back
+  (verified: 0 credits), so waiting is free.
+- **Week roll.** Group betting leagues move to the next week at the last
+  kickoff, not the last final — nothing can be added once every game has
+  started. Scores keep syncing for earlier weeks that still have open legs.
+  TD pools still wait for every game to go final.
 - **Grading** runs on every Home load (throttled to once a minute): scores come
   from ESPN, then each pending leg on a final game is graded from the ESPN box
   score. A player absent from the box score counts as zero unless the injury
   report ruled him out (void). Admins can override any leg once its game has
   started. A slip settles, and moves to History, only when every leg is graded.
+
+### TD odds early in the week
+
+Books post anytime-TD markets game by game. A sync the night a week opens
+priced 62 players against a full week's ~368, and the 40-hour hold kept the
+board mostly blank until Wednesday. A sync pricing fewer than 12 players per
+unstarted game is now recorded as `partial` and retries after 12 hours.
+
+### Stale reads in page requests
+
+Next.js memoizes identical `GET` fetches for a whole page request, and work
+scheduled with `after()` shares that request. Supabase reads are `GET`s, so a
+row read back after a write came back unchanged: the refresh moved a league to
+Week 2, re-read the league as Week 1, and paid to re-price the finished week.
+`createAdminClient` passes an `AbortController` signal on every fetch, which is
+Next's documented opt-out. Route handlers were never affected.
 
 ### Staging odds
 
