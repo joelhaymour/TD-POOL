@@ -11,6 +11,7 @@ import { SlipHero } from "@/components/betting/slip-hero";
 import { FanduelLauncher } from "@/components/betting/fanduel-launcher";
 import { PropPickerSheet } from "@/components/betting/prop-picker-sheet";
 import { LegRow } from "@/components/betting/leg-row";
+import { RideBet } from "@/components/betting/ride-bet";
 import {
   gameStarted,
   slipEstimate,
@@ -30,7 +31,7 @@ import type {
   ParlayWithLegs,
 } from "@/lib/types";
 
-const GROUP_TABLES = ["parlays", "parlay_legs"] as const;
+const GROUP_TABLES = ["parlays", "parlay_legs", "parlay_share_links"] as const;
 
 type Picker = {
   game: NflGame;
@@ -266,6 +267,38 @@ export function GroupBettingClient({
     await refresh();
   }
 
+  async function addShareLink(url: string, note: string): Promise<boolean> {
+    if (!selected) return false;
+    const r = await api(`/api/leagues/${slug}/parlays/${selected.parlay.id}/shares`, {
+      method: "POST",
+      body: JSON.stringify({ url, note }),
+    });
+    if (!r.ok) {
+      toast({ title: "Link not saved", description: errorOf(r), tone: "error" });
+      return false;
+    }
+    toast({
+      title: "Link shared",
+      description: "The group can ride your bet now",
+      tone: "success",
+    });
+    await refresh();
+    return true;
+  }
+
+  async function removeShareLink(shareId: string) {
+    if (!selected) return;
+    const r = await api(
+      `/api/leagues/${slug}/parlays/${selected.parlay.id}/shares/${shareId}`,
+      { method: "DELETE" },
+    );
+    if (!r.ok) {
+      toast({ title: "Couldn't remove", description: errorOf(r), tone: "error" });
+      return;
+    }
+    await refresh();
+  }
+
   async function gradeLeg(legId: string, result: LegResult | "auto") {
     if (!selected) return;
     const r = await api(
@@ -396,6 +429,17 @@ export function GroupBettingClient({
           actions={heroActions}
         >
           <FanduelLauncher legs={legs} />
+          {legs.length > 0 || selected.shares.length > 0 ? (
+            <RideBet
+              shares={selected.shares}
+              members={members}
+              viewerMemberId={viewer.memberId}
+              isAdmin={viewer.isAdmin}
+              disabled={busy}
+              onAdd={addShareLink}
+              onRemove={removeShareLink}
+            />
+          ) : null}
         </SlipHero>
       ) : (
         <section className="relative overflow-hidden rounded-2xl bg-ink p-5 text-chalk shadow-card">

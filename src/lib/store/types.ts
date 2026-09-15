@@ -7,6 +7,7 @@ import type {
   NewParlayLeg,
   Parlay,
   ParlayLeg,
+  ParlayShareLink,
   ParlayWithLegs,
   LeagueDashboard,
   LeagueMember,
@@ -253,6 +254,16 @@ export interface Store {
   deleteParlay(parlayId: string): Promise<void>;
 
   /** Insert a leg snapshot. Duplicate selections in one slip are CONFLICT. */
+  /** Save (or replace) one member's share link for a slip at one book. */
+  saveParlayShareLink(input: {
+    parlay_id: string;
+    league_id: string;
+    member_id: string;
+    sportsbook: string;
+    url: string;
+    note?: string | null;
+  }): Promise<ParlayShareLink>;
+  removeParlayShareLink(shareId: string): Promise<ParlayShareLink | null>;
   addParlayLeg(input: NewParlayLeg): Promise<ParlayLeg>;
   removeParlayLeg(parlayId: string, legId: string): Promise<ParlayLeg | null>;
   gradeParlayLegs(updates: LegGradeUpdate[]): Promise<number>;

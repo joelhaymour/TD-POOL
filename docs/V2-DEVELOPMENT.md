@@ -150,6 +150,16 @@ Group betting members build shared parlays: each member adds up to
   kickoff, not the last final — nothing can be added once every game has
   started. Scores keep syncing for earlier weeks that still have open legs.
   TD pools still wait for every game to go final.
+- **Ride this bet.** Sportsbooks mint share links on their own servers and no
+  third party can construct one, so the member who placed the slip pastes
+  theirs (`parlay_share_links`) and everyone else gets a branded button that
+  loads the same selections in their own account. One link per member per book,
+  so several books can sit side by side. The pasted text is scanned for the
+  first URL and its host must match a book in `src/lib/props/sportsbooks.ts` —
+  these become buttons other members tap, so an open field would turn a slip
+  into a place to post any link. **Adding a book is one entry in that file**;
+  nothing else changes. `deepLink: true` marks the books we can also prefill
+  from our own board (FanDuel today).
 - **Grading** runs on every Home load (throttled to once a minute): scores come
   from ESPN, then each pending leg on a final game is graded from the ESPN box
   score. A player absent from the box score counts as zero unless the injury

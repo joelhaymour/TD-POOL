@@ -416,9 +416,27 @@ export type NewParlayLeg = Omit<
   "id" | "added_at" | "result" | "actual_value" | "graded_at" | "manual_result"
 >;
 
+/**
+ * A link the bettor generated inside their sportsbook after placing the slip.
+ * Only the book can mint one, so it is pasted rather than built, and the rest
+ * of the league opens it to load the same selections into their own account.
+ */
+export interface ParlayShareLink {
+  id: string;
+  parlay_id: string;
+  league_id: string;
+  member_id: string;
+  sportsbook: string;
+  url: string;
+  note: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface ParlayWithLegs {
   parlay: Parlay;
   legs: ParlayLeg[];
+  shares: ParlayShareLink[];
 }
 
 export interface SelectPickInput {

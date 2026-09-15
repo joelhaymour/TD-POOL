@@ -33,6 +33,7 @@ import type {
   NewParlayLeg,
   Parlay,
   ParlayLeg,
+  ParlayShareLink,
   ParlayWithLegs,
   LeagueDashboard,
   LeagueMember,
@@ -173,6 +174,20 @@ function mapParlay(row: Record<string, unknown>): Parlay {
         : "pending",
     payout: numOrNull(row.payout),
     settled_at: row.settled_at ? String(row.settled_at) : null,
+    created_at: String(row.created_at),
+    updated_at: String(row.updated_at),
+  };
+}
+
+function mapShareLink(row: Record<string, unknown>): ParlayShareLink {
+  return {
+    id: String(row.id),
+    parlay_id: String(row.parlay_id),
+    league_id: String(row.league_id),
+    member_id: String(row.member_id),
+    sportsbook: String(row.sportsbook),
+    url: String(row.url),
+    note: row.note != null ? String(row.note) : null,
     created_at: String(row.created_at),
     updated_at: String(row.updated_at),
   };
@@ -1547,9 +1562,21 @@ export class SupabaseStore implements Store {
     if (legErr) throw legErr;
     const legs = (legRows ?? []).map(mapParlayLeg);
 
+    const { data: shareRows, error: shareErr } = await this.client
+      .from("parlay_share_links")
+      .select("*")
+      .in(
+        "parlay_id",
+        parlays.map((p) => p.id),
+      )
+      .order("created_at");
+    if (shareErr) throw shareErr;
+    const shares = (shareRows ?? []).map(mapShareLink);
+
     return parlays.map((parlay) => ({
       parlay,
       legs: legs.filter((l) => l.parlay_id === parlay.id),
+      shares: shares.filter((s) => s.parlay_id === parlay.id),
     }));
   }
 
@@ -1567,9 +1594,16 @@ export class SupabaseStore implements Store {
       .eq("parlay_id", parlayId)
       .order("added_at");
     if (legErr) throw legErr;
+    const { data: shareRows, error: shareErr } = await this.client
+      .from("parlay_share_links")
+      .select("*")
+      .eq("parlay_id", parlayId)
+      .order("created_at");
+    if (shareErr) throw shareErr;
     return {
       parlay: mapParlay(data),
       legs: (legRows ?? []).map(mapParlayLeg),
+      shares: (shareRows ?? []).map(mapShareLink),
     };
   }
 
@@ -1590,6 +1624,46 @@ export class SupabaseStore implements Store {
       .delete()
       .eq("id", parlayId);
     if (error) throw error;
+  }
+
+  async saveParlayShareLink(input: {
+    parlay_id: string;
+    league_id: string;
+    member_id: string;
+    sportsbook: string;
+    url: string;
+    note?: string | null;
+  }): Promise<ParlayShareLink> {
+    // One row per member per book: pasting a corrected link replaces the old.
+    const { data, error } = await this.client
+      .from("parlay_share_links")
+      .upsert(
+        {
+          parlay_id: input.parlay_id,
+          league_id: input.league_id,
+          member_id: input.member_id,
+          sportsbook: input.sportsbook,
+          url: input.url,
+          note: input.note ?? null,
+          updated_at: nowIso(),
+        },
+        { onConflict: "parlay_id,member_id,sportsbook" },
+      )
+      .select("*")
+      .single();
+    if (error) throw error;
+    return mapShareLink(data);
+  }
+
+  async removeParlayShareLink(shareId: string): Promise<ParlayShareLink | null> {
+    const { data, error } = await this.client
+      .from("parlay_share_links")
+      .delete()
+      .eq("id", shareId)
+      .select("*")
+      .maybeSingle();
+    if (error) throw error;
+    return data ? mapShareLink(data) : null;
   }
 
   async addParlayLeg(input: NewParlayLeg): Promise<ParlayLeg> {

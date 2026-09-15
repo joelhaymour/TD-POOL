@@ -1048,6 +1048,12 @@ export class LocalFileStore implements Store {
   async deleteParlay(): Promise<void> {
     this.groupBettingUnavailable();
   }
+  async saveParlayShareLink(): Promise<import("@/lib/types").ParlayShareLink> {
+    this.groupBettingUnavailable();
+  }
+  async removeParlayShareLink(): Promise<import("@/lib/types").ParlayShareLink | null> {
+    this.groupBettingUnavailable();
+  }
   async addParlayLeg(): Promise<import("@/lib/types").ParlayLeg> {
     this.groupBettingUnavailable();
   }
