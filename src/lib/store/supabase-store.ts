@@ -13,6 +13,7 @@ import {
   type SyncStateRow,
   type UserLeague,
   effectiveSyncTtl,
+  type SyncSlotStatus,
 } from "@/lib/store/types";
 import { chunk } from "@/lib/concurrency";
 import {
@@ -1709,7 +1710,7 @@ export class SupabaseStore implements Store {
 
   async completeSyncSlot(
     key: string,
-    status: "ok" | "error",
+    status: SyncSlotStatus,
     detail: Record<string, unknown> = {},
   ): Promise<void> {
     const fields: Record<string, unknown> = {
@@ -1719,7 +1720,7 @@ export class SupabaseStore implements Store {
       detail,
       updated_at: nowIso(),
     };
-    if (status === "ok") fields.last_ok_at = nowIso();
+    if (status !== "error") fields.last_ok_at = nowIso();
 
     const { error } = await this.client
       .from("sync_state")

@@ -15,7 +15,7 @@ import {
   featuresFromResearch,
   recomputePlayerAgainstCohort,
 } from "@/lib/model/recompute-with-market";
-import { StoreError, type Store, type GameStatusUpdate, type PickResultUpdate, type ApplyOddsRefreshInput, type JoinLeagueInput, type JoinLeagueResult, type SyncStateRow, type UserLeague, effectiveSyncTtl } from "@/lib/store/types";
+import { StoreError, type Store, type GameStatusUpdate, type PickResultUpdate, type ApplyOddsRefreshInput, type JoinLeagueInput, type JoinLeagueResult, type SyncStateRow, type UserLeague, type SyncSlotStatus, effectiveSyncTtl } from "@/lib/store/types";
 import type {
   CreateLeagueInput,
   League,
@@ -1079,14 +1079,14 @@ export class LocalFileStore implements Store {
 
   async completeSyncSlot(
     key: string,
-    status: "ok" | "error",
+    status: SyncSlotStatus,
     detail: Record<string, unknown> = {},
   ): Promise<void> {
     const existing = this.syncState.get(key);
     this.syncState.set(key, {
       key,
       last_run_at: nowIso(),
-      last_ok_at: status === "ok" ? nowIso() : (existing?.last_ok_at ?? null),
+      last_ok_at: status !== "error" ? nowIso() : (existing?.last_ok_at ?? null),
       status,
       detail,
     });

@@ -526,9 +526,8 @@ export async function ensureNflWeekMaterialized(
     const restored = await store.reapplyStoredOdds(nflWeek.id);
     if (restored === 0) {
       try {
-        const { syncWeekOdds, ODDS_SYNC_TTL_MS } = await import(
-          "@/lib/services/sync-odds"
-        );
+        const { syncWeekOdds, weekOddsSlotStatus, ODDS_SYNC_TTL_MS } =
+          await import("@/lib/services/sync-odds");
         // Share the week slot with page-load syncs, or a rebuild that lands
         // while one is running pays for the same slate twice.
         const weekKey = `odds:week:${season}:${week}`;
@@ -540,7 +539,7 @@ export async function ensureNflWeekMaterialized(
           });
           await store.completeSyncSlot(
             weekKey,
-            summary.playersUpdated > 0 ? "ok" : "error",
+            weekOddsSlotStatus(summary),
             {
               source: summary.source,
               quotes: summary.quotes,

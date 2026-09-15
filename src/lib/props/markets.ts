@@ -124,6 +124,15 @@ export function propMarketDef(key: string): PropMarketDef | null {
   return BY_KEY.get(key) ?? null;
 }
 
+/**
+ * Everything but game lines. FanDuel posts a Sunday game's lines right after
+ * the previous week ends, and its player markets a few days later.
+ */
+export function isPlayerMarket(key: string): boolean {
+  const def = BY_KEY.get(key);
+  return def != null && def.group !== "game_lines";
+}
+
 /** Display order: every market, with its alternate ladder right underneath. */
 const MARKET_DISPLAY_ORDER: string[] = (() => {
   const order: string[] = [];

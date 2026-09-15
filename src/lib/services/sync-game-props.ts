@@ -9,6 +9,7 @@ import { resolveRosterPlayer } from "@/lib/providers/the-odds-api/maps";
 import {
   CORE_MARKET_KEYS,
   EXTENDED_MARKET_KEYS,
+  isPlayerMarket,
 } from "@/lib/props/markets";
 
 /** Core markets load on open; the long tail loads when someone asks for it. */
@@ -27,6 +28,13 @@ function envNumber(name: string, fallback: number): number {
  */
 export const PROPS_SYNC_TTL_MS =
   envNumber("PROPS_SYNC_TTL_HOURS", 6) * 60 * 60_000;
+
+/**
+ * How often a board with game lines but no player markets checks again. The
+ * check asks only for the missing player markets, which costs nothing while
+ * FanDuel has none posted, so it can run far more often than a full refresh.
+ */
+export const PLAYER_PROPS_RECHECK_MS = 30 * 60_000;
 
 /** Below this many credits, keep serving the saved board instead of refreshing. */
 const CREDIT_FLOOR = envNumber("ODDS_CREDIT_FLOOR", 40);
@@ -51,19 +59,60 @@ export async function syncGameProps(
   game: NflGame,
   options: { force?: boolean; tier?: PropTier } = {},
 ): Promise<SyncGamePropsResult> {
+  const tier = options.tier ?? "core";
+  return pullMarkets(store, game, {
+    key: tier === "core" ? `props:game:${game.id}` : `props:game:${game.id}:extended`,
+    ttlMs: options.force ? 0 : PROPS_SYNC_TTL_MS,
+    marketKeys: tier === "core" ? CORE_MARKET_KEYS : EXTENDED_MARKET_KEYS,
+    emptyNote:
+      tier === "extended"
+        ? "FanDuel has no extra markets posted for this game yet"
+        : "FanDuel has no props posted for this game yet",
+  });
+}
+
+/**
+ * Fill in player markets on a board that was pulled before FanDuel posted
+ * them. Only player markets are requested and replaced, so the game lines
+ * already on the board stay put, and the call is free until props appear.
+ */
+export async function recheckPlayerProps(
+  store: Store,
+  game: NflGame,
+  options: { includeExtended: boolean },
+): Promise<SyncGamePropsResult> {
+  const keys = options.includeExtended
+    ? [...CORE_MARKET_KEYS, ...EXTENDED_MARKET_KEYS]
+    : CORE_MARKET_KEYS;
+  return pullMarkets(store, game, {
+    key: `props:game:${game.id}:players`,
+    ttlMs: PLAYER_PROPS_RECHECK_MS,
+    marketKeys: keys.filter(isPlayerMarket),
+    emptyNote:
+      "Game lines are up — FanDuel usually posts player props for this game midweek",
+    // Nothing posted yet is the expected answer, not a failure to retry soon.
+    emptyIsOk: true,
+  });
+}
+
+async function pullMarkets(
+  store: Store,
+  game: NflGame,
+  pull: {
+    key: string;
+    ttlMs: number;
+    marketKeys: string[];
+    emptyNote: string;
+    emptyIsOk?: boolean;
+  },
+): Promise<SyncGamePropsResult> {
   const apiKey = process.env.ODDS_API_KEY?.trim();
   if (getConfiguredOddsSource() !== "live" || !apiKey) {
     return skipped("Live odds are turned off in this environment");
   }
 
-  const tier = options.tier ?? "core";
-  const marketKeys = tier === "core" ? CORE_MARKET_KEYS : EXTENDED_MARKET_KEYS;
-  const key =
-    tier === "core" ? `props:game:${game.id}` : `props:game:${game.id}:extended`;
-  const claimed = await store.claimSyncSlot(
-    key,
-    options.force ? 0 : PROPS_SYNC_TTL_MS,
-  );
+  const { key, marketKeys } = pull;
+  const claimed = await store.claimSyncSlot(key, pull.ttlMs);
   if (!claimed) return skipped(null);
 
   try {
@@ -127,21 +176,16 @@ export async function syncGameProps(
             marketKeys,
           )
         : 0;
-    await store.completeSyncSlot(key, count > 0 ? "ok" : "error", {
-      tier,
-      props: count,
-      credits: creditsUsed,
-    });
+    await store.completeSyncSlot(
+      key,
+      count > 0 || pull.emptyIsOk ? "ok" : "error",
+      { props: count, credits: creditsUsed },
+    );
     return {
       synced: count > 0,
       propCount: count,
       creditsUsed,
-      note:
-        count > 0
-          ? null
-          : tier === "extended"
-            ? "FanDuel has no extra markets posted for this game yet"
-            : "FanDuel has no props posted for this game yet",
+      note: count > 0 ? null : pull.emptyNote,
     };
   } catch (err) {
     await store.completeSyncSlot(key, "error", { message: String(err) });

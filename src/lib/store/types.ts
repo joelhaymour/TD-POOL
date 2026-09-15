@@ -88,12 +88,17 @@ export type SyncStateRow = {
 /** Failed and abandoned runs must not hold a refresh slot for the full TTL. */
 const SYNC_ERROR_RETRY_MS = 5 * 60_000;
 const SYNC_RUNNING_STALE_MS = 10 * 60_000;
+/** A run that got some of the data (a slate still being posted) tries again sooner. */
+const SYNC_PARTIAL_RETRY_MS = 12 * 60 * 60_000;
+
+export type SyncSlotStatus = "ok" | "partial" | "error";
 
 export function effectiveSyncTtl(
   state: { status: string },
   ttlMs: number,
 ): number {
   if (state.status === "error") return Math.min(ttlMs, SYNC_ERROR_RETRY_MS);
+  if (state.status === "partial") return Math.min(ttlMs, SYNC_PARTIAL_RETRY_MS);
   if (state.status === "running") return Math.min(ttlMs, SYNC_RUNNING_STALE_MS);
   return ttlMs;
 }
@@ -265,7 +270,7 @@ export interface Store {
   /** Record the outcome of a refresh so other instances can throttle on it. */
   completeSyncSlot(
     key: string,
-    status: "ok" | "error",
+    status: SyncSlotStatus,
     detail?: Record<string, unknown>,
   ): Promise<void>;
 }

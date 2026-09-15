@@ -1,13 +1,15 @@
 import { getNFLProvider } from "@/lib/providers";
 import { getStore } from "@/lib/store";
 import type { Store } from "@/lib/store/types";
-import type { League, PickResult } from "@/lib/types";
+import type { League, NflWeek, PickResult } from "@/lib/types";
 
 export type SyncNflWeekOptions = {
   season?: number;
   week?: number;
   asOf?: Date;
   leagueId?: string;
+  /** Update game statuses and scores only; skip TD pick resolution. */
+  scoresOnly?: boolean;
 };
 
 export type SyncNflWeekSummary = {
@@ -34,7 +36,15 @@ const inFlightAutoSync = new Map<string, Promise<SyncNflWeekSummary | null>>();
  */
 export async function autoSyncLeagueWeek(
   slug: string,
-  options: { force?: boolean } = {},
+  options: {
+    force?: boolean;
+    /**
+     * The week to sync, when the caller has just aligned it. Re-reading the
+     * league inside `after()` can return the page render's memoized row — the
+     * week before the move — and sync a finished week instead.
+     */
+    target?: { leagueId: string; week: NflWeek };
+  } = {},
 ): Promise<SyncNflWeekSummary | null> {
   const existing = inFlightAutoSync.get(slug);
   if (existing) return existing;
@@ -49,13 +59,17 @@ export async function autoSyncLeagueWeek(
       );
       if (!claimed) return null;
 
-      const dashboard = await store.getDashboard(slug);
-      if (!dashboard) return null;
+      let target = options.target;
+      if (!target) {
+        const dashboard = await store.getDashboard(slug);
+        if (!dashboard) return null;
+        target = { leagueId: dashboard.league.id, week: dashboard.week };
+      }
 
       const summary = await syncNflWeek(store, {
-        season: dashboard.week.season,
-        week: dashboard.week.week,
-        leagueId: dashboard.league.id,
+        season: target.week.season,
+        week: target.week.week,
+        leagueId: target.leagueId,
         asOf: new Date(),
       });
       await store.completeSyncSlot(key, "ok", {
@@ -160,6 +174,8 @@ export async function syncNflWeek(
 
     gamesUpdated = await store.updateGameStatuses(updates);
   }
+
+  if (options.scoresOnly) return { ...empty(), gamesUpdated };
 
   const gamesAfter = await store.listGamesForWeek(nflWeek.id);
   const gamesById = new Map(gamesAfter.map((g) => [g.id, g]));

@@ -154,17 +154,18 @@ export async function refreshLeagueData(slug: string): Promise<void> {
     const league = await store.getLeagueBySlug(slug);
     if (!league) return;
 
-    // Advance to the right week / rebuild a stale board.
-    await alignLeagueActiveWeek(store, league);
+    // Advance to the right week / rebuild a stale board. Everything after
+    // uses the week this returns: `league` still holds the week before a move.
+    const week = await alignLeagueActiveWeek(store, league);
 
     await Promise.all([
-      autoSyncLeagueWeek(slug).catch(() => null),
-      autoSyncLeagueOdds(slug).catch(() => null),
+      autoSyncLeagueWeek(slug, {
+        target: { leagueId: league.id, week },
+      }).catch(() => null),
+      autoSyncLeagueOdds(slug, { week }).catch(() => null),
     ]);
 
-    if (league.active_week_id) {
-      await store.reapplyStoredOdds(league.active_week_id).catch(() => null);
-    }
+    await store.reapplyStoredOdds(week.id).catch(() => null);
 
     await store.completeSyncSlot(`refresh:${slug}`, "ok");
   } catch (err) {

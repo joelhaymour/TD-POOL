@@ -1,12 +1,14 @@
 import { nextPoolWeek, resolvePoolWeek } from "@/lib/nfl/calendar";
 import { ensureNflWeekMaterialized } from "@/lib/services/ensure-nfl-week";
+import { gameStarted } from "@/lib/props/slip";
 import type { Store } from "@/lib/store/types";
 import type { League, NflWeek } from "@/lib/types";
 
 /**
  * Align a league onto the current pool week:
  * - Before season → Week 1
- * - After all games of active week are final → next week
+ * - After all games of active week are final → next week (group betting
+ *   leagues move on at the last kickoff instead)
  * - If active week is behind the calendar pool week → snap forward
  */
 export async function alignLeagueActiveWeek(
@@ -23,14 +25,20 @@ export async function alignLeagueActiveWeek(
     const active = weeks.find((w) => w.id === league.active_week_id);
     if (active) {
       const games = await store.listGamesForWeek(active.id);
-      const allFinal =
-        games.length > 0 && games.every((g) => g.status === "final");
+      // A group slip cannot take a leg from a game in progress, so once the
+      // last game kicks off there is nothing left to build this week. Slips
+      // still in play stay on Home and keep grading after the move.
+      const weekDone =
+        games.length > 0 &&
+        (league.league_type === "group_betting"
+          ? games.every((g) => gameStarted(g, asOf.getTime()))
+          : games.every((g) => g.status === "final"));
 
       const activeBehind =
         active.season < pool.season ||
         (active.season === pool.season && active.week < pool.week);
 
-      if (allFinal) {
+      if (weekDone) {
         const next = nextPoolWeek(active.season, active.week);
         if (next) {
           targetSeason = next.season;

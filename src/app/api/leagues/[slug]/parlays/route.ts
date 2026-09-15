@@ -38,7 +38,7 @@ export async function GET(
       access.league,
       access.league.active_week_id,
     );
-    return NextResponse.json(data);
+    return NextResponse.json({ ...data, weekId: access.league.active_week_id });
   } catch (err) {
     return storeErrorResponse(err);
   }

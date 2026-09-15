@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
+import { useRouter } from "next/navigation";
 import { ChevronDown, ChevronRight, Lock, Plus, Trash2, Unlock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet } from "@/components/ui/sheet";
@@ -95,6 +96,7 @@ export function GroupBettingClient({
   viewer: { memberId: string; isAdmin: boolean };
 }) {
   const { toast } = useToast();
+  const router = useRouter();
   const [slips, setSlips] = useState(initialSlips);
   const [games, setGames] = useState(initialGames);
   const [selectedId, setSelectedId] = useState<string | null>(
@@ -112,10 +114,13 @@ export function GroupBettingClient({
       if (!r.ok) return;
       setSlips(r.data.slips as ParlayWithLegs[]);
       setGames(r.data.games as NflGame[]);
+      // The league moved to a new week while this page was open: re-render
+      // the server parts (header week, slip title) too.
+      if (r.data.weekId && r.data.weekId !== week.id) router.refresh();
     } catch {
       // Keep the last good snapshot on a transient error.
     }
-  }, [slug]);
+  }, [slug, week.id, router]);
 
   const { connected } = useLeagueRealtime(league.id, refresh, GROUP_TABLES);
 

@@ -4,11 +4,16 @@ import { storeErrorResponse } from "@/lib/api/store-error";
 import { requireApiMembership } from "@/lib/auth/api";
 import {
   PROPS_SYNC_TTL_MS,
+  recheckPlayerProps,
   syncGameProps,
   type PropTier,
 } from "@/lib/services/sync-game-props";
 import { gameStarted } from "@/lib/props/slip";
-import { isCoreMarket, isExtendedMarket } from "@/lib/props/markets";
+import {
+  isCoreMarket,
+  isExtendedMarket,
+  isPlayerMarket,
+} from "@/lib/props/markets";
 import type { GameProp } from "@/lib/types";
 
 /** A cold game needs a live provider fetch, which can take a few seconds. */
@@ -65,6 +70,7 @@ export async function GET(
       !loaded || Date.now() - newestFetch(props, match) > PROPS_SYNC_TTL_MS;
 
     let note: string | null = null;
+    let pulledNow = false;
     // Pregame markets come down at kickoff, so refreshing then would replace
     // the board with nothing.
     if (gameStarted(game)) {
@@ -75,11 +81,34 @@ export async function GET(
           force: wantsRefresh,
           tier,
         });
+        pulledNow = true;
         note = result.note;
         if (result.synced) props = await store.listGameProps(gameId);
       } catch (err) {
         // A failed provider call still serves whatever board we have.
         note = err instanceof Error ? err.message : String(err);
+      }
+    }
+
+    // Lines but no player markets: the board was pulled before FanDuel posted
+    // props. Ask again for just those — free until they appear — rather than
+    // waiting out the full refresh window.
+    const hasPlayerMarkets = () => props.some((p) => isPlayerMarket(p.market_key));
+    if (props.length > 0 && !hasPlayerMarkets() && !gameStarted(game)) {
+      // Straight after a full pull, asking again would only repeat its answer.
+      if (!pulledNow) {
+        try {
+          const result = await recheckPlayerProps(store, game, {
+            includeExtended: props.some((p) => isExtendedMarket(p.market_key)),
+          });
+          if (result.synced) props = await store.listGameProps(gameId);
+        } catch (err) {
+          console.error("player prop recheck failed", err);
+        }
+      }
+      if (!hasPlayerMarkets()) {
+        note ??=
+          "Game lines are up — FanDuel usually posts player props for this game midweek";
       }
     }
 

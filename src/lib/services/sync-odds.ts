@@ -1,7 +1,9 @@
 import { getConfiguredOddsSource, getOddsProvider } from "@/lib/providers";
 import { getStore } from "@/lib/store";
-import type { Store } from "@/lib/store/types";
+import type { Store, SyncSlotStatus } from "@/lib/store/types";
+import { gameStarted } from "@/lib/props/slip";
 import type { ConsensusOdds, OddsQuote } from "@/lib/providers/types";
+import type { NflWeek } from "@/lib/types";
 
 export type OddsSyncSummary = {
   source: "live" | "mock" | "none";
@@ -17,6 +19,8 @@ export type OddsSyncSummary = {
   creditsUsed?: number | null;
   /** API book keys we received but do not display. */
   unmappedBookmakers?: string[];
+  /** Games in the week that had not kicked off when the sync ran. */
+  openGames?: number;
 };
 
 /**
@@ -28,6 +32,23 @@ export type OddsSyncSummary = {
 export const ODDS_SYNC_TTL_MS = 40 * 60 * 60_000;
 const inFlightOddsSync = new Map<string, Promise<OddsSyncSummary | null>>();
 
+/**
+ * A full week prices ~23 players per game. Books post anytime-TD markets game
+ * by game — Thursday's first, Sunday's midweek — so a sync the night the week
+ * opens can price a fraction of the slate. Holding that for the full TTL left
+ * the board mostly blank until Wednesday.
+ */
+const FULL_BOARD_PLAYERS_PER_GAME = 12;
+
+/** Slot status for a week odds sync: partial boards retry after 12 hours. */
+export function weekOddsSlotStatus(summary: OddsSyncSummary): SyncSlotStatus {
+  if (summary.playersUpdated <= 0) return "error";
+  const open = summary.openGames ?? 0;
+  return summary.playersUpdated < open * FULL_BOARD_PLAYERS_PER_GAME
+    ? "partial"
+    : "ok";
+}
+
 export { getConfiguredOddsSource };
 
 /**
@@ -37,13 +58,19 @@ export { getConfiguredOddsSource };
  */
 export async function autoSyncLeagueOdds(
   slug: string,
-  options: { force?: boolean } = {},
+  /** `week`: the just-aligned week — see autoSyncLeagueWeek for why. */
+  options: { force?: boolean; week?: NflWeek } = {},
 ): Promise<OddsSyncSummary | null> {
   const store = getStore();
-  const dashboard = await store.getDashboard(slug);
-  if (!dashboard) return null;
+  let week = options.week;
+  if (!week) {
+    const dashboard = await store.getDashboard(slug);
+    if (!dashboard) return null;
+    week = dashboard.week;
+  }
+  const target = week;
 
-  const weekKey = `odds:week:${dashboard.week.season}:${dashboard.week.week}`;
+  const weekKey = `odds:week:${target.season}:${target.week}`;
   const existing = inFlightOddsSync.get(weekKey);
   if (existing) return existing;
 
@@ -56,9 +83,9 @@ export async function autoSyncLeagueOdds(
       if (!claimed) return null;
 
       const summary = await syncWeekOdds(store, {
-        season: dashboard.week.season,
-        week: dashboard.week.week,
-        weekId: dashboard.week.id,
+        season: target.season,
+        week: target.week,
+        weekId: target.id,
       });
       const detail = {
         source: summary.source,
@@ -71,8 +98,8 @@ export async function autoSyncLeagueOdds(
       };
       // An empty result must not hold the 40-hour slot, or a missing key or
       // an unposted market keeps the board blank for two days. Errors retry
-      // after five minutes (see effectiveSyncTtl).
-      const status = summary.playersUpdated > 0 ? "ok" : "error";
+      // after five minutes, partial slates after 12 hours (see effectiveSyncTtl).
+      const status = weekOddsSlotStatus(summary);
       await store.completeSyncSlot(weekKey, status, detail);
       await store.completeSyncSlot(`odds:${slug}`, status, detail);
       return summary;
@@ -175,5 +202,6 @@ export async function syncWeekOdds(
     creditsRemaining,
     creditsUsed,
     unmappedBookmakers,
+    openGames: games.filter((g) => !gameStarted(g)).length,
   };
 }
