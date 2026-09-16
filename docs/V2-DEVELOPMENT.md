@@ -195,6 +195,19 @@ Group betting members build shared parlays: each member adds up to
   is only written when its result or stat actually moved.
   **This costs no odds credits** — ESPN's box score is free. Odds APIs sell
   prices, not player stats.
+- **Live cadence.** While any game on the board is `in_progress` the league
+  refresh slot opens every 20s, scores are pulled every 25s, box scores are
+  cached 45s per game, and both group screens poll every 20s — so a leg moves
+  within about half a minute of the play. Off game days everything falls back
+  to 60-90s. ESPN publishes box-score updates every 15-30s, so ~20s is the
+  practical floor for a free feed; going lower needs a paid live-stats
+  provider, which odds APIs are not.
+- **Unattended settlement.** The daily cron settles group parlays as well as
+  rebuilding the TD board. Before that, grading only ran when somebody opened
+  the app, which is how legs sat pending overnight. A parlay that ends while
+  nobody is watching now settles on the next cron run; minute-level
+  unattended settlement would need a per-minute trigger (Vercel Pro cron, or a
+  free external ticker hitting the cron route with CRON_SECRET).
 - **Grading** runs on every Home load (throttled to once a minute): scores come
   from ESPN, then each pending leg on a final game is graded from the ESPN box
   score. A player absent from the box score counts as zero unless the injury

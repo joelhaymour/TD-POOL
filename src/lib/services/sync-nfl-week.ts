@@ -44,6 +44,8 @@ export async function autoSyncLeagueWeek(
      * week before the move — and sync a finished week instead.
      */
     target?: { leagueId: string; week: NflWeek };
+    /** Overrides the shared throttle — shorter while a game is being played. */
+    ttlMs?: number;
   } = {},
 ): Promise<SyncNflWeekSummary | null> {
   const existing = inFlightAutoSync.get(slug);
@@ -55,7 +57,7 @@ export async function autoSyncLeagueWeek(
     try {
       const claimed = await store.claimSyncSlot(
         key,
-        options.force ? 0 : AUTO_SYNC_TTL_MS,
+        options.force ? 0 : (options.ttlMs ?? AUTO_SYNC_TTL_MS),
       );
       if (!claimed) return null;
 

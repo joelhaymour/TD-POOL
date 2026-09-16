@@ -6,6 +6,7 @@ import { formatAmerican } from "@/lib/utils/odds";
 import { gameStarted } from "@/lib/props/slip";
 import { actualLabel, gameLabel, legTitle, RESULT_META } from "@/lib/props/format";
 import { MemberChip, ResultMark } from "@/components/ui/result-mark";
+import { LegLineProgress, hasLineProgress } from "@/components/betting/leg-line-progress";
 import type { LegResult, NflGame, ParlayLeg } from "@/lib/types";
 
 const GRADE_OPTIONS: Array<[LegResult | "auto", string]> = [
@@ -42,7 +43,7 @@ export function LegRow({
   return (
     <li
       className={cn(
-        "flex items-center gap-2.5 rounded-xl border px-3 py-2.5",
+        "flex flex-wrap items-center gap-x-2.5 gap-y-2 rounded-xl border px-3 py-2.5",
         leg.result === "won"
           ? "border-lime/30 bg-lime/[0.07]"
           : leg.result === "lost"
@@ -84,7 +85,7 @@ export function LegRow({
           </select>
         ) : null}
       </div>
-      <span className="shrink-0 pt-0.5 font-display text-sm font-bold text-ink">
+      <span className="shrink-0 font-display text-sm font-bold text-ink">
         {formatAmerican(leg.american_odds)}
       </span>
       {onRemove ? (
@@ -96,6 +97,9 @@ export function LegRow({
         >
           <X className="h-4 w-4" />
         </button>
+      ) : null}
+      {hasLineProgress(leg) ? (
+        <LegLineProgress leg={leg} className="w-full" />
       ) : null}
     </li>
   );

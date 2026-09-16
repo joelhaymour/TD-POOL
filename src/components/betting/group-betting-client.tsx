@@ -139,14 +139,14 @@ export function GroupBettingClient({
 
   const { connected } = useLeagueRealtime(league.id, refresh, GROUP_TABLES);
 
-  // Realtime misses deletes and score changes, so keep a slow poll running.
+  // Realtime misses deletes and score changes, so keep a poll running: every
+  // 20s while a game is being played, lazily the rest of the week.
+  const anyLive = games.some((g) => g.status === "in_progress");
   useEffect(() => {
-    const id = window.setInterval(
-      () => void refresh(),
-      connected ? 90_000 : 30_000,
-    );
+    const every = anyLive ? 20_000 : connected ? 90_000 : 30_000;
+    const id = window.setInterval(() => void refresh(), every);
     return () => window.clearInterval(id);
-  }, [connected, refresh]);
+  }, [anyLive, connected, refresh]);
 
   const gamesById = useMemo(() => new Map(games.map((g) => [g.id, g])), [games]);
   const selected =

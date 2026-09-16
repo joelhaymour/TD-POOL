@@ -7,6 +7,8 @@ import {
   ODDS_SYNC_TTL_MS,
 } from "@/lib/services/sync-odds";
 import { resolvePoolWeek } from "@/lib/nfl/calendar";
+import { settleLeagueParlays } from "@/lib/services/settle-parlays";
+import { syncNflWeek } from "@/lib/services/sync-nfl-week";
 
 /** Full board rebuild — the slowest job in the app. */
 export const maxDuration = 300;
@@ -93,11 +95,28 @@ export async function GET(request: Request) {
     }).catch(() => {});
   }
 
+  // Group betting settles here as well. Without it a parlay stays pending
+  // until somebody opens the app, which is how legs sat overnight.
+  let parlaysSettled = 0;
+  try {
+    await syncNflWeek(store, { season, week, scoresOnly: true });
+    const leagues = await store.listLeagues();
+    for (const league of leagues.filter(
+      (l) => l.league_type === "group_betting",
+    )) {
+      const summary = await settleLeagueParlays(store, league);
+      parlaysSettled += summary.slipsSettled;
+    }
+  } catch (err) {
+    console.error("cron parlay settlement failed", err);
+  }
+
   return NextResponse.json({
     ok: true,
     season,
     week,
     weekId: nflWeek.id,
+    parlaysSettled,
     odds: odds ?? { skipped: "odds TTL not elapsed" },
     at: new Date().toISOString(),
   });

@@ -8,6 +8,10 @@ import { useLeagueRealtime } from "@/hooks/use-league-realtime";
 import { RideBet } from "@/components/betting/ride-bet";
 import { LegProgress, legProgressLabel } from "@/components/betting/leg-progress";
 import { MemberChip, ResultMark } from "@/components/ui/result-mark";
+import {
+  LegLineProgress,
+  hasLineProgress,
+} from "@/components/betting/leg-line-progress";
 import { legTitle, gameLabel, actualLabel } from "@/lib/props/format";
 import {
   gameStarted,
@@ -93,10 +97,12 @@ export function ParlayBoard({
   }, [slug]);
 
   const { connected } = useLeagueRealtime(league.id, refresh, GROUP_TABLES);
+  const anyLive = games.some((g) => g.status === "in_progress");
   useEffect(() => {
-    const id = window.setInterval(() => void refresh(), connected ? 90_000 : 30_000);
+    const every = anyLive ? 20_000 : connected ? 90_000 : 30_000;
+    const id = window.setInterval(() => void refresh(), every);
     return () => window.clearInterval(id);
-  }, [connected, refresh]);
+  }, [anyLive, connected, refresh]);
 
   const gamesById = useMemo(() => new Map(games.map((g) => [g.id, g])), [games]);
   const weekById = useMemo(() => new Map(weeks.map((w) => [w.id, w])), [weeks]);
@@ -254,7 +260,7 @@ export function ParlayBoard({
                           <li
                             key={leg.id}
                             className={cn(
-                              "flex items-center gap-2.5 rounded-xl border px-3 py-2.5",
+                              "flex flex-wrap items-center gap-x-2.5 gap-y-2 rounded-xl border px-3 py-2.5",
                               leg.result === "won"
                                 ? "border-lime/30 bg-lime/[0.07]"
                                 : leg.result === "lost"
@@ -282,6 +288,9 @@ export function ParlayBoard({
                             <span className="shrink-0 font-display text-sm font-bold text-turf">
                               {formatAmerican(leg.american_odds)}
                             </span>
+                            {hasLineProgress(leg) ? (
+                              <LegLineProgress leg={leg} className="w-full" />
+                            ) : null}
                           </li>
                         );
                       })}

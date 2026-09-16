@@ -10,23 +10,35 @@ import {
 } from "@/lib/services/sync-nfl-week";
 import { settleLeagueParlays } from "@/lib/services/settle-parlays";
 
+/** How often a league may refresh, and how often scores may be pulled. */
+const LIVE_REFRESH_MS = 20_000;
+const LIVE_SCORE_TTL_MS = 25_000;
+
 /**
- * Background refresh for a group betting league: advance the week, pull live
- * scores, then grade legs on finished games. The TD board's odds sync is
- * skipped — group betting prices come from the per-game prop board instead.
- * Safe to call on every request; the shared slot allows one run a minute.
+ * Background refresh for a group betting league: advance the week, pull
+ * scores, then grade legs. The TD board's odds sync is skipped — group
+ * betting prices come from the per-game prop board instead.
+ *
+ * Safe to call on every request. While a game on the board is being played
+ * the shared slot opens every 20 seconds and scores are pulled every 25, so
+ * the parlay cards keep pace with the broadcast; the rest of the week it
+ * settles back to a minute.
  */
 export async function refreshGroupLeague(slug: string): Promise<void> {
   const store = getStore();
   try {
-    if (!(await store.claimSyncSlot(`refresh:${slug}`, 60_000))) return;
+    if (!(await store.claimSyncSlot(`refresh:${slug}`, LIVE_REFRESH_MS))) return;
 
     const league = await store.getLeagueBySlug(slug);
     if (!league) return;
 
     const week = await alignLeagueActiveWeek(store, league);
+    const live = (await store.listGamesForWeek(week.id)).some(
+      (g) => g.status === "in_progress",
+    );
     await autoSyncLeagueWeek(slug, {
       target: { leagueId: league.id, week },
+      ttlMs: live ? LIVE_SCORE_TTL_MS : undefined,
     }).catch(() => null);
     await syncOpenLegWeeks(store, league, week.id);
     await settleLeagueParlays(store, league);
