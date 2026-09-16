@@ -173,6 +173,17 @@ Group betting members build shared parlays: each member adds up to
   (`countParlaysNeedingPicks`), using the same visibility filter as Home so an
   empty slip from a past week never badges. It is server-rendered, so the
   client calls `router.refresh()` after a pick is added or removed.
+- **Pasting a share link.** A book's share sheet puts a PICTURE of the bet on
+  the clipboard next to the link, and a text input ignores pictures — so a
+  plain paste looks like nothing happened. The sheet handles the paste event
+  itself (pulling `text/plain`) and offers a Paste button that reads the
+  clipboard's text directly. The parser then strips the surrounding sentence
+  ("Add To Your Bet Slip - https://…").
+- **Opening a share link** navigates in the same tab rather than a new one:
+  iOS hands a universal link to the sportsbook app on a plain navigation, but
+  a new tab tends to land on the book's website with no slip loaded. Each
+  link also has a copy button, since pasting into Messages always opens the
+  app — that is how the user first proved a link works.
 - **Ride this bet.** Sportsbooks mint share links on their own servers and no
   third party can construct one, so the member who placed the slip pastes
   theirs (`parlay_share_links`) and everyone else gets a branded button that

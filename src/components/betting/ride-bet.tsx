@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import { ExternalLink, Link2, Trash2 } from "lucide-react";
+import { Check, ClipboardPaste, Copy, ExternalLink, Link2, Trash2 } from "lucide-react";
 import { Sheet } from "@/components/ui/sheet";
 import { SHARE_BOOKS, sportsbook } from "@/lib/props/sportsbooks";
 import { cn } from "@/lib/utils/cn";
@@ -20,8 +20,7 @@ function BookButton({
   return (
     <a
       href={share.url}
-      target="_blank"
-      rel="noopener noreferrer"
+      rel="noopener"
       className="flex h-12 flex-1 items-center justify-center gap-2 rounded-xl px-3 font-display text-sm font-extrabold tracking-wide shadow-sm ring-1 ring-inset ring-white/20 transition active:scale-[0.98]"
       style={{
         backgroundColor: book?.brand.bg ?? "#333333",
@@ -64,7 +63,40 @@ export function RideBet({
   const [url, setUrl] = useState("");
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState(false);
+  const [copied, setCopied] = useState<string | null>(null);
+  const [pasteHint, setPasteHint] = useState<string | null>(null);
   const dark = tone === "dark";
+
+  async function copyLink(id: string, url: string) {
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopied(id);
+      window.setTimeout(() => setCopied(null), 1600);
+    } catch {
+      // Clipboard blocked; the link is still openable from the button.
+    }
+  }
+
+  /**
+   * A book's share sheet puts a picture of the bet on the clipboard beside
+   * the link, and a text field ignores pictures — which reads as "nothing
+   * pasted". Reading the clipboard's text directly gets the link every time.
+   */
+  async function pasteFromClipboard() {
+    setPasteHint(null);
+    try {
+      const text = await navigator.clipboard.readText();
+      if (text.trim()) {
+        setUrl(text.trim());
+        return;
+      }
+      setPasteHint(
+        "The clipboard only held the picture of the bet — in the book's share sheet choose Copy link.",
+      );
+    } catch {
+      setPasteHint("Couldn't read the clipboard. Long-press the box and paste instead.");
+    }
+  }
 
   const nameFor = (memberId: string) =>
     members.find((m) => m.id === memberId)?.display_name ?? null;
@@ -98,6 +130,23 @@ export function RideBet({
             {shares.map((share) => (
               <div key={share.id} className="flex min-w-[45%] flex-1 items-center gap-1.5">
                 <BookButton share={share} who={nameFor(share.member_id)} />
+                <button
+                  type="button"
+                  className={cn(
+                    "rounded-lg p-2 transition",
+                    dark
+                      ? "text-raised-fg/40 hover:text-raised-fg"
+                      : "text-ink-faint hover:text-ink",
+                  )}
+                  aria-label="Copy this link"
+                  onClick={() => void copyLink(share.id, share.url)}
+                >
+                  {copied === share.id ? (
+                    <Check className="h-4 w-4 text-lime" aria-hidden />
+                  ) : (
+                    <Copy className="h-4 w-4" aria-hidden />
+                  )}
+                </button>
                 {share.member_id === viewerMemberId || isAdmin ? (
                   <button
                     type="button"
@@ -158,15 +207,36 @@ export function RideBet({
           {/* Text, not url: a share sheet pastes a sentence around the link,
               which a url field refuses to submit. The link is pulled out and
               checked against the known books server-side. */}
-          <input
-            type="text"
-            inputMode="url"
-            autoComplete="off"
-            value={url}
-            onChange={(e) => setUrl(e.target.value)}
-            placeholder="https://..."
-            className="w-full rounded-xl border border-border bg-field px-3 py-2.5 text-sm text-ink outline-none focus:border-turf"
-          />
+          <div className="flex gap-2">
+            <input
+              type="text"
+              inputMode="url"
+              autoComplete="off"
+              value={url}
+              onChange={(e) => setUrl(e.target.value)}
+              onPaste={(e) => {
+                // When the clipboard holds the book's picture AND the link,
+                // the field takes neither. Pull the text out of the event.
+                const text = e.clipboardData?.getData("text/plain")?.trim();
+                if (text) {
+                  e.preventDefault();
+                  setUrl(text);
+                  setPasteHint(null);
+                }
+              }}
+              placeholder="https://..."
+              className="min-w-0 flex-1 rounded-xl border border-border bg-field px-3 py-2.5 text-sm text-ink outline-none focus:border-turf"
+            />
+            <button
+              type="button"
+              onClick={() => void pasteFromClipboard()}
+              className="flex shrink-0 items-center gap-1.5 rounded-xl border border-border-strong px-3 text-xs font-bold uppercase tracking-wide text-ink-muted transition hover:text-ink"
+            >
+              <ClipboardPaste className="h-4 w-4" aria-hidden />
+              Paste
+            </button>
+          </div>
+          {pasteHint ? <p className="text-[11px] text-warning">{pasteHint}</p> : null}
           <input
             type="text"
             value={note}
