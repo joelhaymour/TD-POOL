@@ -4,6 +4,7 @@ import { useState, type FormEvent } from "react";
 import { ExternalLink, Link2, Trash2 } from "lucide-react";
 import { Sheet } from "@/components/ui/sheet";
 import { SHARE_BOOKS, sportsbook } from "@/lib/props/sportsbooks";
+import { cn } from "@/lib/utils/cn";
 import type { LeagueMember, ParlayShareLink } from "@/lib/types";
 
 /** The book's own wordmark, on its own colour. */
@@ -45,6 +46,7 @@ export function RideBet({
   viewerMemberId,
   isAdmin,
   disabled,
+  tone = "dark",
   onAdd,
   onRemove,
 }: {
@@ -53,6 +55,8 @@ export function RideBet({
   viewerMemberId: string;
   isAdmin: boolean;
   disabled?: boolean;
+  /** "dark" sits on the slip hero; "light" on the parlay tiles. */
+  tone?: "dark" | "light";
   onAdd: (url: string, note: string) => Promise<boolean>;
   onRemove: (shareId: string) => Promise<void>;
 }) {
@@ -60,6 +64,7 @@ export function RideBet({
   const [url, setUrl] = useState("");
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState(false);
+  const dark = tone === "dark";
 
   const nameFor = (memberId: string) =>
     members.find((m) => m.id === memberId)?.display_name ?? null;
@@ -78,10 +83,15 @@ export function RideBet({
   }
 
   return (
-    <div className="mt-3 border-t border-chalk/10 pt-3">
+    <div className={cn(dark && "mt-3 border-t border-chalk/10 pt-3")}>
       {shares.length > 0 ? (
         <>
-          <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.1em] text-chalk/50">
+          <p
+            className={cn(
+              "mb-2 text-[10px] font-bold uppercase tracking-[0.1em]",
+              dark ? "text-chalk/50" : "text-ink-faint",
+            )}
+          >
             Ride this bet
           </p>
           <div className="flex flex-wrap gap-2">
@@ -91,7 +101,10 @@ export function RideBet({
                 {share.member_id === viewerMemberId || isAdmin ? (
                   <button
                     type="button"
-                    className="rounded-lg p-2 text-chalk/40 transition hover:text-danger"
+                    className={cn(
+                      "rounded-lg p-2 transition hover:text-danger",
+                      dark ? "text-chalk/40" : "text-ink-faint",
+                    )}
                     aria-label="Remove this link"
                     onClick={() => void onRemove(share.id)}
                   >
@@ -106,7 +119,13 @@ export function RideBet({
               const who = nameFor(share.member_id);
               const book = sportsbook(share.sportsbook);
               return (
-                <li key={share.id} className="text-[11px] text-chalk/55">
+                <li
+                  key={share.id}
+                  className={cn(
+                    "text-[11px]",
+                    dark ? "text-chalk/55" : "text-ink-faint",
+                  )}
+                >
                   {book?.name ?? share.sportsbook} · {who ?? "a member"}
                   {share.note ? ` · ${share.note}` : ""}
                 </li>
@@ -118,7 +137,10 @@ export function RideBet({
 
       <button
         type="button"
-        className="mt-2 flex items-center gap-1.5 text-[11px] font-medium text-chalk/55 underline-offset-2 transition hover:text-chalk hover:underline disabled:opacity-40"
+        className={cn(
+          "mt-2 flex items-center gap-1.5 text-[11px] font-medium underline-offset-2 transition hover:underline disabled:opacity-40",
+          dark ? "text-chalk/55 hover:text-chalk" : "text-ink-muted hover:text-ink",
+        )}
         onClick={() => setOpen(true)}
         disabled={disabled}
       >

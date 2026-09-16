@@ -97,10 +97,10 @@ export function SlipHero({
       <div className="relative">
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">
-            <h2 className="font-display text-lg font-extrabold uppercase tracking-[0.12em] text-lime">
-              Week {weekNumber} Parlay
+            <h2 className="line-clamp-2 font-display text-lg font-extrabold uppercase leading-tight tracking-[0.12em] text-lime">
+              {title}
             </h2>
-            <p className="truncate text-xs font-medium text-chalk/60">{title}</p>
+            <p className="text-xs font-medium text-chalk/60">Week {weekNumber}</p>
           </div>
           <div className="flex shrink-0 items-center gap-1">
             {actions}

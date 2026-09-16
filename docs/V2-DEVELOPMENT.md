@@ -150,6 +150,16 @@ Group betting members build shared parlays: each member adds up to
   kickoff, not the last final — nothing can be added once every game has
   started. Scores keep syncing for earlier weeks that still have open legs.
   TD pools still wait for every game to go final.
+- **Tabs.** Create (build and name a parlay, add picks), Parlays (every slip in
+  play as a tile leading with odds and payout, expandable to its legs and its
+  place-the-bet links), History (settled), Board. A league can carry many
+  parlays at once, so Create switches between them through a list rather than a
+  row of chips.
+- **No prefilled FanDuel slip.** The launcher and `fanduel-link.ts` were
+  removed: a share link the bettor pastes carries the real prices from the book
+  they actually used, and needs no state subdomain, no indexed-array format and
+  no per-leg id matching. FanDuel ids are still captured on each leg, so
+  prefill can come back from git history if it is ever wanted.
 - **Ride this bet.** Sportsbooks mint share links on their own servers and no
   third party can construct one, so the member who placed the slip pastes
   theirs (`parlay_share_links`) and everyone else gets a branded button that

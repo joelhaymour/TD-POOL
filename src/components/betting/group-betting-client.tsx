@@ -2,13 +2,20 @@
 
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronDown, ChevronRight, Lock, Plus, Trash2, Unlock } from "lucide-react";
+import {
+  ChevronDown,
+  ChevronRight,
+  Lock,
+  Pencil,
+  Plus,
+  Trash2,
+  Unlock,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet } from "@/components/ui/sheet";
 import { useToast } from "@/components/ui/toast";
 import { useLeagueRealtime } from "@/hooks/use-league-realtime";
 import { SlipHero } from "@/components/betting/slip-hero";
-import { FanduelLauncher } from "@/components/betting/fanduel-launcher";
 import { PropPickerSheet } from "@/components/betting/prop-picker-sheet";
 import { LegRow } from "@/components/betting/leg-row";
 import { RideBet } from "@/components/betting/ride-bet";
@@ -20,7 +27,7 @@ import {
   type SlipPhase,
 } from "@/lib/props/slip";
 import { cn } from "@/lib/utils/cn";
-import { calculateWeeklyStake, formatMoney } from "@/lib/utils/odds";
+import { calculateWeeklyStake, formatAmerican, formatMoney } from "@/lib/utils/odds";
 import type {
   GameProp,
   League,
@@ -86,6 +93,7 @@ export function GroupBettingClient({
   members,
   initialSlips,
   initialGames,
+  initialSlipId,
   viewer,
 }: {
   slug: string;
@@ -94,6 +102,8 @@ export function GroupBettingClient({
   members: LeagueMember[];
   initialSlips: ParlayWithLegs[];
   initialGames: NflGame[];
+  /** Parlay to open, when arriving from the Parlays tab. */
+  initialSlipId?: string | null;
   viewer: { memberId: string; isAdmin: boolean };
 }) {
   const { toast } = useToast();
@@ -101,13 +111,15 @@ export function GroupBettingClient({
   const [slips, setSlips] = useState(initialSlips);
   const [games, setGames] = useState(initialGames);
   const [selectedId, setSelectedId] = useState<string | null>(
-    initialSlips[0]?.parlay.id ?? null,
+    initialSlipId ?? initialSlips[0]?.parlay.id ?? null,
   );
   const [creating, setCreating] = useState(false);
   const [busy, setBusy] = useState(false);
   const [picker, setPicker] = useState<Picker | null>(null);
   const [stakeDraft, setStakeDraft] = useState<string | null>(null);
   const [membersOpen, setMembersOpen] = useState(true);
+  const [sheet, setSheet] = useState<null | "switch" | "new" | "rename" | "delete">(null);
+  const [nameDraft, setNameDraft] = useState("");
 
   const refresh = useCallback(async () => {
     try {
@@ -173,12 +185,12 @@ export function GroupBettingClient({
   const upcoming = games.filter((g) => !gameStarted(g));
   const underway = games.filter((g) => gameStarted(g));
 
-  async function createSlip(): Promise<string | null> {
+  async function createSlip(title?: string): Promise<string | null> {
     setCreating(true);
     try {
       const r = await api(`/api/leagues/${slug}/parlays`, {
         method: "POST",
-        body: "{}",
+        body: JSON.stringify(title?.trim() ? { title: title.trim() } : {}),
       });
       if (!r.ok) {
         toast({ title: "Couldn't start a parlay", description: errorOf(r), tone: "error" });
@@ -186,6 +198,8 @@ export function GroupBettingClient({
       }
       const id = (r.data.parlay as { id: string }).id;
       setSelectedId(id);
+      setSheet(null);
+      setNameDraft("");
       await refresh();
       return id;
     } finally {
@@ -326,9 +340,10 @@ export function GroupBettingClient({
     return true;
   }
 
+  // An in-app confirm, not window.confirm: webviews suppress the native
+  // dialog, which silently returned false and made the button look dead.
   async function deleteSlip() {
     if (!selected) return;
-    if (!window.confirm(`Delete "${selected.parlay.title}" and all its picks?`)) return;
     const r = await api(`/api/leagues/${slug}/parlays/${selected.parlay.id}`, {
       method: "DELETE",
     });
@@ -336,8 +351,20 @@ export function GroupBettingClient({
       toast({ title: "Couldn't delete", description: errorOf(r), tone: "error" });
       return;
     }
+    toast({ title: "Parlay deleted", tone: "success" });
+    setSheet(null);
     setSelectedId(null);
     await refresh();
+  }
+
+  async function renameSlip(e: FormEvent) {
+    e.preventDefault();
+    const name = nameDraft.trim();
+    if (!name) return;
+    if (await patchSlip({ title: name })) {
+      setSheet(null);
+      setNameDraft("");
+    }
   }
 
   async function saveStake(e: FormEvent) {
@@ -360,13 +387,27 @@ export function GroupBettingClient({
           {slipLocked ? <Unlock className="h-4 w-4" /> : <Lock className="h-4 w-4" />}
         </button>
       ) : null}
+      {canEditSlip && phase !== "settled" ? (
+        <button
+          type="button"
+          className="rounded-md p-1.5 text-chalk/60 hover:bg-chalk/10 hover:text-chalk"
+          aria-label="Rename parlay"
+          title="Rename parlay"
+          onClick={() => {
+            setNameDraft(selected.parlay.title);
+            setSheet("rename");
+          }}
+        >
+          <Pencil className="h-4 w-4" />
+        </button>
+      ) : null}
       {canEditSlip ? (
         <button
           type="button"
           className="rounded-md p-1.5 text-chalk/60 hover:bg-chalk/10 hover:text-chalk"
-          aria-label="Delete slip"
-          title="Delete slip"
-          onClick={() => void deleteSlip()}
+          aria-label="Delete parlay"
+          title="Delete parlay"
+          onClick={() => setSheet("delete")}
         >
           <Trash2 className="h-4 w-4" />
         </button>
@@ -376,35 +417,39 @@ export function GroupBettingClient({
 
   return (
     <div className="space-y-4">
+      {/* One line instead of a row of chips: a league can carry a lot of
+          parlays, and picking from a list beats scrolling tiny pills. */}
       {slips.length > 0 ? (
-        <div className="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-0.5 [scrollbar-width:none]">
-          {slips.map((s) => {
-            const p = slipPhase(s.parlay, s.legs, gamesById);
-            const isActive = s.parlay.id === selected?.parlay.id;
-            return (
-              <button
-                key={s.parlay.id}
-                type="button"
-                onClick={() => setSelectedId(s.parlay.id)}
-                className={cn(
-                  "flex max-w-[12rem] shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-bold transition",
-                  isActive
-                    ? "bg-ink text-lime"
-                    : "border border-border bg-chalk text-ink-muted hover:text-ink",
-                )}
-              >
-                <span className={cn("h-1.5 w-1.5 shrink-0 rounded-full", PHASE_DOT[p])} />
-                <span className="truncate">{s.parlay.title}</span>
-              </button>
-            );
-          })}
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            className="flex min-w-0 flex-1 items-center gap-2 rounded-xl border border-border bg-chalk px-3 py-2.5 text-left shadow-card"
+            onClick={() => setSheet("switch")}
+            aria-label="Switch parlay"
+          >
+            <span className={cn("h-2 w-2 shrink-0 rounded-full", PHASE_DOT[phase])} />
+            <span className="min-w-0 flex-1">
+              <span className="block truncate font-display text-sm font-bold uppercase tracking-wide text-ink">
+                {selected?.parlay.title ?? "Pick a parlay"}
+              </span>
+              <span className="block text-[11px] text-ink-faint">
+                {slips.length === 1
+                  ? "Building this one"
+                  : `${slips.length} parlays going · tap to switch`}
+              </span>
+            </span>
+            <ChevronDown className="h-4 w-4 shrink-0 text-ink-faint" aria-hidden />
+          </button>
           <button
             type="button"
             disabled={creating}
-            onClick={() => void createSlip()}
-            className="flex shrink-0 items-center gap-1 rounded-full border border-dashed border-border-strong px-3 py-1.5 text-xs font-bold text-ink-muted hover:text-ink disabled:opacity-50"
+            onClick={() => {
+              setNameDraft("");
+              setSheet("new");
+            }}
+            className="flex h-[3.25rem] shrink-0 items-center gap-1 rounded-xl border border-dashed border-border-strong px-3 font-display text-xs font-bold uppercase tracking-wide text-ink-muted transition hover:text-ink disabled:opacity-50"
           >
-            <Plus className="h-3.5 w-3.5" /> New slip
+            <Plus className="h-4 w-4" /> New
           </button>
         </div>
       ) : null}
@@ -428,7 +473,6 @@ export function GroupBettingClient({
           }
           actions={heroActions}
         >
-          <FanduelLauncher legs={legs} />
           {legs.length > 0 || selected.shares.length > 0 ? (
             <RideBet
               shares={selected.shares}
@@ -447,18 +491,21 @@ export function GroupBettingClient({
             Week {week.week} Parlay
           </h2>
           <p className="mt-2 text-sm text-chalk/70">
-            Start the group&apos;s slip. Everyone adds up to {max} pick
-            {max === 1 ? "" : "s"} from any game — TDs, yards, spreads, totals —
-            then one tap opens it in FanDuel.
+            Start the group&apos;s parlay. Everyone adds up to {max} pick
+            {max === 1 ? "" : "s"} from any game — TDs, yards, spreads, totals.
+            Whoever places it shares the link so the rest can ride it.
           </p>
           <button
             type="button"
             disabled={creating}
-            onClick={() => void createSlip()}
+            onClick={() => {
+              setNameDraft("");
+              setSheet("new");
+            }}
             className="mt-4 flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-lime font-display text-sm font-extrabold uppercase tracking-wider text-ink transition active:scale-[0.98] disabled:opacity-60"
           >
             <Plus className="h-4 w-4" />
-            {creating ? "Starting…" : "Start the parlay"}
+            {creating ? "Starting…" : "Name a parlay"}
           </button>
         </section>
       )}
@@ -554,7 +601,7 @@ export function GroupBettingClient({
               {slipLocked
                 ? "Slip is locked — the bet's placed."
                 : picksLeft > 0
-                  ? `Tap a game for every FanDuel prop · ${picksLeft} left`
+                  ? `Tap a game for every prop it lists · ${picksLeft} left`
                   : "Your picks are in — browse, or start another slip"}
             </p>
           </div>
@@ -619,6 +666,119 @@ export function GroupBettingClient({
           if (picker) void openGame(picker.game, { tier: "extended" });
         }}
       />
+
+      <Sheet
+        open={sheet === "switch"}
+        onClose={() => setSheet(null)}
+        title="Parlays going"
+        description="Pick the one you're adding to."
+      >
+        <ul className="space-y-2 pb-2">
+          {slips.map((s) => {
+            const p = slipPhase(s.parlay, s.legs, gamesById);
+            const est = slipEstimate(s.legs, slipStake(s.parlay, league));
+            const isActive = s.parlay.id === selected?.parlay.id;
+            return (
+              <li key={s.parlay.id}>
+                <button
+                  type="button"
+                  className={cn(
+                    "flex w-full items-center gap-2.5 rounded-xl border px-3 py-2.5 text-left transition",
+                    isActive
+                      ? "border-turf bg-turf/10"
+                      : "border-border bg-field hover:border-turf",
+                  )}
+                  onClick={() => {
+                    setSelectedId(s.parlay.id);
+                    setSheet(null);
+                  }}
+                >
+                  <span className={cn("h-2 w-2 shrink-0 rounded-full", PHASE_DOT[p])} />
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-sm font-semibold text-ink">
+                      {s.parlay.title}
+                    </span>
+                    <span className="block text-[11px] text-ink-faint">
+                      {s.legs.length} leg{s.legs.length === 1 ? "" : "s"}
+                    </span>
+                  </span>
+                  <span className="shrink-0 font-display text-sm font-bold text-turf">
+                    {est.american != null ? formatAmerican(est.american) : "—"}
+                  </span>
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      </Sheet>
+
+      <Sheet
+        open={sheet === "new" || sheet === "rename"}
+        onClose={() => setSheet(null)}
+        title={sheet === "rename" ? "Rename parlay" : "New parlay"}
+        description={
+          sheet === "rename"
+            ? "Everyone in the league sees this name."
+            : "Give it a name so the group can tell it apart."
+        }
+      >
+        <form
+          className="space-y-3 pb-2"
+          onSubmit={(e) => {
+            if (sheet === "rename") return void renameSlip(e);
+            e.preventDefault();
+            void createSlip(nameDraft);
+          }}
+        >
+          <input
+            autoFocus
+            value={nameDraft}
+            maxLength={60}
+            onChange={(e) => setNameDraft(e.target.value)}
+            placeholder={`Week ${week.week} parlay`}
+            className="h-11 w-full rounded-xl border border-border-strong bg-field px-3 text-sm font-semibold text-ink outline-none focus:border-turf focus:ring-2 focus:ring-turf/20"
+          />
+          <Button
+            type="submit"
+            fullWidth
+            disabled={creating || (sheet === "rename" && !nameDraft.trim())}
+          >
+            {sheet === "rename"
+              ? "Save name"
+              : creating
+                ? "Starting…"
+                : "Start parlay"}
+          </Button>
+        </form>
+      </Sheet>
+
+      <Sheet
+        open={sheet === "delete"}
+        onClose={() => setSheet(null)}
+        title="Delete this parlay?"
+        description={
+          selected
+            ? `"${selected.parlay.title}" and its ${legs.length} pick${legs.length === 1 ? "" : "s"} go for everyone. This can't be undone.`
+            : ""
+        }
+      >
+        <div className="space-y-2 pb-2">
+          <button
+            type="button"
+            className="h-12 w-full rounded-xl bg-danger font-display text-sm font-extrabold uppercase tracking-wider text-white transition active:scale-[0.98]"
+            onClick={() => void deleteSlip()}
+          >
+            Delete parlay
+          </button>
+          <button
+            type="button"
+            className="h-11 w-full rounded-xl border border-border font-semibold text-ink"
+            onClick={() => setSheet(null)}
+          >
+            Keep it
+          </button>
+        </div>
+      </Sheet>
 
       <Sheet
         open={stakeDraft != null}

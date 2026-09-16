@@ -6,6 +6,7 @@ import {
   ClipboardList,
   History,
   Layers,
+  PlusCircle,
   Ticket,
   Trophy,
 } from "lucide-react";
@@ -23,6 +24,7 @@ export type BottomNavProps = {
 
 const iconMap = {
   picks: Layers,
+  create: PlusCircle,
   league: ClipboardList,
   slip: Ticket,
   history: History,

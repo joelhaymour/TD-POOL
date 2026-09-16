@@ -2,9 +2,7 @@
  * The books this app knows about.
  *
  * Adding one is a single entry here: the share-link parser, the branded
- * button, and the API validation all read from this list. A book only needs
- * `deepLink: true` if we can build a prefilled slip for it ourselves —
- * everything else still works through a share link the bettor pastes.
+ * button, and the API validation all read from this list.
  */
 export type SportsbookKey = "fanduel" | "bet365" | "draftkings" | "betmgm";
 
@@ -16,8 +14,6 @@ export type SportsbookDef = {
   brand: { bg: string; fg: string };
   /** Host suffixes a share link from this book can use. */
   hosts: string[];
-  /** We can build a prefilled slip from our own board (no share link needed). */
-  deepLink: boolean;
   /** Shown in the paste sheet: how to get the link out of the app. */
   shareHint: string;
 };
@@ -28,7 +24,6 @@ export const SPORTSBOOKS: SportsbookDef[] = [
     name: "FanDuel",
     brand: { bg: "#1493FF", fg: "#FFFFFF" },
     hosts: ["fanduel.com"],
-    deepLink: true,
     shareHint: "Open the bet, tap the share icon, then Copy link.",
   },
   {
@@ -36,7 +31,6 @@ export const SPORTSBOOKS: SportsbookDef[] = [
     name: "bet365",
     brand: { bg: "#027B5B", fg: "#FFFFFF" },
     hosts: ["bet365.com"],
-    deepLink: false,
     shareHint: "Open the bet in My Bets, tap Share Bet, then copy the link.",
   },
   {
@@ -44,7 +38,6 @@ export const SPORTSBOOKS: SportsbookDef[] = [
     name: "DraftKings",
     brand: { bg: "#61C250", fg: "#0B0B0B" },
     hosts: ["draftkings.com", "dksb.sng.link", "dkn.gs"],
-    deepLink: false,
     shareHint: "Open the bet, tap Share, then copy the link.",
   },
   {
@@ -52,7 +45,6 @@ export const SPORTSBOOKS: SportsbookDef[] = [
     name: "BetMGM",
     brand: { bg: "#C8A15A", fg: "#0B0B0B" },
     hosts: ["betmgm.com"],
-    deepLink: false,
     shareHint: "Open the bet, tap Share, then copy the link.",
   },
 ];

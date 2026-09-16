@@ -18,7 +18,7 @@ export default async function LeagueDashboardPage({
   searchParams,
 }: PageProps<"/[slug]">) {
   const { slug } = await params;
-  const { game } = await searchParams;
+  const { game, slip } = await searchParams;
   const member = await requireViewerMembership(slug);
   const dashboard = await loadLeagueDashboard(slug);
 
@@ -39,6 +39,7 @@ export default async function LeagueDashboardPage({
           .filter((m) => m.active)}
         initialSlips={slips}
         initialGames={games}
+        initialSlipId={typeof slip === "string" ? slip : null}
         viewer={{ memberId: member.id, isAdmin: member.role === "admin" }}
       />
     );

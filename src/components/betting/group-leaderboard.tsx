@@ -87,7 +87,7 @@ export async function GroupLeaderboard({
           Leaderboard
         </h2>
         <p className="mt-1 text-sm text-ink-muted">
-          Legs hit across every slip · 💀 = slips your miss sank
+          Legs hit across every slip
         </p>
       </div>
 
@@ -122,9 +122,11 @@ export async function GroupLeaderboard({
                   </span>
                 </p>
                 <p className="text-[11px] font-semibold text-ink-faint">
-                  {row.slipsWon > 0 ? `🏆 ${row.slipsWon}` : ""}
+                  {row.slipsWon > 0
+                    ? `${row.slipsWon} slip${row.slipsWon === 1 ? "" : "s"} won`
+                    : ""}
                   {row.slipsWon > 0 && row.busts > 0 ? " · " : ""}
-                  {row.busts > 0 ? `💀 ${row.busts}` : ""}
+                  {row.busts > 0 ? `${row.busts} sank` : ""}
                 </p>
               </div>
             </li>

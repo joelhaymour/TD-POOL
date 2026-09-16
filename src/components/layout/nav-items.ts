@@ -1,7 +1,7 @@
 export type BottomNavItem = {
   href: string;
   label: string;
-  icon: "picks" | "league" | "slip" | "history" | "board";
+  icon: "picks" | "league" | "slip" | "create" | "history" | "board";
   badge?: number;
 };
 
@@ -21,7 +21,8 @@ export function leagueNavItems(basePath: string): BottomNavItem[] {
 
 export function groupBettingNavItems(basePath: string): BottomNavItem[] {
   return [
-    { href: basePath, label: "Parlay", icon: "slip" },
+    { href: basePath, label: "Create", icon: "create" },
+    { href: `${basePath}/parlays`, label: "Parlays", icon: "slip" },
     { href: `${basePath}/history`, label: "History", icon: "history" },
     { href: `${basePath}/leaderboard`, label: "Board", icon: "board" },
   ];
