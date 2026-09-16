@@ -1,8 +1,11 @@
 import { cn } from "@/lib/utils/cn";
 import { formatAmerican, formatMoney } from "@/lib/utils/odds";
+import type { PickResult } from "@/lib/types";
 
 export type ParlaySummaryProps = {
   weekNumber: number;
+  /** One entry per member, in board order — drives the result bar. */
+  pickResults?: PickResult[];
   picksSubmitted: number;
   totalMembers: number;
   /** Combined American odds estimate; null when incomplete or no money */
@@ -43,8 +46,34 @@ function Stat({
   );
 }
 
+/**
+ * One segment per member's pick — scored lime, missed red, still playing a
+ * pulse, not yet decided dim. The parlay cards carry the same bar, so both
+ * league types read the same way at a glance.
+ */
+function PickResults({ results }: { results: PickResult[] }) {
+  if (results.length === 0) return null;
+  return (
+    <div className="mt-3 flex gap-1" aria-hidden>
+      {results.map((result, i) => (
+        <span
+          key={i}
+          className={cn(
+            "h-1.5 flex-1 rounded-full",
+            result === "td" && "bg-lime",
+            result === "no_td" && "bg-danger",
+            result === "game_not_finished" && "animate-pulse bg-turf",
+            result === "pending" && "bg-raised-fg/15",
+          )}
+        />
+      ))}
+    </div>
+  );
+}
+
 export function ParlaySummary({
   weekNumber,
+  pickResults = [],
   picksSubmitted,
   totalMembers,
   estimatedAmericanOdds,
@@ -98,6 +127,7 @@ export function ParlaySummary({
         <p className="mt-1 text-xs font-medium text-raised-fg/65">
           Picks submitted
         </p>
+        <PickResults results={pickResults} />
 
         {showMoney ? (
           <div className="mt-4 grid grid-cols-3 gap-3 border-t border-chalk/10 pt-4">

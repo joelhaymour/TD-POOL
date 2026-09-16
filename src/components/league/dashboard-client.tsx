@@ -172,6 +172,7 @@ export function DashboardClient({
     <div className="space-y-4">
       <ParlaySummary
         weekNumber={dashboard.week.week}
+        pickResults={memberRows.map((m) => m.result)}
         picksSubmitted={dashboard.parlay.picks_submitted}
         totalMembers={dashboard.parlay.picks_total}
         estimatedAmericanOdds={dashboard.parlay.combined_american}
