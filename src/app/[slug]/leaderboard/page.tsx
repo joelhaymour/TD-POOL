@@ -12,5 +12,5 @@ export default async function LeaderboardPage({
   if (league?.league_type === "group_betting") {
     return <GroupLeaderboard league={league} viewerMemberId={member.id} />;
   }
-  return <TdLeaderboard />;
+  return <TdLeaderboard viewerMemberId={member.id} />;
 }

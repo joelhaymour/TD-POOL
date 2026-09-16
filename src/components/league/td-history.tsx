@@ -6,6 +6,8 @@ import Link from "next/link";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatAmerican } from "@/lib/utils/odds";
 import { Badge } from "@/components/ui/badge";
+import { MemberChip, ResultMark } from "@/components/ui/result-mark";
+import { cn } from "@/lib/utils/cn";
 import type { PickResult } from "@/lib/types";
 
 type HistoryWeek = {
@@ -32,27 +34,6 @@ type HistoryResponse = {
   weeks: HistoryWeek[];
 };
 
-function resultBadge(result: string) {
-  if (result === "td") {
-    return (
-      <Badge status="td" className="shrink-0">
-        TD
-      </Badge>
-    );
-  }
-  if (result === "no_td") {
-    return (
-      <Badge status="no_td" className="shrink-0">
-        NO TD
-      </Badge>
-    );
-  }
-  return (
-    <Badge status="pending" className="shrink-0">
-      Pending
-    </Badge>
-  );
-}
 
 export function TdHistory() {
   const params = useParams<{ slug: string }>();
@@ -141,32 +122,42 @@ export function TdHistory() {
                 {w.status}
               </Badge>
             </div>
-            <ul className="divide-y divide-border">
+            <ul className="flex flex-col gap-2 px-4 pb-4 pt-3">
               {w.picks.length === 0 ? (
-                <li className="px-4 py-6 text-center text-sm text-ink-muted">
+                <li className="py-6 text-center text-sm text-ink-muted">
                   No picks submitted yet.
                 </li>
               ) : (
                 w.picks.map((p) => (
                   <li
                     key={p.memberId}
-                    className="flex items-center justify-between gap-3 px-4 py-3 text-sm"
+                    className={cn(
+                      "flex items-center gap-2.5 rounded-xl border px-3 py-2.5",
+                      p.result === "td"
+                        ? "border-lime/30 bg-lime/[0.07]"
+                        : p.result === "no_td"
+                          ? "border-danger/25 bg-danger/[0.06]"
+                          : "border-border bg-chalk",
+                    )}
                   >
-                    <div className="min-w-0">
-                      <p className="font-semibold text-ink">{p.memberName}</p>
+                    <span className="flex w-5 shrink-0 justify-center">
+                      <ResultMark result={p.result as "td" | "no_td" | "pending"} />
+                    </span>
+                    <MemberChip name={p.memberName} />
+                    <div className="min-w-0 flex-1">
                       <Link
                         href={`/${slug}/players/${p.playerId}`}
-                        className="truncate text-turf hover:underline"
+                        className="block truncate text-sm font-semibold text-ink hover:underline"
                       >
-                        {p.playerName} ({p.team})
+                        {p.playerName}
                       </Link>
+                      <p className="truncate text-[11px] uppercase tracking-wide text-ink-faint">
+                        {[p.team, p.memberName].filter(Boolean).join(" · ")}
+                      </p>
                     </div>
-                    <div className="flex shrink-0 items-center gap-2">
-                      <span className="font-display text-base font-bold text-ink">
-                        {formatAmerican(p.americanOdds)}
-                      </span>
-                      {resultBadge(p.result)}
-                    </div>
+                    <span className="shrink-0 font-display text-sm font-bold text-turf">
+                      {formatAmerican(p.americanOdds)}
+                    </span>
                   </li>
                 ))
               )}

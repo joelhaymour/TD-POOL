@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatAmerican } from "@/lib/utils/odds";
+import { cn } from "@/lib/utils/cn";
+import { MemberChip } from "@/components/ui/result-mark";
 
 type Standing = {
   rank: number;
@@ -20,7 +22,7 @@ type LeaderboardResponse = {
   weeksCounted: number;
 };
 
-export function TdLeaderboard() {
+export function TdLeaderboard({ viewerMemberId }: { viewerMemberId?: string }) {
   const params = useParams<{ slug: string }>();
   const slug = params.slug;
   const [data, setData] = useState<LeaderboardResponse | null>(null);
@@ -62,6 +64,15 @@ export function TdLeaderboard() {
     );
   }
 
+  const [first, second, third] = data.standings;
+  const best = data.standings.reduce<Standing | null>(
+    (top, row) =>
+      row.avgOdds != null && (!top?.avgOdds || row.avgOdds > top.avgOdds)
+        ? row
+        : top,
+    null,
+  );
+
   return (
     <div className="space-y-4">
       <div>
@@ -70,45 +81,122 @@ export function TdLeaderboard() {
         </h2>
         <p className="mt-1 text-sm text-ink-muted">
           Correct picks over decided results
-          {data.weeksCounted > 1 ? ` · ${data.weeksCounted} weeks` : ""}.
+          {data.weeksCounted > 1 ? ` · ${data.weeksCounted} weeks` : ""}
         </p>
       </div>
 
-      <ol className="overflow-hidden rounded-2xl border border-border bg-chalk shadow-card">
-        {data.standings.length === 0 ? (
-          <li className="px-4 py-8 text-center text-sm text-ink-muted">
-            No members yet.
-          </li>
-        ) : (
-          data.standings.map((row) => (
-            <li
-              key={row.memberId}
-              className="flex items-center gap-3 border-b border-border px-4 py-3 last:border-b-0"
-            >
-              <span className="w-7 shrink-0 font-display text-lg font-extrabold text-ink-faint">
-                {row.rank}.
-              </span>
-              <div className="min-w-0 flex-1">
-                <p className="truncate font-semibold text-ink">
-                  {row.memberName}
-                </p>
-                {row.avgOdds != null ? (
-                  <p className="text-xs text-ink-muted">
-                    Avg odds {formatAmerican(row.avgOdds)}
+      {data.standings.length === 0 ? (
+        <p className="rounded-2xl border border-border bg-chalk px-4 py-8 text-center text-sm text-ink-muted">
+          No members yet.
+        </p>
+      ) : (
+        <>
+          {first && first.decided > 0 ? (
+            <div className="grid grid-cols-3 items-end gap-2">
+              <Podium row={second} place={2} />
+              <Podium row={first} place={1} />
+              <Podium row={third} place={3} />
+            </div>
+          ) : null}
+
+          <ul className="flex flex-col gap-2">
+            {data.standings.map((row) => (
+              <li
+                key={row.memberId}
+                className={cn(
+                  "flex items-center gap-3 rounded-xl border px-3 py-2.5",
+                  row.memberId === viewerMemberId
+                    ? "border-lime/30 bg-lime/[0.07]"
+                    : "border-border bg-chalk",
+                )}
+              >
+                <span className="w-4 shrink-0 font-display text-base font-extrabold text-ink-faint">
+                  {row.rank}
+                </span>
+                <MemberChip name={row.memberName} className="h-7 w-7 text-[10px]" />
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-semibold text-ink">
+                    {row.memberName}
+                    {row.memberId === viewerMemberId ? (
+                      <span className="ml-1.5 text-[10px] font-bold uppercase tracking-wider text-lime">
+                        You
+                      </span>
+                    ) : null}
                   </p>
-                ) : null}
-              </div>
-              <div className="shrink-0 text-right">
-                <p className="font-display text-base font-bold text-ink">
-                  {row.correct}/{row.decided}
-                  <span className="text-ink-muted"> — </span>
-                  {row.decided === 0 ? "—" : `${row.hitPct}%`}
+                  <p className="truncate text-[11px] text-ink-faint">
+                    {row.avgOdds != null
+                      ? `Avg odds ${formatAmerican(row.avgOdds)}`
+                      : "No decided picks yet"}
+                  </p>
+                </div>
+                <div className="shrink-0 text-right">
+                  <p className="font-display text-lg font-extrabold leading-none text-ink">
+                    {row.correct}/{row.decided}
+                  </p>
+                  <p className="mt-1 text-[11px] text-ink-faint">
+                    {row.decided === 0 ? "—" : `${row.hitPct}%`}
+                  </p>
+                </div>
+              </li>
+            ))}
+          </ul>
+
+          {best?.avgOdds != null ? (
+            <div className="rounded-2xl border border-border bg-chalk p-4">
+              <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-ink-faint">
+                Longest average odds
+              </p>
+              <div className="mt-2 flex items-center gap-3">
+                <p className="min-w-0 flex-1 truncate text-sm font-semibold text-ink">
+                  {best.memberName}
                 </p>
+                <span className="shrink-0 font-display text-xl font-extrabold text-lime">
+                  {formatAmerican(best.avgOdds)}
+                </span>
               </div>
-            </li>
-          ))
+            </div>
+          ) : null}
+        </>
+      )}
+    </div>
+  );
+}
+
+/** One place on the podium; the leader's card is taller and lit. */
+function Podium({ row, place }: { row: Standing | undefined; place: number }) {
+  if (!row) return <div />;
+  const leader = place === 1;
+  return (
+    <div
+      className={cn(
+        "rounded-2xl border px-2 text-center",
+        leader ? "border-lime/40 bg-lime/[0.1] py-4" : "border-border bg-chalk py-3",
+      )}
+    >
+      <p
+        className={cn(
+          "font-display text-[11px] font-bold uppercase tracking-[0.1em]",
+          leader ? "text-lime" : "text-ink-faint",
         )}
-      </ol>
+      >
+        {leader ? "Leader" : place === 2 ? "2nd" : "3rd"}
+      </p>
+      <MemberChip
+        name={row.memberName}
+        className={cn(
+          "mx-auto mt-2",
+          leader ? "h-10 w-10 bg-lime text-[12px] text-accent-fg" : "h-8 w-8 text-[10px]",
+        )}
+      />
+      <p className="mt-2 truncate text-xs font-semibold text-ink">{row.memberName}</p>
+      <p
+        className={cn(
+          "mt-0.5 font-display text-xl font-extrabold leading-none",
+          leader ? "text-lime" : "text-ink",
+        )}
+      >
+        {row.correct}/{row.decided}
+      </p>
     </div>
   );
 }

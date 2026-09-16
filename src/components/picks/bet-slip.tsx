@@ -4,6 +4,7 @@ import { Copy, Check } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils/cn";
+import { MemberChip } from "@/components/ui/result-mark";
 import {
   americanToDecimal,
   combineParlayDecimal,
@@ -105,25 +106,22 @@ export function BetSlip({
           No picks yet — the slip fills as members lock players.
         </p>
       ) : (
-        <ol className="divide-y divide-border">
-          {legs.map((leg, index) => (
+        <ol className="flex flex-col gap-2 px-4 pb-1 pt-3">
+          {legs.map((leg) => (
             <li
               key={leg.id}
-              className="flex items-center gap-3 px-4 py-3"
+              className="flex items-center gap-2.5 rounded-xl border border-border bg-chalk px-3 py-2.5"
             >
-              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-field font-display text-sm font-bold text-ink">
-                {index + 1}
-              </span>
+              <MemberChip name={leg.memberName} />
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-semibold text-ink">
                   {leg.playerName}
                 </p>
-                <p className="truncate text-xs text-ink-muted">
-                  {leg.memberName}
-                  {leg.team ? ` · ${leg.team}` : ""}
+                <p className="truncate text-[11px] uppercase tracking-wide text-ink-faint">
+                  {[leg.team, leg.memberName].filter(Boolean).join(" · ")}
                 </p>
               </div>
-              <span className="font-display text-lg font-extrabold text-turf">
+              <span className="shrink-0 font-display text-sm font-bold text-turf">
                 {formatAmerican(leg.americanOdds)}
               </span>
             </li>
