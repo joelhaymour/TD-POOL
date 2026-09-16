@@ -19,6 +19,7 @@ import { SlipHero } from "@/components/betting/slip-hero";
 import { PropPickerSheet } from "@/components/betting/prop-picker-sheet";
 import { LegRow } from "@/components/betting/leg-row";
 import { LegProgress } from "@/components/betting/leg-progress";
+import { MemberChip, ResultMark } from "@/components/ui/result-mark";
 import { RideBet } from "@/components/betting/ride-bet";
 import {
   gameStarted,
@@ -509,7 +510,7 @@ export function GroupBettingClient({
               setNameDraft("");
               setSheet("new");
             }}
-            className="mt-4 flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-lime font-display text-sm font-extrabold uppercase tracking-wider text-ink transition active:scale-[0.98] disabled:opacity-60"
+            className="mt-4 flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-lime font-display text-sm font-extrabold uppercase tracking-wider text-accent-fg transition active:scale-[0.98] disabled:opacity-60"
           >
             <Plus className="h-4 w-4" />
             {creating ? "Starting…" : "Name a parlay"}
@@ -548,9 +549,10 @@ export function GroupBettingClient({
                 return (
                   <li key={m.id} className={cn("px-4 py-2.5", isViewer && "bg-turf/5")}>
                     <div className="flex items-center gap-2.5 text-sm">
-                      <span aria-hidden className="text-base leading-none">
-                        {m.id === "former" ? "👋" : done ? "✅" : "⏳"}
-                      </span>
+                      <MemberChip name={m.name} />
+                      {m.id !== "former" && done ? (
+                        <ResultMark result="won" className="h-3.5 w-3.5" />
+                      ) : null}
                       <span className="min-w-0 flex-1 truncate font-semibold text-ink">
                         {m.name}
                         {isViewer ? (
@@ -566,7 +568,7 @@ export function GroupBettingClient({
                       ) : null}
                     </div>
                     {m.legs.length > 0 ? (
-                      <ul className="pl-1">
+                      <ul className="mt-2 flex flex-col gap-2">
                         {m.legs.map((leg) => {
                           const game = gamesById.get(leg.game_id);
                           const started = gameStarted(game);
@@ -579,6 +581,7 @@ export function GroupBettingClient({
                               key={leg.id}
                               leg={leg}
                               game={game}
+                              memberName={m.name}
                               onRemove={removable ? () => void removeLeg(leg.id) : undefined}
                               onGrade={
                                 viewer.isAdmin && started

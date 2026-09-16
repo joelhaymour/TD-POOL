@@ -30,13 +30,13 @@ type ToastContextValue = {
 const ToastContext = createContext<ToastContextValue | null>(null);
 
 const toneClasses: Record<ToastTone, string> = {
-  default: "border-border-strong bg-chalk text-ink",
-  success: "border-turf/30 bg-chalk text-ink",
-  error: "border-danger/30 bg-chalk text-ink",
+  default: "border-border-strong bg-raised text-ink",
+  success: "border-lime/40 bg-raised text-ink",
+  error: "border-danger/40 bg-raised text-ink",
 };
 
 const accentClasses: Record<ToastTone, string> = {
-  default: "bg-ink",
+  default: "bg-lime",
   success: "bg-turf",
   error: "bg-danger",
 };

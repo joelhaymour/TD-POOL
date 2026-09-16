@@ -36,20 +36,20 @@ function resultBadge(result: string) {
   if (result === "td") {
     return (
       <Badge status="td" className="shrink-0">
-        ✅ TD
+        TD
       </Badge>
     );
   }
   if (result === "no_td") {
     return (
       <Badge status="no_td" className="shrink-0">
-        ❌ NO TD
+        NO TD
       </Badge>
     );
   }
   return (
     <Badge status="pending" className="shrink-0">
-      ⏳ Pending
+      Pending
     </Badge>
   );
 }

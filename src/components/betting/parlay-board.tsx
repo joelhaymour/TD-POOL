@@ -7,8 +7,15 @@ import { useToast } from "@/components/ui/toast";
 import { useLeagueRealtime } from "@/hooks/use-league-realtime";
 import { RideBet } from "@/components/betting/ride-bet";
 import { LegProgress, legProgressLabel } from "@/components/betting/leg-progress";
-import { legTitle, gameLabel, actualLabel, RESULT_META } from "@/lib/props/format";
-import { slipEstimate, slipPhase, slipStake, type SlipPhase } from "@/lib/props/slip";
+import { MemberChip, ResultMark } from "@/components/ui/result-mark";
+import { legTitle, gameLabel, actualLabel } from "@/lib/props/format";
+import {
+  gameStarted,
+  slipEstimate,
+  slipPhase,
+  slipStake,
+  type SlipPhase,
+} from "@/lib/props/slip";
 import { cn } from "@/lib/utils/cn";
 import { formatAmerican, formatMoney } from "@/lib/utils/odds";
 import type {
@@ -24,7 +31,7 @@ const GROUP_TABLES = ["parlays", "parlay_legs", "parlay_share_links"] as const;
 const PHASE_BADGE: Record<SlipPhase, { label: string; className: string }> = {
   building: { label: "Building", className: "bg-ink/6 text-ink-muted" },
   locked: { label: "Bet placed", className: "bg-raised text-raised-fg" },
-  live: { label: "Live", className: "bg-lime text-ink" },
+  live: { label: "Live", className: "bg-lime text-accent-fg" },
   busted: { label: "Busted", className: "bg-danger text-white" },
   settled: { label: "Settled", className: "bg-ink/6 text-ink-muted" },
 };
@@ -238,23 +245,36 @@ export function ParlayBoard({
               {isOpen ? (
                 <div className="border-t border-border px-4 py-3">
                   {legs.length > 0 ? (
-                    <ul className="divide-y divide-border">
+                    <ul className="flex flex-col gap-2">
                       {legs.map((leg) => {
                         const game = gamesById.get(leg.game_id);
                         const actual = actualLabel(leg);
+                        const who = nameOf(leg.member_id);
                         return (
-                          <li key={leg.id} className="flex items-start gap-2.5 py-2">
-                            <span className="mt-0.5 w-5 shrink-0 text-center text-sm leading-5">
-                              {leg.result === "pending"
-                                ? "·"
-                                : RESULT_META[leg.result].icon}
+                          <li
+                            key={leg.id}
+                            className={cn(
+                              "flex items-center gap-2.5 rounded-xl border px-3 py-2.5",
+                              leg.result === "won"
+                                ? "border-lime/30 bg-lime/[0.07]"
+                                : leg.result === "lost"
+                                  ? "border-danger/25 bg-danger/[0.06]"
+                                  : "border-border bg-chalk",
+                            )}
+                          >
+                            <span className="flex w-5 shrink-0 justify-center">
+                              <ResultMark
+                                result={leg.result}
+                                live={gameStarted(game)}
+                              />
                             </span>
+                            {who ? <MemberChip name={who} /> : null}
                             <span className="min-w-0 flex-1">
                               <span className="block truncate text-sm font-semibold text-ink">
                                 {legTitle(leg)}
                               </span>
                               <span className="block truncate text-[11px] uppercase tracking-wide text-ink-faint">
-                                {[leg.market_label, gameLabel(game), nameOf(leg.member_id), actual]
+                                {[leg.market_label, gameLabel(game), actual]
                                   .filter(Boolean)
                                   .join(" · ")}
                               </span>

@@ -158,13 +158,13 @@ export function GameBoard({
           All games
         </button>
 
-        <div className="rounded-2xl border border-border bg-ink px-4 py-3 text-chalk">
+        <div className="rounded-2xl border border-border bg-raised px-4 py-3 text-raised-fg">
           <h3 className="font-display text-lg font-extrabold uppercase leading-tight tracking-wide">
             {teamNickname(game.away_team)}
-            <span className="mx-1.5 text-chalk/40">@</span>
+            <span className="mx-1.5 text-raised-fg/40">@</span>
             {teamNickname(game.home_team)}
           </h3>
-          <p className="mt-0.5 text-xs font-medium text-chalk/60">
+          <p className="mt-0.5 text-xs font-medium text-raised-fg/60">
             {kickoffLabel(game.kickoff_at)}
             {status ? ` · ${status}` : ""}
             {game.stadium ? ` · ${game.stadium}` : ""}
@@ -190,7 +190,7 @@ export function GameBoard({
                 className={cn(
                   "rounded-xl px-3 py-2 text-sm font-bold uppercase tracking-wide transition",
                   active
-                    ? "bg-ink text-lime"
+                    ? "bg-lime text-accent-fg"
                     : "border border-border bg-chalk text-ink-muted hover:border-border-strong",
                 )}
               >

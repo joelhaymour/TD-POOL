@@ -8,7 +8,7 @@ import type { Currency } from "@/lib/types";
 const PHASE: Record<SlipPhase, { label: string; className: string }> = {
   building: { label: "Building", className: "bg-raised-fg/10 text-raised-fg/75" },
   locked: { label: "Bet placed", className: "bg-raised-fg/15 text-raised-fg" },
-  live: { label: "Live", className: "bg-lime text-ink" },
+  live: { label: "Live", className: "bg-lime text-accent-fg" },
   busted: { label: "Busted", className: "bg-danger text-white" },
   settled: { label: "Settled", className: "bg-raised-fg/15 text-raised-fg" },
 };

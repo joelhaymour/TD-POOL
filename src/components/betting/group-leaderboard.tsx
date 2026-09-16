@@ -2,6 +2,7 @@ import { getStore } from "@/lib/store";
 import { cn } from "@/lib/utils/cn";
 import { formatAmerican } from "@/lib/utils/odds";
 import { legTitle } from "@/lib/props/format";
+import { MemberChip } from "@/components/ui/result-mark";
 import type { League } from "@/lib/types";
 
 type Standing = {
@@ -79,6 +80,18 @@ export async function GroupLeaderboard({
     return b.won - a.won || pct(b) - pct(a) || a.name.localeCompare(b.name);
   });
   const anyGraded = standings.some((s) => s.won + s.lost > 0);
+  const [first, second, third] = standings;
+  const bestLeg = standings.reduce<{ name: string; hit: Standing["bestHit"] } | null>(
+    (best, row) =>
+      row.bestHit && (!best?.hit || row.bestHit.odds > best.hit.odds)
+        ? { name: row.name, hit: row.bestHit }
+        : best,
+    null,
+  );
+  const rate = (row: Standing) =>
+    row.won + row.lost === 0
+      ? null
+      : `${Math.round((row.won / (row.won + row.lost)) * 100)}%`;
 
   return (
     <div className="space-y-4">
@@ -87,57 +100,124 @@ export async function GroupLeaderboard({
           Leaderboard
         </h2>
         <p className="mt-1 text-sm text-ink-muted">
-          Legs hit across every slip
+          Legs hit across every parlay · season to date
         </p>
       </div>
 
-      <ol className="overflow-hidden rounded-2xl border border-border bg-chalk shadow-card">
-        {standings.map((row, i) => {
-          const decided = row.won + row.lost;
-          return (
-            <li
-              key={row.memberId}
-              className={cn(
-                "flex items-center gap-3 border-b border-border px-4 py-3 last:border-b-0",
-                row.memberId === viewerMemberId && "bg-turf/5",
-              )}
-            >
-              <span className="w-7 shrink-0 font-display text-lg font-extrabold text-ink-faint">
-                {i + 1}.
-              </span>
-              <div className="min-w-0 flex-1">
-                <p className="truncate font-semibold text-ink">{row.name}</p>
-                <p className="truncate text-xs text-ink-muted">
-                  {row.bestHit
-                    ? `Best hit ${formatAmerican(row.bestHit.odds)} · ${row.bestHit.label}`
-                    : "No hits yet"}
-                </p>
-              </div>
-              <div className="shrink-0 text-right">
-                <p className="font-display text-base font-bold text-ink">
-                  {row.won}-{row.lost}
-                  <span className="text-ink-muted">
-                    {" "}
-                    {decided === 0 ? "" : `${Math.round((row.won / decided) * 100)}%`}
+      {/* The top three, sized by where they finished. */}
+      {anyGraded && first ? (
+        <div className="grid grid-cols-3 items-end gap-2">
+          <Podium row={second} place={2} />
+          <Podium row={first} place={1} />
+          <Podium row={third} place={3} />
+        </div>
+      ) : null}
+
+      <ul className="flex flex-col gap-2">
+        {standings.map((row, i) => (
+          <li
+            key={row.memberId}
+            className={cn(
+              "flex items-center gap-3 rounded-xl border px-3 py-2.5",
+              row.memberId === viewerMemberId
+                ? "border-lime/30 bg-lime/[0.07]"
+                : "border-border bg-chalk",
+            )}
+          >
+            <span className="w-4 shrink-0 font-display text-base font-extrabold text-ink-faint">
+              {i + 1}
+            </span>
+            <MemberChip name={row.name} className="h-7 w-7 text-[10px]" />
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-semibold text-ink">
+                {row.name}
+                {row.memberId === viewerMemberId ? (
+                  <span className="ml-1.5 text-[10px] font-bold uppercase tracking-wider text-lime">
+                    You
                   </span>
-                </p>
-                <p className="text-[11px] font-semibold text-ink-faint">
-                  {row.slipsWon > 0
-                    ? `${row.slipsWon} slip${row.slipsWon === 1 ? "" : "s"} won`
-                    : ""}
-                  {row.slipsWon > 0 && row.busts > 0 ? " · " : ""}
-                  {row.busts > 0 ? `${row.busts} sank` : ""}
-                </p>
-              </div>
-            </li>
-          );
-        })}
-      </ol>
+                ) : null}
+              </p>
+              <p className="truncate text-[11px] text-ink-faint">
+                {row.bestHit
+                  ? `Best hit ${formatAmerican(row.bestHit.odds)} · ${row.bestHit.label}`
+                  : "No hits yet"}
+              </p>
+            </div>
+            <div className="shrink-0 text-right">
+              <p className="font-display text-lg font-extrabold leading-none text-ink">
+                {row.won}-{row.lost}
+              </p>
+              <p className="mt-1 text-[11px] text-ink-faint">{rate(row) ?? "—"}</p>
+            </div>
+          </li>
+        ))}
+      </ul>
+
+      {bestLeg?.hit ? (
+        <div className="rounded-2xl border border-border bg-chalk p-4">
+          <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-ink-faint">
+            Leg of the season
+          </p>
+          <div className="mt-2 flex items-center gap-3">
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-semibold text-ink">
+                {bestLeg.hit.label}
+              </p>
+              <p className="truncate text-[11px] text-ink-faint">{bestLeg.name}</p>
+            </div>
+            <span className="shrink-0 font-display text-xl font-extrabold text-lime">
+              {formatAmerican(bestLeg.hit.odds)}
+            </span>
+          </div>
+        </div>
+      ) : null}
+
       {!anyGraded ? (
         <p className="text-center text-xs text-ink-faint">
           Standings fill in as legs are graded after each game goes final.
         </p>
       ) : null}
+    </div>
+  );
+}
+
+/** One place on the podium; the leader's card is taller and lit. */
+function Podium({ row, place }: { row: Standing | undefined; place: number }) {
+  if (!row) return <div />;
+  const leader = place === 1;
+  return (
+    <div
+      className={cn(
+        "rounded-2xl border px-2 text-center",
+        leader
+          ? "border-lime/40 bg-lime/[0.1] py-4"
+          : "border-border bg-chalk py-3",
+      )}
+    >
+      <p
+        className={cn(
+          "font-display text-[11px] font-bold uppercase tracking-[0.1em]",
+          leader ? "text-lime" : "text-ink-faint",
+        )}
+      >
+        {leader ? "Leader" : place === 2 ? "2nd" : "3rd"}
+      </p>
+      <MemberChip
+        name={row.name}
+        className={cn(
+          "mx-auto mt-2",
+          leader ? "h-10 w-10 bg-lime text-[12px] text-accent-fg" : "h-8 w-8 text-[10px]",
+        )}
+      />
+      <p className="mt-2 truncate text-xs font-semibold text-ink">{row.name}</p>
+      <p
+        className={cn(
+          "mt-0.5 font-display text-xl font-extrabold leading-none",
+          leader ? "text-lime" : "text-ink",
+        )}
+      >
+        {row.won}-{row.lost}
+      </p>
     </div>
   );
 }

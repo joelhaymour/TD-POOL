@@ -221,7 +221,7 @@ export function DashboardClient({
               className={cn(
                 "rounded-lg px-3 py-2 font-display text-sm font-bold uppercase tracking-wide transition",
                 board === key
-                  ? "bg-ink text-lime shadow-card"
+                  ? "bg-lime text-accent-fg shadow-card"
                   : "text-ink-muted hover:text-ink",
               )}
             >

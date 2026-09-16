@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils/cn";
 import { formatAmerican } from "@/lib/utils/odds";
 import { gameStarted } from "@/lib/props/slip";
 import { actualLabel, gameLabel, legTitle, RESULT_META } from "@/lib/props/format";
+import { MemberChip, ResultMark } from "@/components/ui/result-mark";
 import type { LegResult, NflGame, ParlayLeg } from "@/lib/types";
 
 const GRADE_OPTIONS: Array<[LegResult | "auto", string]> = [
@@ -18,11 +19,14 @@ const GRADE_OPTIONS: Array<[LegResult | "auto", string]> = [
 export function LegRow({
   leg,
   game,
+  memberName,
   onRemove,
   onGrade,
 }: {
   leg: ParlayLeg;
   game: NflGame | undefined;
+  /** Whose pick this is — shown as initials. */
+  memberName?: string;
   /** Present when the viewer may take this leg off the slip. */
   onRemove?: () => void;
   /** Present for admins once the leg's game has started. */
@@ -36,23 +40,27 @@ export function LegRow({
     .join(" · ");
 
   return (
-    <li className="flex items-start gap-2.5 py-2">
+    <li
+      className={cn(
+        "flex items-center gap-2.5 rounded-xl border px-3 py-2.5",
+        leg.result === "won"
+          ? "border-lime/30 bg-lime/[0.07]"
+          : leg.result === "lost"
+            ? "border-danger/25 bg-danger/[0.06]"
+            : "border-border bg-chalk",
+      )}
+    >
       <span
-        className="mt-0.5 flex w-5 shrink-0 justify-center text-sm leading-5"
+        className="flex w-5 shrink-0 justify-center"
         aria-label={leg.result === "pending" && started ? "Live" : meta.label}
       >
-        {leg.result !== "pending" ? (
-          meta.icon
-        ) : started ? (
-          <span className="mt-1.5 inline-block h-2 w-2 animate-pulse rounded-full bg-turf" />
-        ) : (
-          <span className="mt-1.5 inline-block h-1.5 w-1.5 rounded-full bg-ink/25" />
-        )}
+        <ResultMark result={leg.result} live={started} />
       </span>
+      {memberName ? <MemberChip name={memberName} /> : null}
       <div className="min-w-0 flex-1">
         <p
           className={cn(
-            "truncate text-sm font-semibold",
+            "line-clamp-2 text-sm font-semibold",
             leg.result === "lost" ? "text-ink-faint line-through" : "text-ink",
           )}
         >

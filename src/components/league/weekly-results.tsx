@@ -72,7 +72,7 @@ export function WeeklyResults({
         <div className="text-right">
           {parlayHit ? (
             <p className="font-display text-lg font-extrabold uppercase text-turf">
-              🎉 Parlay hit
+              Parlay hit
             </p>
           ) : parlayLost ? (
             <p className="font-display text-lg font-extrabold uppercase text-danger">
@@ -119,14 +119,14 @@ function ResultBadge({ result }: { result: PickResult }) {
   if (result === "td") {
     return (
       <span className="shrink-0 rounded-md bg-turf/15 px-2 py-1 text-[11px] font-bold uppercase tracking-wide text-turf">
-        ✅ TD
+        TD
       </span>
     );
   }
   if (result === "no_td") {
     return (
       <span className="shrink-0 rounded-md bg-danger/10 px-2 py-1 text-[11px] font-bold uppercase tracking-wide text-danger">
-        ❌ No TD
+        No TD
       </span>
     );
   }

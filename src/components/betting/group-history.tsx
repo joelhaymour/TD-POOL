@@ -2,11 +2,12 @@ import { getStore } from "@/lib/store";
 import { cn } from "@/lib/utils/cn";
 import { formatAmerican, formatMoney } from "@/lib/utils/odds";
 import { slipEstimate, slipStake } from "@/lib/props/slip";
-import { actualLabel, gameLabel, legTitle, RESULT_META } from "@/lib/props/format";
+import { actualLabel, gameLabel, legTitle } from "@/lib/props/format";
+import { MemberChip, ResultMark } from "@/components/ui/result-mark";
 import type { League, ParlayResult } from "@/lib/types";
 
 const RESULT_BADGE: Record<ParlayResult, { label: string; className: string }> = {
-  won: { label: "Won", className: "bg-lime text-ink border-lime" },
+  won: { label: "Won", className: "bg-lime text-accent-fg border-lime" },
   lost: { label: "Lost", className: "bg-ink/6 text-ink-muted border-border" },
   push: { label: "Push", className: "bg-field-deep text-ink-muted border-border" },
   pending: { label: "Pending", className: "bg-field-deep text-ink-muted border-border" },
@@ -120,22 +121,38 @@ export async function GroupHistory({
                 {badge.label}
               </span>
             </div>
-            <ul className="divide-y divide-border">
+            <ul className="flex flex-col gap-2 px-4 pb-4">
               {legs.map((leg) => {
                 const actual = actualLabel(leg);
-                const who =
-                  leg.member_id === viewerMemberId ? "You" : nameOf(leg.member_id);
+                const who = nameOf(leg.member_id);
+                const mine = leg.member_id === viewerMemberId;
                 return (
-                  <li key={leg.id} className="flex items-start gap-2.5 px-4 py-2.5">
-                    <span className="mt-0.5 w-5 shrink-0 text-center text-sm">
-                      {RESULT_META[leg.result].icon}
+                  <li
+                    key={leg.id}
+                    className={cn(
+                      "flex items-center gap-2.5 rounded-xl border px-3 py-2.5",
+                      leg.result === "won"
+                        ? "border-lime/30 bg-lime/[0.07]"
+                        : leg.result === "lost"
+                          ? "border-danger/25 bg-danger/[0.06]"
+                          : "border-border bg-chalk",
+                    )}
+                  >
+                    <span className="flex w-5 shrink-0 justify-center">
+                      <ResultMark result={leg.result} />
                     </span>
+                    {who ? (
+                      <MemberChip
+                        name={who}
+                        className={mine ? "bg-lime/20 text-lime" : undefined}
+                      />
+                    ) : null}
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm font-semibold text-ink">
                         {legTitle(leg)}
                       </p>
                       <p className="truncate text-[11px] uppercase tracking-wide text-ink-faint">
-                        {[leg.market_label, gameLabel(gamesById.get(leg.game_id)), who, actual]
+                        {[leg.market_label, gameLabel(gamesById.get(leg.game_id)), actual]
                           .filter(Boolean)
                           .join(" · ")}
                       </p>

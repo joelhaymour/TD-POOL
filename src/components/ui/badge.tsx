@@ -25,7 +25,7 @@ const statusStyles: Record<BadgeStatus, string> = {
   injured: "bg-danger/10 text-danger border-danger/25",
   questionable: "bg-warning/12 text-warning border-warning/30",
   pending: "bg-field-deep text-ink-muted border-border",
-  td: "bg-lime/40 text-ink border-lime/60",
+  td: "bg-lime/25 text-lime border-lime/40",
   no_td: "bg-ink/6 text-ink-faint border-border",
   healthy: "bg-turf/10 text-turf border-turf/20",
   default: "bg-chalk text-ink-muted border-border",

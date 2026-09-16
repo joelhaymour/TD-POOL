@@ -74,7 +74,7 @@ export function PlayerCard({
       )}
     >
       <div className="flex items-start gap-3">
-        <div className="flex h-11 w-11 shrink-0 flex-col items-center justify-center rounded-xl bg-ink text-lime">
+        <div className="flex h-11 w-11 shrink-0 flex-col items-center justify-center rounded-xl bg-raised text-lime">
           <span className="text-[9px] font-bold uppercase leading-none tracking-wider text-lime/70">
             Rank
           </span>
@@ -117,8 +117,8 @@ export function PlayerCard({
           </p>
         </div>
         {player.americanOdds != null ? (
-          <div className="rounded-xl bg-ink px-2.5 py-2">
-            <p className="text-[9px] font-bold uppercase tracking-wider text-chalk/55">
+          <div className="rounded-xl bg-raised px-2.5 py-2">
+            <p className="text-[9px] font-bold uppercase tracking-wider text-raised-fg/55">
               Odds
             </p>
             <p className="font-display text-xl font-extrabold text-lime">

@@ -412,9 +412,9 @@ export function AdminTools({
                     <p className="truncate text-ink-muted">
                       {m.player?.name ?? "Needs pick"}
                       {m.pick?.result === "td"
-                        ? " · ✅ TD"
+                        ? " · TD"
                         : m.pick?.result === "no_td"
-                          ? " · ❌ NO TD"
+                          ? " · NO TD"
                           : m.pick
                             ? " · ⏳"
                             : ""}

@@ -343,13 +343,13 @@ export function PropPickerSheet({
                                   className={cn(
                                     "flex min-w-[4.75rem] items-center justify-center gap-1 rounded-lg border px-2.5 py-2 text-sm font-bold transition",
                                     added
-                                      ? "border-turf bg-turf text-chalk"
+                                      ? "border-lime bg-lime text-raised"
                                       : "border-border-strong bg-chalk text-ink hover:border-turf disabled:opacity-45",
                                   )}
                                 >
                                   {added ? <Check className="h-3.5 w-3.5" /> : null}
                                   {label ? (
-                                    <span className={added ? "text-chalk/80" : "text-ink-muted"}>
+                                    <span className={added ? "text-raised/80" : "text-ink-muted"}>
                                       {label}
                                     </span>
                                   ) : null}

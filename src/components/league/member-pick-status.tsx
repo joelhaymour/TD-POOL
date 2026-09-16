@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
+import { MemberChip, ResultMark } from "@/components/ui/result-mark";
 
 export type MemberPickRow = {
   memberId: string;
@@ -73,9 +74,8 @@ export function MemberPickStatus({
                   isViewer && "bg-turf/5",
                 )}
               >
-                <span aria-hidden className="text-base leading-none">
-                  {hasPick ? "✅" : "⏳"}
-                </span>
+                <MemberChip name={m.memberName} />
+                {hasPick ? <ResultMark result="won" className="h-3.5 w-3.5" /> : null}
                 <span className="min-w-0 flex-1 truncate font-semibold text-ink">
                   {m.memberName}
                   {isViewer ? (

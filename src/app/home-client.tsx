@@ -231,7 +231,7 @@ export function HomeClient({
             type="button"
             className={`h-10 rounded-lg font-display text-xs font-bold uppercase tracking-wider transition ${
               mode === value
-                ? "bg-ink text-lime"
+                ? "bg-lime text-accent-fg"
                 : "text-ink-muted hover:text-ink"
             }`}
             onClick={() => setMode(value)}

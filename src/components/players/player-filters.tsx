@@ -59,7 +59,7 @@ export function PlayerFilters({
               className={cn(
                 "shrink-0 rounded-lg px-3 py-1.5 text-xs font-bold uppercase tracking-wider transition",
                 active
-                  ? "bg-ink text-lime"
+                  ? "bg-lime text-accent-fg"
                   : "bg-chalk text-ink-muted border border-border hover:border-border-strong",
               )}
             >

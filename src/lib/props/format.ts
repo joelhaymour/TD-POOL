@@ -75,12 +75,13 @@ export function actualLabel(
   return unit ? `${v} ${unit}` : String(v);
 }
 
-export const RESULT_META: Record<LegResult, { icon: string; label: string }> = {
-  pending: { icon: "⏳", label: "Pending" },
-  won: { icon: "✅", label: "Hit" },
-  lost: { icon: "❌", label: "Miss" },
-  push: { icon: "↩️", label: "Push" },
-  void: { icon: "⚪", label: "Void" },
+/** Wording for a graded leg. The mark itself is drawn — see ResultMark. */
+export const RESULT_META: Record<LegResult, { label: string }> = {
+  pending: { label: "Pending" },
+  won: { label: "Hit" },
+  lost: { label: "Miss" },
+  push: { label: "Push" },
+  void: { label: "Void" },
 };
 
 export function gameLabel(

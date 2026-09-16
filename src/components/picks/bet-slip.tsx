@@ -91,11 +91,11 @@ export function BetSlip({
         className,
       )}
     >
-      <div className="border-b border-border bg-ink px-4 py-3">
+      <div className="border-b border-border bg-raised px-4 py-3">
         <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-lime">
           Bet Slip
         </p>
-        <h2 className="font-display text-xl font-extrabold uppercase tracking-wide text-chalk">
+        <h2 className="font-display text-xl font-extrabold uppercase tracking-wide text-raised-fg">
           Week {weekNumber} Legs
         </h2>
       </div>

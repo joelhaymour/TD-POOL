@@ -34,7 +34,7 @@ function Stat({
       <p
         className={cn(
           "mt-0.5 font-display text-2xl font-extrabold leading-none tracking-tight",
-          accent ? "text-lime" : "text-chalk",
+          accent ? "text-lime" : "text-raised-fg",
         )}
       >
         {value}
@@ -70,7 +70,7 @@ export function ParlaySummary({
   return (
     <section
       className={cn(
-        "relative overflow-hidden rounded-2xl bg-ink p-4 text-chalk shadow-card",
+        "relative overflow-hidden rounded-2xl bg-raised p-4 text-raised-fg shadow-card",
         className,
       )}
     >
@@ -86,16 +86,16 @@ export function ParlaySummary({
           <h2 className="font-display text-lg font-extrabold uppercase tracking-[0.12em] text-lime">
             Week {weekNumber} Parlay
           </h2>
-          <span className="rounded-md bg-chalk/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-chalk/70">
+          <span className="rounded-md bg-raised-fg/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-raised-fg/70">
             Estimates
           </span>
         </div>
 
         <p className="mt-3 font-display text-4xl font-extrabold leading-none tracking-tight">
           {picksSubmitted}
-          <span className="text-chalk/40"> / {totalMembers}</span>
+          <span className="text-raised-fg/40"> / {totalMembers}</span>
         </p>
-        <p className="mt-1 text-xs font-medium text-chalk/65">
+        <p className="mt-1 text-xs font-medium text-raised-fg/65">
           Picks submitted
         </p>
 
@@ -120,13 +120,13 @@ export function ParlaySummary({
             />
           </div>
         ) : (
-          <p className="mt-4 text-xs text-chalk/55">
+          <p className="mt-4 text-xs text-raised-fg/55">
             Money tracking is off for this league.
           </p>
         )}
 
         {oddsLabel ? (
-          <p className="mt-3 text-[10px] font-medium uppercase tracking-wider text-chalk/45">
+          <p className="mt-3 text-[10px] font-medium uppercase tracking-wider text-raised-fg/45">
             {oddsLabel}
           </p>
         ) : null}

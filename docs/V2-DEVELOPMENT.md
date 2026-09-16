@@ -155,15 +155,17 @@ Group betting members build shared parlays: each member adds up to
   they actually used, and needs no state subdomain, no indexed-array format and
   no per-leg id matching. FanDuel ids are still captured on each leg, so
   prefill can come back from git history if it is ever wanted.
-- **Night Ticket theme.** Group betting renders dark; a TD pool stays light.
-  `globals.css` defines the whole palette as tokens and `[data-theme="night"]`
-  redefines their values, so components keep the classes they already have —
-  `LeagueShell` puts that attribute on a wrapper (not `<html>`) so both themes
-  can render in one session. Two tokens exist for surfaces that are dark in
-  BOTH themes (the slip hero, primary buttons): `raised` / `raised-fg`. Their
-  light values equal the old `ink` / `chalk`, which is why the swap left the
-  TD pool unchanged. `body:has([data-theme="night"])` paints the overscroll
-  area.
+- **Night Ticket is the whole app** — TD pool, league list and login included.
+  `globals.css` holds one palette: a near-black field with translucent white
+  surfaces. `bg-chalk` (the card surface everywhere) is blurred centrally in
+  `globals.css`, so every card is frosted glass and new ones inherit it.
+  Three tokens carry the exceptions: `raised` / `raised-fg` for surfaces that
+  stay a solid slab (slip hero, sheets, toasts) and `accent-fg` for text on a
+  lime or turf fill — `ink` is white now, so `bg-lime text-ink` would be
+  invisible. Check any new accent fill against `accent-fg`.
+- **No emoji in the UI.** Graded marks are drawn (`ui/result-mark.tsx`:
+  `ResultMark`, plus `MemberChip` for initials). Emoji render differently on
+  every device and pull the app toward looking like a chat message.
 - **Leg progress** (`leg-progress.tsx`) draws one bar per leg on every parlay
   card — won lime, lost red, live pulsing, pending dim — so a parlay's state
   reads before any number does.

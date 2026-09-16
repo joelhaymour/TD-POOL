@@ -60,7 +60,7 @@ export function Sheet({
         aria-modal="true"
         aria-labelledby={title ? titleId : undefined}
         className={cn(
-          "relative z-10 flex max-h-[88vh] w-full max-w-lg flex-col rounded-t-2xl bg-chalk shadow-card sm:rounded-2xl",
+          "relative z-10 flex max-h-[88vh] w-full max-w-lg flex-col rounded-t-2xl border border-border bg-raised shadow-card sm:rounded-2xl",
           "animate-sheet-up",
           className,
         )}
