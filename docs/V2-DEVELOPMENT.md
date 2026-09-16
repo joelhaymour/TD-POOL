@@ -97,10 +97,11 @@ quote-based pricing — see `docs/predictiondata-outreach.md`.
 Caesars (`williamhill_us`) and Fanatics also require a paid subscription and
 return empty on free keys.
 
-Group betting ships FanDuel only, because FanDuel returns usable `addToBetslip`
+The prop board group betting picks from is FanDuel's, because FanDuel returns
 market and selection ids through `includeLinks=true&includeSids=true` at no
-extra credit cost. Adding another book is a new adapter in
-`src/lib/props/fanduel-link.ts`, not a rewrite.
+extra credit cost. Placing the bet is a different problem, solved by share
+links rather than by a second odds feed — adding a book there is one entry in
+`src/lib/props/sportsbooks.ts`.
 
 Credits are billed per market **returned**, so requesting markets a book does
 not price is free. A full FanDuel board for one NFL game measured 12-16 credits;
@@ -135,12 +136,6 @@ Group betting members build shared parlays: each member adds up to
   by market id. Identify a selection by market + player + side + line, never
   by `fd_selection_id` alone. Deep links are unaffected, since they send the
   market id alongside.
-- **FanDuel links** must carry the bettor's state subdomain
-  (`co.sportsbook.fanduel.com/addToBetslip?...`). Without it FanDuel shows a
-  state picker first and multi-leg selections can be lost. The state is chosen
-  once per device and saved in local storage. Multi-leg links use indexed
-  arrays (`marketId[0]=…&selectionId[0]=…`); "Add one at a time" is the
-  fallback with single-selection links.
 - **Boards pulled before props post.** FanDuel lists a Sunday game's lines as
   soon as the previous week ends and its player markets midweek. A board with
   lines but no player markets asks again for just the player markets every 30
