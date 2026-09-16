@@ -6,6 +6,7 @@ import { ChevronDown, Plus } from "lucide-react";
 import { useToast } from "@/components/ui/toast";
 import { useLeagueRealtime } from "@/hooks/use-league-realtime";
 import { RideBet } from "@/components/betting/ride-bet";
+import { LegProgress, legProgressLabel } from "@/components/betting/leg-progress";
 import { legTitle, gameLabel, actualLabel, RESULT_META } from "@/lib/props/format";
 import { slipEstimate, slipPhase, slipStake, type SlipPhase } from "@/lib/props/slip";
 import { cn } from "@/lib/utils/cn";
@@ -22,7 +23,7 @@ const GROUP_TABLES = ["parlays", "parlay_legs", "parlay_share_links"] as const;
 
 const PHASE_BADGE: Record<SlipPhase, { label: string; className: string }> = {
   building: { label: "Building", className: "bg-ink/6 text-ink-muted" },
-  locked: { label: "Bet placed", className: "bg-ink text-chalk" },
+  locked: { label: "Bet placed", className: "bg-raised text-raised-fg" },
   live: { label: "Live", className: "bg-lime text-ink" },
   busted: { label: "Busted", className: "bg-danger text-white" },
   settled: { label: "Settled", className: "bg-ink/6 text-ink-muted" },
@@ -131,7 +132,7 @@ export function ParlayBoard({
           </p>
           <Link
             href={`/${slug}`}
-            className="mt-4 inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-ink px-5 font-display text-sm font-extrabold uppercase tracking-wider text-lime"
+            className="mt-4 inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-raised px-5 font-display text-sm font-extrabold uppercase tracking-wider text-lime"
           >
             <Plus className="h-4 w-4" /> Create a parlay
           </Link>
@@ -223,11 +224,15 @@ export function ParlayBoard({
                     aria-hidden
                   />
                 </div>
-                {showMoney ? (
-                  <p className="mt-1 text-[11px] text-ink-faint">
-                    {formatMoney(stake, league.currency)} stake
-                  </p>
-                ) : null}
+                <LegProgress legs={legs} gamesById={gamesById} className="mt-3" />
+                <p className="mt-1.5 text-[11px] text-ink-faint">
+                  {[
+                    showMoney ? `${formatMoney(stake, league.currency)} stake` : null,
+                    legProgressLabel(legs),
+                  ]
+                    .filter(Boolean)
+                    .join(" · ")}
+                </p>
               </button>
 
               {isOpen ? (

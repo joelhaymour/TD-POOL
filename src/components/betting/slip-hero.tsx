@@ -6,11 +6,11 @@ import type { SlipPhase } from "@/lib/props/slip";
 import type { Currency } from "@/lib/types";
 
 const PHASE: Record<SlipPhase, { label: string; className: string }> = {
-  building: { label: "Building", className: "bg-chalk/10 text-chalk/75" },
-  locked: { label: "Bet placed", className: "bg-chalk/15 text-chalk" },
+  building: { label: "Building", className: "bg-raised-fg/10 text-raised-fg/75" },
+  locked: { label: "Bet placed", className: "bg-raised-fg/15 text-raised-fg" },
   live: { label: "Live", className: "bg-lime text-ink" },
   busted: { label: "Busted", className: "bg-danger text-white" },
-  settled: { label: "Settled", className: "bg-chalk/15 text-chalk" },
+  settled: { label: "Settled", className: "bg-raised-fg/15 text-raised-fg" },
 };
 
 function Stat({
@@ -33,7 +33,7 @@ function Stat({
       <p
         className={cn(
           "mt-0.5 truncate font-display text-2xl font-extrabold leading-none tracking-tight",
-          accent ? "text-lime" : "text-chalk",
+          accent ? "text-lime" : "text-raised-fg",
         )}
       >
         {value}
@@ -68,6 +68,7 @@ export function SlipHero({
   currency,
   onEditStake,
   actions,
+  progress,
   children,
 }: {
   weekNumber: number;
@@ -82,11 +83,13 @@ export function SlipHero({
   currency: Currency;
   onEditStake?: () => void;
   actions?: ReactNode;
+  /** Leg-by-leg progress bars, rendered under the count. */
+  progress?: ReactNode;
   children?: ReactNode;
 }) {
   const odds = american != null ? formatAmerican(american) : "—";
   return (
-    <section className="relative overflow-hidden rounded-2xl bg-ink p-4 text-chalk shadow-card">
+    <section className="relative overflow-hidden rounded-2xl bg-raised p-4 text-raised-fg shadow-card">
       <div
         className="pointer-events-none absolute inset-0 opacity-40"
         style={{
@@ -100,7 +103,7 @@ export function SlipHero({
             <h2 className="line-clamp-2 font-display text-lg font-extrabold uppercase leading-tight tracking-[0.12em] text-lime">
               {title}
             </h2>
-            <p className="text-xs font-medium text-chalk/60">Week {weekNumber}</p>
+            <p className="text-xs font-medium text-raised-fg/60">Week {weekNumber}</p>
           </div>
           <div className="flex shrink-0 items-center gap-1">
             {actions}
@@ -117,13 +120,14 @@ export function SlipHero({
 
         <p className="mt-3 font-display text-4xl font-extrabold leading-none tracking-tight">
           {legsIn}
-          <span className="text-chalk/40"> / {capacity}</span>
+          <span className="text-raised-fg/40"> / {capacity}</span>
         </p>
-        <p className="mt-1 text-xs font-medium text-chalk/65">Legs in</p>
+        <p className="mt-1 text-xs font-medium text-raised-fg/65">Legs in</p>
+        {progress ? <div className="mt-3">{progress}</div> : null}
 
         <div
           className={cn(
-            "mt-4 grid gap-3 border-t border-chalk/10 pt-4",
+            "mt-4 grid gap-3 border-t border-raised-fg/10 pt-4",
             showMoney ? "grid-cols-3" : "grid-cols-1",
           )}
         >

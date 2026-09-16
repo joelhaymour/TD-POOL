@@ -12,7 +12,7 @@ export type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
 
 const variantClasses: Record<ButtonVariant, string> = {
   primary:
-    "bg-ink text-lime shadow-sm hover:bg-ink/90 active:scale-[0.98] disabled:bg-ink/40 disabled:text-lime/50",
+    "bg-raised text-lime shadow-sm hover:bg-raised/90 active:scale-[0.98] disabled:bg-raised/40 disabled:text-lime/50",
   secondary:
     "bg-chalk text-ink border border-border-strong hover:bg-field-deep active:scale-[0.98] disabled:opacity-50",
   ghost:

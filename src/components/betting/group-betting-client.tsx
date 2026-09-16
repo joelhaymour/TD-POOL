@@ -18,6 +18,7 @@ import { useLeagueRealtime } from "@/hooks/use-league-realtime";
 import { SlipHero } from "@/components/betting/slip-hero";
 import { PropPickerSheet } from "@/components/betting/prop-picker-sheet";
 import { LegRow } from "@/components/betting/leg-row";
+import { LegProgress } from "@/components/betting/leg-progress";
 import { RideBet } from "@/components/betting/ride-bet";
 import {
   gameStarted,
@@ -263,6 +264,8 @@ export function GroupBettingClient({
       });
       if (left <= 0) setPicker(null);
       await refresh();
+      // The Create tab's badge is server-rendered; re-render it too.
+      router.refresh();
     } finally {
       setBusy(false);
     }
@@ -279,6 +282,7 @@ export function GroupBettingClient({
       return;
     }
     await refresh();
+    router.refresh();
   }
 
   async function addShareLink(url: string, note: string): Promise<boolean> {
@@ -379,7 +383,7 @@ export function GroupBettingClient({
       {viewer.isAdmin && phase !== "settled" ? (
         <button
           type="button"
-          className="rounded-md p-1.5 text-chalk/60 hover:bg-chalk/10 hover:text-chalk"
+          className="rounded-md p-1.5 text-raised-fg/60 hover:bg-raised-fg/10 hover:text-raised-fg"
           aria-label={slipLocked ? "Unlock slip" : "Mark bet placed (locks the slip)"}
           title={slipLocked ? "Unlock slip" : "Mark bet placed"}
           onClick={() => void patchSlip({ status: slipLocked ? "open" : "locked" })}
@@ -390,7 +394,7 @@ export function GroupBettingClient({
       {canEditSlip && phase !== "settled" ? (
         <button
           type="button"
-          className="rounded-md p-1.5 text-chalk/60 hover:bg-chalk/10 hover:text-chalk"
+          className="rounded-md p-1.5 text-raised-fg/60 hover:bg-raised-fg/10 hover:text-raised-fg"
           aria-label="Rename parlay"
           title="Rename parlay"
           onClick={() => {
@@ -404,7 +408,7 @@ export function GroupBettingClient({
       {canEditSlip ? (
         <button
           type="button"
-          className="rounded-md p-1.5 text-chalk/60 hover:bg-chalk/10 hover:text-chalk"
+          className="rounded-md p-1.5 text-raised-fg/60 hover:bg-raised-fg/10 hover:text-raised-fg"
           aria-label="Delete parlay"
           title="Delete parlay"
           onClick={() => setSheet("delete")}
@@ -472,6 +476,9 @@ export function GroupBettingClient({
               : undefined
           }
           actions={heroActions}
+          progress={
+            <LegProgress legs={legs} gamesById={gamesById} tone="dark" />
+          }
         >
           {legs.length > 0 || selected.shares.length > 0 ? (
             <RideBet
@@ -486,11 +493,11 @@ export function GroupBettingClient({
           ) : null}
         </SlipHero>
       ) : (
-        <section className="relative overflow-hidden rounded-2xl bg-ink p-5 text-chalk shadow-card">
+        <section className="relative overflow-hidden rounded-2xl bg-raised p-5 text-raised-fg shadow-card">
           <h2 className="font-display text-lg font-extrabold uppercase tracking-[0.12em] text-lime">
             Week {week.week} Parlay
           </h2>
-          <p className="mt-2 text-sm text-chalk/70">
+          <p className="mt-2 text-sm text-raised-fg/70">
             Start the group&apos;s parlay. Everyone adds up to {max} pick
             {max === 1 ? "" : "s"} from any game — TDs, yards, spreads, totals.
             Whoever places it shares the link so the rest can ride it.

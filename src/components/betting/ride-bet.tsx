@@ -83,13 +83,13 @@ export function RideBet({
   }
 
   return (
-    <div className={cn(dark && "mt-3 border-t border-chalk/10 pt-3")}>
+    <div className={cn(dark && "mt-3 border-t border-raised-fg/10 pt-3")}>
       {shares.length > 0 ? (
         <>
           <p
             className={cn(
               "mb-2 text-[10px] font-bold uppercase tracking-[0.1em]",
-              dark ? "text-chalk/50" : "text-ink-faint",
+              dark ? "text-raised-fg/50" : "text-ink-faint",
             )}
           >
             Ride this bet
@@ -103,7 +103,7 @@ export function RideBet({
                     type="button"
                     className={cn(
                       "rounded-lg p-2 transition hover:text-danger",
-                      dark ? "text-chalk/40" : "text-ink-faint",
+                      dark ? "text-raised-fg/40" : "text-ink-faint",
                     )}
                     aria-label="Remove this link"
                     onClick={() => void onRemove(share.id)}
@@ -123,7 +123,7 @@ export function RideBet({
                   key={share.id}
                   className={cn(
                     "text-[11px]",
-                    dark ? "text-chalk/55" : "text-ink-faint",
+                    dark ? "text-raised-fg/55" : "text-ink-faint",
                   )}
                 >
                   {book?.name ?? share.sportsbook} · {who ?? "a member"}
@@ -139,7 +139,7 @@ export function RideBet({
         type="button"
         className={cn(
           "mt-2 flex items-center gap-1.5 text-[11px] font-medium underline-offset-2 transition hover:underline disabled:opacity-40",
-          dark ? "text-chalk/55 hover:text-chalk" : "text-ink-muted hover:text-ink",
+          dark ? "text-raised-fg/55 hover:text-raised-fg" : "text-ink-muted hover:text-ink",
         )}
         onClick={() => setOpen(true)}
         disabled={disabled}

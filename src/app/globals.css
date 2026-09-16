@@ -14,6 +14,10 @@
   --warning: #c47a12;
   --border: rgba(13, 31, 20, 0.1);
   --border-strong: rgba(13, 31, 20, 0.18);
+  /* A surface that is dark in BOTH themes — slip hero, primary buttons. */
+  --raised: #0d1f14;
+  --raised-fg: #ffffff;
+  --scrim: rgba(13, 31, 20, 0.45);
   --shadow-card: 0 1px 2px rgba(13, 31, 20, 0.04),
     0 8px 24px rgba(13, 31, 20, 0.06);
 }
@@ -32,9 +36,46 @@
   --color-warning: var(--warning);
   --color-border: var(--border);
   --color-border-strong: var(--border-strong);
+  --color-raised: var(--raised);
+  --color-raised-fg: var(--raised-fg);
+  --color-scrim: var(--scrim);
   --font-sans: var(--font-manrope);
   --font-display: var(--font-barlow);
   --shadow-card: var(--shadow-card);
+}
+
+/**
+ * Night Ticket — the group betting look. Only token values change here, so
+ * every component keeps the classes it already has. Scoped to a subtree
+ * rather than the document so a TD pool league in the same session stays
+ * light.
+ */
+[data-theme="night"] {
+  --field: #0b0f0c;
+  --field-deep: #101713;
+  --ink: #ffffff;
+  --ink-muted: rgba(255, 255, 255, 0.64);
+  --ink-faint: rgba(255, 255, 255, 0.45);
+  --turf: #a9e85f;
+  --turf-deep: #c7f94b;
+  --chalk: #141a16;
+  --lime: #c7f94b;
+  --danger: #e2553f;
+  --warning: #e0a53a;
+  --border: rgba(255, 255, 255, 0.09);
+  --border-strong: rgba(255, 255, 255, 0.2);
+  --raised: #17231b;
+  --scrim: rgba(0, 0, 0, 0.62);
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.45),
+    0 10px 30px rgba(0, 0, 0, 0.4);
+  color-scheme: dark;
+}
+
+/* The themed wrapper cannot paint the document itself; without this the
+   overscroll area behind a night page stays light. */
+body:has([data-theme="night"]) {
+  background-color: #0b0f0c;
+  color-scheme: dark;
 }
 
 body {
@@ -61,6 +102,21 @@ body {
     linear-gradient(90deg, rgba(13, 31, 20, 0.035) 1px, transparent 1px);
   background-size: auto, 28px 28px, 28px 28px;
   background-position: 0 0, 0 0, 0 0;
+}
+
+/* The same field lines, drawn in light on dark. */
+[data-theme="night"] .field-atmosphere {
+  background-color: var(--field);
+  background-image:
+    linear-gradient(
+      165deg,
+      rgba(199, 249, 75, 0.06) 0%,
+      transparent 45%,
+      rgba(31, 138, 76, 0.1) 100%
+    ),
+    linear-gradient(rgba(255, 255, 255, 0.028) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.028) 1px, transparent 1px);
+  background-size: auto, 28px 28px, 28px 28px;
 }
 
 @keyframes sheet-up {

@@ -34,7 +34,7 @@ export function LeagueHeader({
           {leagueName}
         </h1>
         <div className="mt-1.5 flex flex-wrap items-center gap-2">
-          <Badge className="bg-ink text-lime border-ink">
+          <Badge className="bg-raised text-lime border-raised">
             NFL Week {weekNumber}
           </Badge>
           {subtitle ? (

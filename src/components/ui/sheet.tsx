@@ -52,7 +52,7 @@ export function Sheet({
       <button
         type="button"
         aria-label="Close sheet"
-        className="absolute inset-0 bg-ink/45 animate-fade-in"
+        className="absolute inset-0 bg-scrim animate-fade-in"
         onClick={onClose}
       />
       <div

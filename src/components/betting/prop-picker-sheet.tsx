@@ -243,7 +243,7 @@ export function PropPickerSheet({
                     className={cn(
                       "shrink-0 rounded-full px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider transition",
                       active === g
-                        ? "bg-ink text-lime"
+                        ? "bg-raised text-lime"
                         : "border border-border text-ink-muted hover:text-ink",
                     )}
                     onClick={() => setGroup(g)}

@@ -14,6 +14,7 @@ export function LeagueShell({
   weekNumber,
   viewerName,
   groupBetting = false,
+  picksNeeded = 0,
   children,
 }: {
   slug: string;
@@ -21,15 +22,26 @@ export function LeagueShell({
   weekNumber: number;
   viewerName: string;
   groupBetting?: boolean;
+  /** Parlays waiting on this viewer — badges the Create tab. */
+  picksNeeded?: number;
   children: ReactNode;
 }) {
   const basePath = `/${slug}`;
 
+  // Group betting wears the Night Ticket theme; a TD pool stays light. The
+  // wrapper (not <html>) scopes it, so both can render in one session, and
+  // it paints the page background either side of the max-width column.
   return (
+    <div
+      data-theme={groupBetting ? "night" : undefined}
+      className={groupBetting ? "min-h-dvh bg-field" : undefined}
+    >
     <AppShell
       basePath={basePath}
       navItems={
-        groupBetting ? groupBettingNavItems(basePath) : leagueNavItems(basePath)
+        groupBetting
+          ? groupBettingNavItems(basePath, { create: picksNeeded })
+          : leagueNavItems(basePath)
       }
       header={
         <LeagueHeader
@@ -42,5 +54,6 @@ export function LeagueShell({
     >
       {children}
     </AppShell>
+    </div>
   );
 }

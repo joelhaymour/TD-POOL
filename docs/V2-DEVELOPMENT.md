@@ -155,6 +155,22 @@ Group betting members build shared parlays: each member adds up to
   they actually used, and needs no state subdomain, no indexed-array format and
   no per-leg id matching. FanDuel ids are still captured on each leg, so
   prefill can come back from git history if it is ever wanted.
+- **Night Ticket theme.** Group betting renders dark; a TD pool stays light.
+  `globals.css` defines the whole palette as tokens and `[data-theme="night"]`
+  redefines their values, so components keep the classes they already have —
+  `LeagueShell` puts that attribute on a wrapper (not `<html>`) so both themes
+  can render in one session. Two tokens exist for surfaces that are dark in
+  BOTH themes (the slip hero, primary buttons): `raised` / `raised-fg`. Their
+  light values equal the old `ink` / `chalk`, which is why the swap left the
+  TD pool unchanged. `body:has([data-theme="night"])` paints the overscroll
+  area.
+- **Leg progress** (`leg-progress.tsx`) draws one bar per leg on every parlay
+  card — won lime, lost red, live pulsing, pending dim — so a parlay's state
+  reads before any number does.
+- **Create tab badge** counts parlays waiting on the viewer's picks
+  (`countParlaysNeedingPicks`), using the same visibility filter as Home so an
+  empty slip from a past week never badges. It is server-rendered, so the
+  client calls `router.refresh()` after a pick is added or removed.
 - **Ride this bet.** Sportsbooks mint share links on their own servers and no
   third party can construct one, so the member who placed the slip pastes
   theirs (`parlay_share_links`) and everyone else gets a branded button that
