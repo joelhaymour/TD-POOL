@@ -79,10 +79,16 @@ export async function settleLeagueParlays(
       continue;
     }
     const box = boxes.get(leg.game_id);
-    const grade = box ? gradeLeg(leg, box) : null;
-    if (grade) {
-      grades.set(leg.id, { result: grade.result, actual_value: grade.actual });
+    if (!box) continue;
+    const final = gamesById.get(leg.game_id)?.status === "final";
+    const grade = final ? gradeLeg(leg, box) : gradeLegLive(leg, box);
+    if (!grade) continue;
+    // Live legs are re-read every cycle; only a change is worth a write, and
+    // the realtime event every open app gets from it.
+    if (grade.result === leg.result && grade.actual === leg.actual_value) {
+      continue;
     }
+    grades.set(leg.id, { result: grade.result, actual_value: grade.actual });
   }
 
   if (grades.size > 0) {
