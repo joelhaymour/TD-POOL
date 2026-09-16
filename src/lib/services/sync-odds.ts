@@ -40,6 +40,17 @@ const inFlightOddsSync = new Map<string, Promise<OddsSyncSummary | null>>();
  */
 const FULL_BOARD_PLAYERS_PER_GAME = 12;
 
+/**
+ * Stop spending when the month's allowance is nearly gone, the way the prop
+ * boards already do. It matters more since partial slates retry every 12
+ * hours: without a floor, an early-week board that books have barely priced
+ * could keep paying to re-read the same handful of games.
+ */
+function creditFloor(): number {
+  const n = Number(process.env.ODDS_CREDIT_FLOOR);
+  return Number.isFinite(n) && n > 0 ? n : 40;
+}
+
 /** Slot status for a week odds sync: partial boards retry after 12 hours. */
 export function weekOddsSlotStatus(summary: OddsSyncSummary): SyncSlotStatus {
   if (summary.playersUpdated <= 0) return "error";
@@ -132,6 +143,25 @@ export async function syncWeekOdds(
   args: { season: number; week: number; weekId: string },
 ): Promise<OddsSyncSummary> {
   const source = getConfiguredOddsSource();
+
+  // The provider reports what is left on every call; the last run stored it.
+  const floor = creditFloor();
+  const last = await store
+    .getSyncState(`odds:week:${args.season}:${args.week}`)
+    .catch(() => null);
+  const left = last?.detail.creditsRemaining;
+  if (source === "live" && typeof left === "number" && left >= 0 && left < floor) {
+    return {
+      source: "none",
+      season: args.season,
+      week: args.week,
+      quotes: 0,
+      playersUpdated: 0,
+      fetchedAt: new Date().toISOString(),
+      error: `Only ${left} odds credits left this month — keeping the saved prices`,
+      creditsRemaining: left,
+    };
+  }
   const players = await store.listPlayers();
   const games = await store.listGamesForWeek(args.weekId);
 
