@@ -61,9 +61,9 @@ const UNITS: Record<string, string> = {
   team_totals: "pts",
 };
 
-/** The graded stat in words: "23 rec yds", "won by 3". */
+/** The graded stat in words: "23 rec yds", "won by 3", "42 rec yds so far". */
 export function actualLabel(
-  leg: Pick<ParlayLeg, "market_key" | "actual_value">,
+  leg: Pick<ParlayLeg, "market_key" | "actual_value"> & { result?: LegResult },
 ): string | null {
   const v = leg.actual_value;
   if (v == null) return null;
@@ -72,7 +72,8 @@ export function actualLabel(
     return v > 0 ? `won by ${v}` : v < 0 ? `lost by ${-v}` : "tied";
   }
   const unit = UNITS[key];
-  return unit ? `${v} ${unit}` : String(v);
+  const stat = unit ? `${v} ${unit}` : String(v);
+  return leg.result === "pending" ? `${stat} so far` : stat;
 }
 
 /** Wording for a graded leg. The mark itself is drawn — see ResultMark. */

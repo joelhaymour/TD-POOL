@@ -183,6 +183,18 @@ Group betting members build shared parlays: each member adds up to
   into a place to post any link. **Adding a book is one entry in that file**;
   nothing else changes. `deepLink: true` marks the books we can also prefill
   from our own board (FanDuel today).
+- **Live grading.** A leg on a game that is UNDER WAY is graded by
+  `gradeLegLive`, which calls only what is already certain: a counting stat
+  never goes down, so a cleared over or "X+" is safe, as is a market whose
+  period is over and the game's first touchdown. Unders, moneylines, spreads
+  and totals hold until the whistle, and nothing is ever called a MISS early —
+  that would kill a parlay that can still win. Pending legs carry the running
+  stat ("42 rec yds so far"). A slip whose legs all cleared early still waits
+  for its games to end before moving to History. Box scores are cached 45s
+  per game so several leagues watching one game share a request, and a leg row
+  is only written when its result or stat actually moved.
+  **This costs no odds credits** — ESPN's box score is free. Odds APIs sell
+  prices, not player stats.
 - **Grading** runs on every Home load (throttled to once a minute): scores come
   from ESPN, then each pending leg on a final game is graded from the ESPN box
   score. A player absent from the box score counts as zero unless the injury

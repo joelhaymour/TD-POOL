@@ -234,3 +234,56 @@ export function gradeLeg(leg: GradableLeg, box: GameBoxScore): LegGrade | null {
     actual,
   };
 }
+
+/**
+ * What is already certain while the game is still being played.
+ *
+ * A player's counting stat only goes up, so an over or a "30+" that has
+ * cleared can never come back — that is safe to call now. An under is not
+ * safe until the whistle, and a moneyline, spread or total can swing on the
+ * next drive, so those stay pending. A period market settles once its period
+ * is in the books, and the game's first touchdown cannot be scored twice.
+ *
+ * Nothing here ever returns "lost" on a market that could still be won: a
+ * miss called early would kill a parlay that is still alive.
+ */
+export function gradeLegLive(
+  leg: GradableLeg,
+  box: GameBoxScore,
+): LegGrade | null {
+  const grade = gradeLeg(leg, box);
+  if (!grade) return null;
+
+  const side = leg.outcome_label.trim().toLowerCase();
+  const key = leg.market_key;
+  const base = isAlternateMarket(key) ? key.slice(0, -"_alternate".length) : key;
+  const periodsDone = Math.min(box.periods.home.length, box.periods.away.length);
+
+  // Ruled out is a roster fact, not a score: it holds.
+  if (grade.result === "void") return grade;
+
+  // A finished period cannot change.
+  if (key.endsWith("_q1")) {
+    return periodsDone >= 1 ? grade : { result: "pending", actual: grade.actual };
+  }
+  if (key.endsWith("_h1")) {
+    return periodsDone >= 2 ? grade : { result: "pending", actual: grade.actual };
+  }
+
+  // The first touchdown of a game is settled the moment it is scored.
+  if (base === "player_1st_td" && box.firstTouchdown) return grade;
+
+  const monotonic =
+    base !== "player_1st_td" &&
+    base !== "player_last_td" &&
+    !MONEYLINE.has(key) &&
+    !SPREAD.has(key) &&
+    !TOTAL.has(key);
+
+  // Overs and "X+" ladders only ever climb toward a win.
+  if (monotonic && grade.result === "won" && side !== "under" && side !== "no") {
+    return grade;
+  }
+
+  return { result: "pending", actual: grade.actual };
+}
