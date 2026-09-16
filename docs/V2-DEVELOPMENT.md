@@ -265,6 +265,11 @@ An external scheduler (cron-job.org) calls it, because Vercel's Hobby plan
 only runs crons daily. Aim it at `/api/cron/tick` with the bearer header,
 every minute during game windows.
 
+Enabled on both environments as of 2026-09-15. Production had no
+`CRON_SECRET` at all before this, so its cron routes were unauthenticated;
+it now has one, which also makes Vercel send it as a bearer token on its own
+scheduled calls.
+
 ## Releasing later
 
 Feature work stays on `v2` or branches based on it. Review and test code and
