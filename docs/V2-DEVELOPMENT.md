@@ -248,6 +248,23 @@ this ships and a league's stake never changes under it; saving settings
 rewrites the row. The `betting_mode` enum keeps its third value in the
 database, unused.
 
+## Settle ticker
+
+`/api/cron/tick` is the every-minute job: it pulls scores for weeks that still
+have a leg in play and grades them, so a parlay settles when its games end
+rather than when somebody next opens the app. It is deliberately cheap — with
+nothing pending on a game that has kicked off it returns `idle` without
+touching a provider — and it spends no odds credits, since ESPN is free. The
+board rebuild stays in `refresh-td-board`.
+
+It runs only where `ENABLE_SETTLE_TICK=true` (set on staging) and requires
+`CRON_SECRET` as a bearer token. `ENABLE_CRON_JOBS` stays `false` on staging,
+which the environment guard demands; this flag is separate on purpose.
+
+An external scheduler (cron-job.org) calls it, because Vercel's Hobby plan
+only runs crons daily. Aim it at `/api/cron/tick` with the bearer header,
+every minute during game windows.
+
 ## Releasing later
 
 Feature work stays on `v2` or branches based on it. Review and test code and
