@@ -148,10 +148,6 @@ export function calculateWeeklyStake(league: WeeklyStakeLeagueInput): number {
       return 0;
     case "fixed":
       return league.fixed_weekly_stake ?? 0;
-    case "individual":
-      return (
-        (league.contribution_per_member ?? 0) * Math.max(league.member_count, 0)
-      );
     default: {
       const _exhaustive: never = league.betting_mode;
       return _exhaustive;

@@ -117,9 +117,16 @@ function mapLeague(row: DbLeague): League {
       row.league_type === "group_betting" ? "group_betting" : "td_pool",
     max_props_per_member: num(row.max_props_per_member, 3),
     currency: (row.currency as League["currency"]) ?? "USD",
-    betting_mode: (row.betting_mode as League["betting_mode"]) ?? "individual",
+    // Legacy "individual" leagues read as fixed at the amount they were
+    // already wagering, so nothing changes for them and no migration is
+    // needed before this ships.
+    betting_mode: row.betting_mode === "none" ? "none" : "fixed",
     contribution_per_member: numOrNull(row.contribution_per_member),
-    fixed_weekly_stake: numOrNull(row.fixed_weekly_stake),
+    fixed_weekly_stake:
+      row.betting_mode === "individual"
+        ? (numOrNull(row.fixed_weekly_stake) ??
+          num(row.contribution_per_member, 0) * num(row.member_count_setting, 0))
+        : numOrNull(row.fixed_weekly_stake),
     pick_lock_type: (row.pick_lock_type as League["pick_lock_type"]) ?? "individual_game",
     pick_deadline_at: row.custom_lock_at ? String(row.custom_lock_at) : null,
     allow_pick_changes: Boolean(row.allow_pick_changes ?? true),
@@ -456,7 +463,7 @@ export class SupabaseStore implements Store {
         league_type: input.league_type ?? "td_pool",
         max_props_per_member: input.max_props_per_member ?? 3,
         currency: input.currency ?? "USD",
-        betting_mode: input.betting_mode ?? "individual",
+        betting_mode: input.betting_mode ?? "fixed",
         contribution_per_member: input.contribution_per_member ?? 10,
         fixed_weekly_stake: input.fixed_weekly_stake ?? null,
         member_count_setting: memberCount,

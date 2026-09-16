@@ -57,7 +57,7 @@ function nowIso(): string {
 
 /**
  * Complete demo league payload for local Phase 1–2 development.
- * League: Sunday TD Club / joels-league, Week 4 active, individual $10 × 12.
+ * League: Sunday TD Club / joels-league, Week 4 active, $120 weekly stake.
  * Games stay `scheduled` until admin sync; seed picks (Barkley/Henry/Chase/Gibbs)
  * are guaranteed TDs when finals are simulated via the mock provider.
  */
@@ -83,9 +83,9 @@ export async function buildSeedPayload(): Promise<SeedPayload> {
     league_type: "td_pool",
     max_props_per_member: 3,
     currency: "USD",
-    betting_mode: "individual",
+    betting_mode: "fixed",
     contribution_per_member: 10,
-    fixed_weekly_stake: null,
+    fixed_weekly_stake: 120,
     pick_lock_type: "individual_game",
     pick_deadline_at: null,
     allow_pick_changes: true,

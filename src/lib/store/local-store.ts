@@ -199,7 +199,7 @@ export class LocalFileStore implements Store {
         league_type: input.league_type ?? "td_pool",
         max_props_per_member: input.max_props_per_member ?? 3,
         currency: input.currency ?? "USD",
-        betting_mode: input.betting_mode ?? "individual",
+        betting_mode: input.betting_mode ?? "fixed",
         contribution_per_member: input.contribution_per_member ?? 10,
         fixed_weekly_stake: input.fixed_weekly_stake ?? null,
         pick_lock_type: input.pick_lock_type ?? "individual_game",

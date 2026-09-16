@@ -213,6 +213,16 @@ and the **test** Odds API key. The test key is a free 500-credit plan, so
 staging sets `PROPS_SYNC_TTL_HOURS=24` and `ODDS_CREDIT_FLOOR=60`. Never put the
 production Odds API key in the staging project.
 
+## Betting mode
+
+"Individual contribution" (members × contribution) is gone: it only ever
+produced a fixed weekly number. A league is now **Fixed Group Bet** or **No
+Money**. Rows still stored as `individual` read back as fixed at the amount
+they were already staking (`mapLeague`), so no data migration is needed before
+this ships and a league's stake never changes under it; saving settings
+rewrites the row. The `betting_mode` enum keeps its third value in the
+database, unused.
+
 ## Releasing later
 
 Feature work stays on `v2` or branches based on it. Review and test code and

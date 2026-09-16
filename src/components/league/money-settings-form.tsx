@@ -2,12 +2,10 @@
 
 import { cn } from "@/lib/utils/cn";
 
-export type BettingMode = "individual" | "fixed" | "none";
+export type BettingMode = "fixed" | "none";
 
 export type MoneySettingsValue = {
   betting_mode: BettingMode;
-  contribution_per_member: number;
-  member_count: number;
   fixed_weekly_stake: number;
   currency: "USD" | "CAD";
 };
@@ -21,14 +19,9 @@ export type MoneySettingsFormProps = {
 
 const modes: { id: BettingMode; title: string; hint: string }[] = [
   {
-    id: "individual",
-    title: "Individual Contribution",
-    hint: "Members × contribution = weekly stake",
-  },
-  {
     id: "fixed",
     title: "Fixed Group Bet",
-    hint: "One fixed amount wagered each week",
+    hint: "One amount wagered each week",
   },
   {
     id: "none",
@@ -63,12 +56,7 @@ export function MoneySettingsForm({
   className,
   disabled,
 }: MoneySettingsFormProps) {
-  const weeklyStake =
-    value.betting_mode === "individual"
-      ? value.contribution_per_member * value.member_count
-      : value.betting_mode === "fixed"
-        ? value.fixed_weekly_stake
-        : 0;
+  const weeklyStake = value.betting_mode === "fixed" ? value.fixed_weekly_stake : 0;
 
   return (
     <div className={cn("space-y-5", className)}>
@@ -107,43 +95,6 @@ export function MoneySettingsForm({
           );
         })}
       </fieldset>
-
-      {value.betting_mode === "individual" ? (
-        <div className="grid grid-cols-2 gap-3">
-          <Field label="Per member ($)">
-            <input
-              type="number"
-              min={0}
-              step={1}
-              disabled={disabled}
-              className={inputClass}
-              value={value.contribution_per_member}
-              onChange={(e) =>
-                onChange({
-                  ...value,
-                  contribution_per_member: Number(e.target.value) || 0,
-                })
-              }
-            />
-          </Field>
-          <Field label="Members">
-            <input
-              type="number"
-              min={1}
-              step={1}
-              disabled={disabled}
-              className={inputClass}
-              value={value.member_count}
-              onChange={(e) =>
-                onChange({
-                  ...value,
-                  member_count: Number(e.target.value) || 0,
-                })
-              }
-            />
-          </Field>
-        </div>
-      ) : null}
 
       {value.betting_mode === "fixed" ? (
         <Field label="Weekly stake ($)">

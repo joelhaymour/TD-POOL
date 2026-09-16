@@ -32,9 +32,7 @@ export function SettingsForm({
   const [allowPickChanges, setAllowPickChanges] = useState(true);
   const [lockType, setLockType] = useState<PickLockType>("individual_game");
   const [money, setMoney] = useState<MoneySettingsValue>({
-    betting_mode: "individual",
-    contribution_per_member: 10,
-    member_count: 12,
+    betting_mode: "fixed",
     fixed_weekly_stake: 100,
     currency: "USD",
   });
@@ -66,8 +64,8 @@ export function SettingsForm({
         setMaxProps(String(l.max_props_per_member || 3));
         setMoney({
           betting_mode: l.betting_mode,
-          contribution_per_member: l.contribution_per_member ?? 10,
-          member_count: l.member_count,
+          // A league that was on the old per-member mode reads back as fixed
+          // at the amount it was already staking.
           fixed_weekly_stake: l.fixed_weekly_stake ?? 100,
           currency: l.currency,
         });
@@ -141,8 +139,6 @@ export function SettingsForm({
               }
             : {}),
           betting_mode: money.betting_mode,
-          contribution_per_member: money.contribution_per_member,
-          member_count: money.member_count,
           fixed_weekly_stake: money.fixed_weekly_stake,
           currency: money.currency,
         }),

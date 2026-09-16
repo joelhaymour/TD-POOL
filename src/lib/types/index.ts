@@ -1,6 +1,11 @@
 /** Domain types for the Anytime TD Pool app. */
 
-export type BettingMode = "individual" | "fixed" | "none";
+/**
+ * "individual" (members × contribution) was dropped — it always produced a
+ * fixed weekly number anyway. Legacy rows are read as "fixed" with that
+ * product as the stake; see mapLeague.
+ */
+export type BettingMode = "fixed" | "none";
 export type LeagueType = "td_pool" | "group_betting";
 export type ParlayStatus = "open" | "locked";
 export type ParlayResult = "pending" | "won" | "lost" | "push";

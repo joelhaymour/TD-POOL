@@ -84,7 +84,15 @@ export async function PATCH(
     }
     if (name !== undefined) settings.name = name;
     if (currency !== undefined) settings.currency = currency;
-    if (betting_mode !== undefined) settings.betting_mode = betting_mode;
+    if (betting_mode !== undefined) {
+      if (betting_mode !== "fixed" && betting_mode !== "none") {
+        return NextResponse.json(
+          { error: "betting_mode must be fixed or none", code: "VALIDATION" },
+          { status: 400 },
+        );
+      }
+      settings.betting_mode = betting_mode;
+    }
     if (contribution_per_member !== undefined) {
       settings.contribution_per_member = contribution_per_member;
     }

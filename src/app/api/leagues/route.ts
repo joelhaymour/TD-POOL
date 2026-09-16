@@ -34,7 +34,7 @@ export async function POST(request: Request) {
       max_props_per_member: body.max_props_per_member,
       join_pin: body.join_pin ?? "0000",
       currency: body.currency,
-      betting_mode: body.betting_mode,
+      betting_mode: body.betting_mode === "none" ? "none" : "fixed",
       contribution_per_member: body.contribution_per_member,
       fixed_weekly_stake: body.fixed_weekly_stake,
       pick_lock_type: body.pick_lock_type,
