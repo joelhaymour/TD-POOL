@@ -166,7 +166,6 @@ export function TicketFeed({
               members={members}
               viewer={viewer}
               currency={league.currency}
-              defaultOpen={feed.tickets.length === 1}
               onRide={(riding) => ride(t.parlay.id, riding)}
               onDelete={() => remove(t.parlay.id)}
               onAddShare={(url, note) => addShare(t.parlay.id, url, note)}

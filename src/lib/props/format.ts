@@ -62,6 +62,39 @@ const UNITS: Record<string, string> = {
   team_totals: "pts",
 };
 
+/**
+ * The leg in a few characters, for the label under its progress bar:
+ * "St. Brown o6.5", "Cook ATD", "Allen o249.5", "Falcons -3.5", "o47.5".
+ */
+export function legShortTitle(leg: LabelLeg): string {
+  const key = leg.market_key;
+  const base = key.replace(/_alternate$/, "");
+  const side = leg.outcome_label.trim().toLowerCase();
+  const line = leg.line != null ? String(leg.line) : "";
+  // First name dropped, so "Amon-Ra St. Brown" keeps its "St."
+  const who = leg.player_name
+    ? leg.player_name.trim().split(/\s+/).slice(1).join(" ") || leg.player_name
+    : null;
+  const team = (name: string) => name.trim().split(/\s+/).at(-1) ?? name;
+
+  if (base === "player_anytime_td") return `${who} ATD`;
+  if (base === "player_1st_td") return `${who} 1st TD`;
+  if (base === "player_last_td") return `${who} last TD`;
+  if (key.startsWith("h2h")) return `${team(leg.outcome_label)} ML`;
+  if (key.startsWith("spreads") || key === "alternate_spreads") {
+    return `${team(leg.outcome_label)} ${leg.line != null && leg.line > 0 ? "+" : ""}${line}`;
+  }
+  if (key.startsWith("totals") || key === "alternate_totals") {
+    return `${side === "under" ? "u" : "o"}${line}`;
+  }
+  if (key === "team_totals") {
+    return `${team(leg.player_name ?? "")} ${side === "under" ? "u" : "o"}${line}`;
+  }
+  if (isAlternateMarket(key)) return `${who} ${line}+`;
+  const marker = side === "under" ? "u" : side === "over" ? "o" : "";
+  return `${who} ${marker}${line}`.trim();
+}
+
 /** "catches", "rec yds" — the unit a market's line is counted in, or null. */
 export function legUnit(marketKey: string): string | null {
   return UNITS[marketKey.replace(/_alternate$/, "")] ?? null;

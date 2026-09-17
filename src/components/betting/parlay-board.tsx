@@ -237,7 +237,7 @@ export function ParlayBoard({
                     aria-hidden
                   />
                 </div>
-                <LegProgress legs={legs} gamesById={gamesById} className="mt-3" />
+                <LegProgress legs={legs} gamesById={gamesById} labels className="mt-3" />
                 <p className="mt-1.5 text-[11px] text-ink-faint">
                   {[
                     showMoney ? `${formatMoney(stake, league.currency)} stake` : null,

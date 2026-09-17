@@ -116,7 +116,7 @@ export function TicketCard({
           />
         </div>
 
-        <div className="mt-2 flex items-center gap-3">
+        <div className="mt-2 flex items-baseline gap-3">
           <span className="shrink-0 font-display text-lg font-extrabold leading-none tracking-tight text-turf">
             {odds != null ? formatAmerican(odds) : "—"}
           </span>
@@ -129,20 +129,20 @@ export function TicketCard({
               </span>
             </span>
           ) : null}
-          <LegProgress legs={legs} gamesById={gamesById} className="ml-auto w-2/5 min-w-24" />
+          <span className="ml-auto min-w-0 truncate text-[11px] text-ink-faint">
+            {[
+              mine ? "You" : posterName,
+              parlay.sportsbook ? sportsbookName(parlay.sportsbook) : null,
+              legProgressLabel(legs),
+              rides.length > 0 ? `${rides.length} riding` : null,
+            ]
+              .filter(Boolean)
+              .join(" · ")}
+          </span>
         </div>
 
-        <p className="mt-1.5 truncate text-[11px] text-ink-faint">
-          {[
-            mine ? "You" : posterName,
-            parlay.sportsbook ? sportsbookName(parlay.sportsbook) : null,
-            `${legs.length} leg${legs.length === 1 ? "" : "s"}`,
-            legProgressLabel(legs),
-            rides.length > 0 ? `${rides.length} riding` : null,
-          ]
-            .filter(Boolean)
-            .join(" · ")}
-        </p>
+        {/* The bars carry the picks' names, so the bet reads without opening it. */}
+        <LegProgress legs={legs} gamesById={gamesById} labels className="mt-2.5" />
       </button>
 
       {open ? (
