@@ -5,7 +5,6 @@ import {
   useEffect,
   useRef,
   useState,
-  type ClipboardEvent,
   type FormEvent,
 } from "react";
 import { ClipboardPaste, ImagePlus, Plus, ScanLine } from "lucide-react";
@@ -14,7 +13,7 @@ import { Sheet } from "@/components/ui/sheet";
 import { BookBadge } from "@/components/tickets/book-badge";
 import { LegEditor, blankLeg } from "@/components/tickets/leg-editor";
 import { apiError, apiForm, apiJson } from "@/lib/api/client";
-import { SHARE_BOOKS } from "@/lib/props/sportsbooks";
+import { parseShareLink, SHARE_BOOKS } from "@/lib/props/sportsbooks";
 import type { TicketDraft, TicketLegDraft } from "@/lib/tickets/normalize";
 import type { TicketReaderStatus } from "@/lib/tickets/reader";
 import { shrinkImage, type ShrunkImage } from "@/lib/tickets/shrink-image";
@@ -39,10 +38,10 @@ type ReadResponse = {
 type Stage = "pick" | "reading" | "review" | "posting";
 
 /**
- * Post a bet you placed. Paste the book's share (it carries a picture of the
- * slip and the link together), or choose the screenshot; the picture is read
- * into legs, the member checks them, and the ticket goes up for the league
- * to follow and ride.
+ * Post a bet you placed. One paste carries the book's share — a picture of
+ * the slip AND the ride link — so the whole sheet is a paste target; the
+ * picture is read into legs, the member checks them, and the ticket goes up
+ * for the league to follow and ride.
  */
 export function PostTicketSheet({
   open,
@@ -61,6 +60,16 @@ export function PostTicketSheet({
   const [picture, setPicture] = useState<Picture | null>(null);
   const [shareText, setShareText] = useState("");
   const [hint, setHint] = useState<string | null>(null);
+  /**
+   * The camera roll is offered only once the clipboard has failed to deliver
+   * a picture — the browser cannot read it, or a read came back with just the
+   * link (Android has no "copy" on a screenshot). Never the front door: a file
+   * picked first would leave the ride link behind.
+   */
+  const [offerPicker, setOfferPicker] = useState(false);
+  /** Bumped on reset so a request that finishes after the sheet closed is ignored. */
+  const session = useRef(0);
+  const pictureRef = useRef<Picture | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const [games, setGames] = useState<NflGame[]>([]);
@@ -94,10 +103,13 @@ export function PostTicketSheet({
 
   const reset = useCallback(() => {
     setStage("pick");
-    if (picture) URL.revokeObjectURL(picture.url);
+    if (pictureRef.current) URL.revokeObjectURL(pictureRef.current.url);
+    pictureRef.current = null;
     setPicture(null);
     setShareText("");
     setHint(null);
+    setOfferPicker(false);
+    session.current += 1;
     setError(null);
     setLegs([]);
     setBook(null);
@@ -105,95 +117,174 @@ export function PostTicketSheet({
     setOdds("");
     setPayout("");
     setNotes(null);
-  }, [picture]);
+  }, []);
 
   function close() {
     reset();
     onClose();
   }
 
-  async function takePicture(file: Blob) {
+  const takePicture = useCallback(async (file: Blob) => {
     setError(null);
     try {
       const shrunk = await shrinkImage(file);
-      setPicture((cur) => {
-        if (cur) URL.revokeObjectURL(cur.url);
-        return { ...shrunk, url: URL.createObjectURL(shrunk.blob) };
-      });
+      if (pictureRef.current) URL.revokeObjectURL(pictureRef.current.url);
+      const next = { ...shrunk, url: URL.createObjectURL(shrunk.blob) };
+      pictureRef.current = next;
+      setPicture(next);
+      setHint(null);
+      setOfferPicker(false);
+      return true;
     } catch (err) {
       setError(err instanceof Error ? err.message : "Couldn't read that file");
+      return false;
     }
-  }
+  }, []);
 
   /**
-   * A book's share sheet copies the slip as a picture AND the link as text.
-   * Both come off one paste event: the picture becomes the screenshot, the
-   * text becomes the ride link.
+   * Only a real bet link is kept. Whatever else is on the clipboard — a
+   * message, a stray URL — would sit in the link box, get posted, and fail
+   * there, so it is refused here with a hint instead.
    */
-  function onPaste(e: ClipboardEvent) {
-    const data = e.clipboardData;
-    if (!data) return;
-    const image = [...data.items].find((i) => i.type.startsWith("image/"))?.getAsFile();
-    const text = data.getData("text/plain")?.trim();
-    if (!image && !text) return;
-    e.preventDefault();
-    setHint(null);
-    if (image) void takePicture(image);
-    if (text) setShareText(text);
-  }
+  const takeLink = useCallback((text: string): boolean => {
+    const parsed = parseShareLink(text);
+    if (!parsed.ok) return false;
+    setShareText(parsed.url);
+    return true;
+  }, []);
 
-  /** The Paste button, for when the zone can't take a paste (some in-app browsers). */
+  /**
+   * A book's share sheet copies the slip as a picture AND the link as text,
+   * and one paste carries both. The listener sits on the sheet rather than on
+   * one box, so a desktop Cmd+V lands wherever the reader happens to be.
+   */
+  useEffect(() => {
+    if (!open || stage !== "pick") return;
+    const onPaste = (e: globalThis.ClipboardEvent) => {
+      // The link box below handles its own paste.
+      const el = e.target as HTMLElement | null;
+      if (el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA")) return;
+      const data = e.clipboardData;
+      if (!data) return;
+      const image = [...data.items].find((i) => i.type.startsWith("image/"))?.getAsFile();
+      const text = data.getData("text/plain")?.trim();
+      if (!image && !text) return;
+      e.preventDefault();
+      setHint(null);
+      if (image) void takePicture(image);
+      if (text && !takeLink(text)) {
+        setHint("That text wasn't a bet link. In your book, open the bet and tap Share.");
+      }
+    };
+    document.addEventListener("paste", onPaste);
+    return () => document.removeEventListener("paste", onPaste);
+  }, [open, stage, takePicture, takeLink]);
+
+  /**
+   * Tapping the box reads the clipboard itself: on a phone that is the only
+   * way to reach the picture, and tapping is what everyone does first.
+   */
   async function pasteFromClipboard() {
+    if (stage !== "pick") return;
     setHint(null);
+    const hadPicture = pictureRef.current != null;
+    let gotImage = false;
+    let gotLink = false;
+    let gotText = false;
+    const clipboard = (navigator.clipboard ?? null) as
+      | (Clipboard & { read?: () => Promise<ClipboardItem[]> })
+      | null;
+
+    // No clipboard API at all (some in-app browsers): the roll is the only way.
+    if (!clipboard) {
+      setOfferPicker(true);
+      setHint("This browser can't paste here. Choose the screenshot from your photos and paste the link into the box below.");
+      return;
+    }
+
     try {
-      let gotImage = false;
-      let gotText = false;
-      // Older WebKit has readText but not read(); the picture is then out of
-      // reach and the member is pointed at the file picker.
-      const clipboard = navigator.clipboard as Clipboard & {
-        read?: () => Promise<ClipboardItem[]>;
-      };
       if (typeof clipboard.read === "function") {
+        // Read every part first — the image is shrunk afterwards, so a slow
+        // resize can never leave the link unread.
         const items = await clipboard.read();
+        let imageBlob: Blob | null = null;
+        let text = "";
         for (const item of items) {
           const imageType = item.types.find((t) => t.startsWith("image/"));
-          if (imageType && !gotImage) {
-            await takePicture(await item.getType(imageType));
-            gotImage = true;
-          }
-          if (item.types.includes("text/plain") && !gotText) {
-            const text = (await (await item.getType("text/plain")).text()).trim();
-            if (text) {
-              setShareText(text);
-              gotText = true;
-            }
-          }
+          if (imageType && !imageBlob) imageBlob = await item.getType(imageType);
+          // A copied URL can arrive as text/uri-list with no text/plain.
+          const textType = ["text/plain", "text/uri-list"].find((t) => item.types.includes(t));
+          if (textType && !text) text = (await (await item.getType(textType)).text()).trim();
         }
-      } else {
-        const text = (await navigator.clipboard.readText()).trim();
         if (text) {
-          setShareText(text);
           gotText = true;
+          gotLink = takeLink(text);
+        }
+        if (imageBlob) gotImage = await takePicture(imageBlob);
+      } else {
+        // readText only (older WebKit): a picture can never come this way.
+        const text = (await clipboard.readText()).trim();
+        if (text) {
+          gotText = true;
+          gotLink = takeLink(text);
+        }
+        if (!hadPicture) {
+          setOfferPicker(true);
+          setHint(
+            gotLink
+              ? "Got the link. This browser can't paste pictures — choose the screenshot from your photos below."
+              : "This browser can't paste pictures — choose the screenshot from your photos below.",
+          );
+          return;
         }
       }
-      if (!gotImage && !gotText) {
-        setHint("Nothing on the clipboard. In the book, open the bet and tap Share.");
-      } else if (!gotImage) {
-        setHint("Got the link. Add the screenshot with Choose screenshot.");
+    } catch (err) {
+      // On a phone the tap pops a Paste bubble; not tapping it rejects the
+      // read. That is not a browser that cannot paste — say so, and keep the
+      // roll out of it. Anything else is a real inability.
+      if (err instanceof DOMException && err.name === "NotAllowedError") {
+        setHint("Tap the box, then tap Paste on the bubble that pops up.");
+        return;
       }
-    } catch {
-      setHint("Couldn't read the clipboard here — use Choose screenshot, or long-press the box and paste.");
+      if (!hadPicture && !gotImage) setOfferPicker(true);
+      setHint("Couldn't read the clipboard here. Choose the screenshot from your photos below and paste the link into the box.");
+      return;
+    }
+
+    const havePicture = gotImage || hadPicture;
+    if (!gotImage && !gotText) {
+      setHint("Nothing on the clipboard. In your book: open the bet, tap Share, then copy it.");
+      if (!havePicture) setOfferPicker(true);
+    } else if (gotText && !gotLink && !gotImage) {
+      setHint("That text wasn't a bet link. In your book, open the bet and tap Share.");
+    } else if (!havePicture) {
+      // Link in hand, no picture. On Android there is no "copy" on a
+      // screenshot, so the roll is offered alongside a second tap.
+      setOfferPicker(true);
+      setHint("Got the link. Now add the screenshot: copy it and tap the box again, or choose it from your photos.");
+    } else if (gotImage && !gotLink && !shareText.trim()) {
+      setHint("Got the picture. For a Ride button, copy the share link from your book and tap again — the picture stays.");
     }
   }
 
   async function readTicket() {
     if (!picture) return;
+    const s = session.current;
     setStage("reading");
     setError(null);
     const form = new FormData();
     form.append("image", picture.blob, "ticket.jpg");
     if (shareText.trim()) form.append("text", shareText.trim());
-    const r = await apiForm<ReadResponse>(`/api/leagues/${slug}/tickets/read`, form);
+    let r: Awaited<ReturnType<typeof apiForm<ReadResponse>>>;
+    try {
+      r = await apiForm<ReadResponse>(`/api/leagues/${slug}/tickets/read`, form);
+    } catch {
+      if (s !== session.current) return;
+      setError("Couldn't reach the server — check your connection and try again.");
+      setStage("pick");
+      return;
+    }
+    if (s !== session.current) return;
     if (!r.ok) {
       setError(apiError(r) ?? "Couldn't read the ticket");
       // A failed read is still a ticket: fall through to entering it by hand.
@@ -211,7 +302,9 @@ export function PostTicketSheet({
     setGames(gs);
     setReader(status);
     setBook(draft.sportsbook ?? share?.sportsbook ?? null);
-    setLegs(draft.legs);
+    // A read that found nothing still needs a leg to edit, or Post is
+    // disabled with no way to see why.
+    setLegs(draft.legs.length > 0 ? draft.legs : [blankLeg(`leg-${++legSeq.current}`)]);
     setStake(draft.stake != null ? String(draft.stake) : "");
     setOdds(draft.book_odds != null ? String(draft.book_odds) : "");
     setPayout(draft.book_payout != null ? String(draft.book_payout) : "");
@@ -222,9 +315,17 @@ export function PostTicketSheet({
 
   async function enterByHand() {
     setError(null);
-    const r = await apiJson<{ games: NflGame[]; reader: TicketReaderStatus }>(
-      `/api/leagues/${slug}/tickets/read`,
-    );
+    const s = session.current;
+    let r: Awaited<ReturnType<typeof apiJson<{ games: NflGame[]; reader: TicketReaderStatus }>>>;
+    try {
+      r = await apiJson<{ games: NflGame[]; reader: TicketReaderStatus }>(
+        `/api/leagues/${slug}/tickets/read`,
+      );
+    } catch {
+      if (s === session.current) setError("Couldn't reach the server — check your connection and try again.");
+      return;
+    }
+    if (s !== session.current) return;
     if (!r.ok) {
       setError(apiError(r) ?? "Couldn't load this week's games");
       return;
@@ -272,7 +373,17 @@ export function PostTicketSheet({
     const form = new FormData();
     form.append("payload", JSON.stringify(payload));
     if (picture) form.append("image", picture.blob, "ticket.jpg");
-    const r = await apiForm(`/api/leagues/${slug}/tickets`, form);
+    const s = session.current;
+    let r: Awaited<ReturnType<typeof apiForm>>;
+    try {
+      r = await apiForm(`/api/leagues/${slug}/tickets`, form);
+    } catch {
+      if (s !== session.current) return;
+      setError("Couldn't reach the server — your legs are still here, try again.");
+      setStage("review");
+      return;
+    }
+    if (s !== session.current) return;
     if (!r.ok) {
       setError(apiError(r) ?? "Couldn't post the ticket");
       setStage("review");
@@ -292,75 +403,85 @@ export function PostTicketSheet({
       description={
         stage === "review" || stage === "posting"
           ? "Fix anything the read got wrong, then post it for the league."
-          : "Share the bet from your book, or add a screenshot of the slip."
+          : "Copy the bet in your book, then paste it here — the picture and the ride link come over together."
       }
     >
       {stage === "pick" || stage === "reading" ? (
         <div className="space-y-3 pb-2">
-          {/* Editable so a long-press offers Paste on iOS; the paste itself is
-              intercepted and nothing is ever typed into it. */}
-          <div
-            role="button"
-            tabIndex={0}
-            contentEditable
-            suppressContentEditableWarning
-            onPaste={onPaste}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" || e.key === " ") {
-                e.preventDefault();
-                fileInput.current?.click();
-              } else if (!(e.metaKey || e.ctrlKey)) {
-                e.preventDefault();
-              }
-            }}
-            onClick={() => {
-              if (!picture) fileInput.current?.click();
-            }}
+          {/* One tap reads the clipboard, because a book's share puts the
+              slip's picture and its ride link there together — picking a file
+              from the camera roll would drop the link and the Ride button
+              with it. */}
+          <button
+            type="button"
+            disabled={stage === "reading"}
+            aria-busy={stage === "reading"}
+            onClick={() => void pasteFromClipboard()}
             className={cn(
-              "flex min-h-40 cursor-pointer flex-col items-center justify-center gap-2 rounded-2xl border border-dashed p-4 text-center outline-none caret-transparent transition focus:border-turf",
-              picture ? "border-lime/40 bg-lime/[0.05]" : "border-border-strong bg-field",
+              "flex min-h-44 w-full flex-col items-center justify-center gap-2 rounded-2xl border border-dashed p-4 text-center transition active:scale-[0.99] disabled:opacity-60",
+              picture
+                ? "border-lime/40 bg-lime/[0.05]"
+                : "border-border-strong bg-field hover:border-turf",
             )}
-            aria-label="Paste or choose the bet slip screenshot"
           >
             {picture ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={picture.url}
-                alt="Your bet slip"
-                className="max-h-56 rounded-lg object-contain shadow-card"
-                draggable={false}
-              />
+              <>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={picture.url}
+                  alt="Your bet slip"
+                  className="max-h-56 rounded-lg object-contain shadow-card"
+                  draggable={false}
+                />
+                <span className="text-[11px] text-ink-faint">
+                  {shareText.trim()
+                    ? "Tap to paste a different one"
+                    : "Tap again to add the ride link, or paste a different slip"}
+                </span>
+              </>
             ) : (
               <>
-                <ImagePlus className="h-7 w-7 text-turf" aria-hidden />
-                <p className="text-sm font-semibold text-ink">Paste your ticket here</p>
-                <p className="text-xs text-ink-muted">
-                  or tap to choose the screenshot
-                </p>
+                <ClipboardPaste className="h-7 w-7 text-turf" aria-hidden />
+                <span className="text-sm font-semibold text-ink">
+                  {shareText.trim()
+                    ? "Tap to add a screenshot of the bet slip"
+                    : "Tap to paste your ticket"}
+                </span>
+                <span className="text-xs text-ink-muted">
+                  {shareText.trim()
+                    ? "Copy the screenshot, then tap here"
+                    : "In your book: open the bet, tap Share, then copy it"}
+                </span>
               </>
             )}
-          </div>
-          <input
-            ref={fileInput}
-            type="file"
-            accept="image/*"
-            className="hidden"
-            onChange={(e) => {
-              const file = e.target.files?.[0];
-              if (file) void takePicture(file);
-              e.target.value = "";
-            }}
-          />
-
-          <div className="grid grid-cols-2 gap-2">
-            <Button type="button" variant="secondary" onClick={() => void pasteFromClipboard()}>
-              <ClipboardPaste className="h-4 w-4" /> Paste
-            </Button>
-            <Button type="button" variant="secondary" onClick={() => fileInput.current?.click()}>
-              <ImagePlus className="h-4 w-4" /> {picture ? "Swap picture" : "Choose screenshot"}
-            </Button>
-          </div>
+          </button>
           {hint ? <p className="text-[11px] text-warning">{hint}</p> : null}
+
+          {/* Only after the clipboard failed to deliver a picture. Any link
+              is already in the box below, so nothing is lost this way. */}
+          {offerPicker && !picture ? (
+            <>
+              <input
+                ref={fileInput}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) void takePicture(file);
+                  e.target.value = "";
+                }}
+              />
+              <Button
+                type="button"
+                variant="secondary"
+                fullWidth
+                onClick={() => fileInput.current?.click()}
+              >
+                <ImagePlus className="h-4 w-4" /> Choose the screenshot from your photos
+              </Button>
+            </>
+          ) : null}
 
           <label className="block">
             <span className={labelClass}>Share link (so friends can ride it)</span>
@@ -373,10 +494,17 @@ export function PostTicketSheet({
               placeholder="https://…"
               onChange={(e) => setShareText(e.target.value)}
               onPaste={(e) => {
-                const text = e.clipboardData?.getData("text/plain")?.trim();
+                // On a phone this field is the one place a long-press can
+                // paste into, and the book's share carries the picture too.
+                const data = e.clipboardData;
+                const image = data
+                  ? [...data.items].find((i) => i.type.startsWith("image/"))?.getAsFile()
+                  : null;
+                const text = data?.getData("text/plain")?.trim();
+                if (image) void takePicture(image);
                 if (text) {
                   e.preventDefault();
-                  setShareText(text);
+                  if (!takeLink(text)) setShareText(text);
                 }
               }}
             />

@@ -148,11 +148,17 @@ parlay is priced by the book, not by multiplying its legs; `settleSlip` pays
 `book_payout` on a win. Leg prices are nullable (a slip may only print the
 total); `legPrice()` leaves the space blank rather than say "Unavailable".
 
-- **Posting.** `PostTicketSheet`: paste (a book's share puts the slip's
-  picture AND the link on the clipboard, and one paste event delivers both),
-  a Paste button (`navigator.clipboard.read()`), or the file picker. The
-  screenshot is redrawn as a ≤1568px JPEG client-side (`shrink-image.ts`)
-  before upload. `POST /tickets/read` sends it to Claude (vision) with the
+- **Posting.** `PostTicketSheet` is paste-first: a book's share puts the
+  slip's picture AND the ride link on the clipboard, so the big box is a
+  button that reads the clipboard (`navigator.clipboard.read()`, which on a
+  phone is the only way to reach the picture) and a document-level `paste`
+  listener catches a long-press or Cmd+V anywhere on the sheet. A link-only
+  paste fills the share-link field and the box changes to ask for a
+  screenshot; the next tap attaches it and keeps the link. There is no
+  ordinary "choose a file" — picking from the camera roll drops the link
+  and the Ride button with it — only a rescue button when the browser
+  cannot read the clipboard at all. The screenshot is redrawn as a ≤1568px
+  JPEG client-side (`shrink-image.ts`) before upload. `POST /tickets/read` sends it to Claude (vision) with the
   week's games and our market catalogue and gets legs back through a forced
   tool call (`reader.ts`); `normalize.ts` maps the answer onto our
   `market_key` / `outcome_label` / `line` conventions and flags anything a
