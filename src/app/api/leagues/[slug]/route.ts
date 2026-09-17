@@ -6,6 +6,7 @@ import {
   loadLeagueDashboard,
   refreshLeagueData,
 } from "@/lib/league/load-dashboard";
+import { mergeSections, sectionsFromBody } from "@/lib/league/sections";
 import type { UpdateLeagueSettingsInput } from "@/lib/types";
 
 /** First-run board materialize can exceed the default timeout. */
@@ -69,9 +70,22 @@ export async function PATCH(
       member_count,
       active_week_id,
       max_props_per_member,
+      sections,
     } = body;
 
     const settings: UpdateLeagueSettingsInput = {};
+    if (sections !== undefined) {
+      const next = mergeSections(league.sections, sectionsFromBody(sections));
+      if (
+        !next.td_pool && !next.group_bets && !next.tickets
+      ) {
+        return NextResponse.json(
+          { error: "Keep at least one section on", code: "VALIDATION" },
+          { status: 400 },
+        );
+      }
+      settings.sections = next;
+    }
     if (max_props_per_member !== undefined) {
       const max = Number(max_props_per_member);
       if (!Number.isInteger(max) || max < 1 || max > 25) {

@@ -1,48 +1,52 @@
 import type { ReactNode } from "react";
 import { AppShell } from "@/components/layout/app-shell";
 import { LeagueHeader } from "@/components/layout/league-header";
-import {
-  groupBettingNavItems,
-  leagueNavItems,
-} from "@/components/layout/nav-items";
+import { LeagueNav } from "@/components/layout/bottom-nav";
+import { SectionSwitcher } from "@/components/layout/section-switcher";
+import { leagueSectionNavs } from "@/components/layout/nav-items";
+import { enabledSections } from "@/lib/league/sections";
+import type { League } from "@/lib/types";
 
 // Name, week and viewer all come from the server render. Re-fetching the
 // dashboard here just to read them tripled the work of every page load.
 export function LeagueShell({
   slug,
-  leagueName,
+  league,
   weekNumber,
   viewerName,
-  groupBetting = false,
   picksNeeded = 0,
   children,
 }: {
   slug: string;
-  leagueName: string;
+  league: Pick<League, "name" | "sections">;
   weekNumber: number;
   viewerName: string;
-  groupBetting?: boolean;
-  /** Parlays waiting on this viewer — badges the Create tab. */
+  /** Group parlays waiting on this viewer — badges the Create tab. */
   picksNeeded?: number;
   children: ReactNode;
 }) {
   const basePath = `/${slug}`;
+  const navs = leagueSectionNavs(slug, league, { create: picksNeeded });
 
   return (
     <AppShell
       basePath={basePath}
-      navItems={
-        groupBetting
-          ? groupBettingNavItems(basePath, { create: picksNeeded })
-          : leagueNavItems(basePath)
-      }
+      nav={<LeagueNav slug={slug} navs={navs} />}
       header={
         <LeagueHeader
-          leagueName={leagueName}
+          leagueName={league.name}
           weekNumber={weekNumber || 1}
           subtitle={viewerName}
           settingsHref={`${basePath}/settings`}
-        />
+        >
+          <SectionSwitcher
+            slug={slug}
+            sections={enabledSections(league).map((s) => ({
+              path: s.path,
+              label: s.label,
+            }))}
+          />
+        </LeagueHeader>
       }
     >
       {children}

@@ -8,6 +8,8 @@ export type AppShellProps = {
   header?: ReactNode;
   basePath: string;
   navItems?: BottomNavItem[];
+  /** A ready-made bar (the league's per-section nav) instead of `navItems`. */
+  nav?: ReactNode;
   hideNav?: boolean;
   className?: string;
 };
@@ -17,6 +19,7 @@ export function AppShell({
   header,
   basePath,
   navItems,
+  nav,
   hideNav = false,
   className,
 }: AppShellProps) {
@@ -37,7 +40,11 @@ export function AppShell({
         {children}
       </main>
 
-      {!hideNav ? <BottomNav basePath={basePath} items={navItems} /> : null}
+      {hideNav ? null : nav ? (
+        nav
+      ) : navItems ? (
+        <BottomNav basePath={basePath} items={navItems} />
+      ) : null}
     </div>
   );
 }

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getStore } from "@/lib/store";
 import { storeErrorResponse } from "@/lib/api/store-error";
 import { requireApiUser } from "@/lib/auth/api";
+import { sectionsFromBody } from "@/lib/league/sections";
 import type { CreateLeagueInput } from "@/lib/types";
 
 export async function POST(request: Request) {
@@ -30,7 +31,7 @@ export async function POST(request: Request) {
       slug: body.slug,
       admin_display_name: body.admin_display_name.trim(),
       admin_user_id: auth.user.id,
-      league_type: body.league_type === "group_betting" ? "group_betting" : "td_pool",
+      sections: sectionsFromBody(body.sections),
       max_props_per_member: body.max_props_per_member,
       join_pin: body.join_pin ?? "0000",
       currency: body.currency,

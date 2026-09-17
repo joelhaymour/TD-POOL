@@ -1,58 +1,40 @@
-import { after } from "next/server";
-import { DashboardClient } from "@/components/league/dashboard-client";
-import { GroupBettingClient } from "@/components/betting/group-betting-client";
-import {
-  loadLeagueDashboard,
-  refreshLeagueData,
-} from "@/lib/league/load-dashboard";
+import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
 import { requireViewerMembership } from "@/lib/auth/league";
+import {
+  defaultSection,
+  sectionByPath,
+  sectionCookieName,
+} from "@/lib/league/sections";
 import { getStore } from "@/lib/store";
-import { loadGroupHome } from "@/lib/props/load-group-home";
-import { refreshGroupLeague } from "@/lib/services/refresh-group-league";
 
-/** A first-run board build happens inline; background refresh also runs here. */
-export const maxDuration = 300;
-
-export default async function LeagueDashboardPage({
+/**
+ * `/<slug>` is the invite link and the home-screen icon, so it has to land
+ * somewhere useful: the section the member was last in, or the first one the
+ * league runs. Query strings are carried across for links that predate the
+ * sections (`?slip=` from a parlay tile, `?game=` from a player page).
+ */
+export default async function LeagueEntryPage({
   params,
   searchParams,
 }: PageProps<"/[slug]">) {
   const { slug } = await params;
-  const { game, slip } = await searchParams;
-  const member = await requireViewerMembership(slug);
-  const dashboard = await loadLeagueDashboard(slug);
+  await requireViewerMembership(slug);
+  const league = await getStore().getLeagueBySlug(slug);
+  if (!league) redirect("/");
 
-  if (dashboard?.league.league_type === "group_betting") {
-    const { slips, games } = await loadGroupHome(
-      getStore(),
-      dashboard.league,
-      dashboard.week.id,
-    );
-    after(() => refreshGroupLeague(slug));
-    return (
-      <GroupBettingClient
-        slug={slug}
-        league={dashboard.league}
-        week={dashboard.week}
-        members={dashboard.members
-          .map((m) => m.member)
-          .filter((m) => m.active)}
-        initialSlips={slips}
-        initialGames={games}
-        initialSlipId={typeof slip === "string" ? slip : null}
-        viewer={{ memberId: member.id, isAdmin: member.role === "admin" }}
-      />
-    );
-  }
-
-  after(() => refreshLeagueData(slug));
-
-  return (
-    <DashboardClient
-      slug={slug}
-      initialDashboard={dashboard}
-      viewer={{ memberId: member.id }}
-      initialGameId={typeof game === "string" ? game : null}
-    />
+  const remembered = sectionByPath(
+    (await cookies()).get(sectionCookieName(slug))?.value,
   );
+  const section =
+    remembered && league.sections[remembered.key]
+      ? remembered
+      : defaultSection(league);
+
+  const query = new URLSearchParams();
+  for (const [key, value] of Object.entries(await searchParams)) {
+    if (typeof value === "string") query.set(key, value);
+  }
+  const suffix = query.size > 0 ? `?${query}` : "";
+  redirect(`/${slug}/${section.path}${suffix}`);
 }

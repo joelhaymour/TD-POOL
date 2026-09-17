@@ -2,7 +2,7 @@ import { getStore } from "@/lib/store";
 import { cn } from "@/lib/utils/cn";
 import { formatAmerican, formatMoney } from "@/lib/utils/odds";
 import { slipEstimate, slipStake } from "@/lib/props/slip";
-import { actualLabel, gameLabel, legTitle } from "@/lib/props/format";
+import { actualLabel, gameLabel, legPrice, legTitle } from "@/lib/props/format";
 import { MemberChip, ResultMark } from "@/components/ui/result-mark";
 import type { League, ParlayResult } from "@/lib/types";
 
@@ -23,7 +23,7 @@ export async function GroupHistory({
 }) {
   const store = getStore();
   const [slips, weeks, members] = await Promise.all([
-    store.listParlaysForLeague(league.id),
+    store.listParlaysForLeague(league.id, "group"),
     store.listWeeks(),
     store.listMembers(league.id),
   ]);
@@ -157,9 +157,11 @@ export async function GroupHistory({
                           .join(" · ")}
                       </p>
                     </div>
-                    <span className="shrink-0 font-display text-sm font-bold text-ink">
-                      {formatAmerican(leg.american_odds)}
-                    </span>
+                    {legPrice(leg.american_odds) ? (
+                      <span className="shrink-0 font-display text-sm font-bold text-ink">
+                        {legPrice(leg.american_odds)}
+                      </span>
+                    ) : null}
                   </li>
                 );
               })}

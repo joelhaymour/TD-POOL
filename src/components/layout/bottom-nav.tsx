@@ -4,14 +4,11 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ClipboardList, History, Layers } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
-import {
-  leagueNavItems,
-  type BottomNavItem,
-} from "@/components/layout/nav-items";
+import type { BottomNavItem, SectionNav } from "@/components/layout/nav-items";
 
 export type BottomNavProps = {
   basePath: string;
-  items?: BottomNavItem[];
+  items: BottomNavItem[];
   className?: string;
 };
 
@@ -36,6 +33,16 @@ function TicketIcon({ className }: IconProps) {
   );
 }
 
+/** A stub with the tear line down it — a placed bet, not a slip being built. */
+function StubIcon({ className }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden>
+      <path d="M4 7.5A1.5 1.5 0 0 1 5.5 6h13A1.5 1.5 0 0 1 20 7.5V10a2 2 0 0 0 0 4v2.5a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 16.5V14a2 2 0 0 0 0-4z" />
+      <path d="M14 6v2M14 11v2M14 16v2" strokeDasharray="0 3.2" />
+    </svg>
+  );
+}
+
 function TrophyIcon({ className }: IconProps) {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden>
@@ -51,17 +58,13 @@ const iconMap = {
   create: CreateIcon,
   league: ClipboardList,
   slip: TicketIcon,
+  ticket: StubIcon,
   history: History,
   board: TrophyIcon,
 };
 
-export function BottomNav({
-  basePath,
-  items,
-  className,
-}: BottomNavProps) {
+export function BottomNav({ basePath, items, className }: BottomNavProps) {
   const pathname = usePathname();
-  const navItems = items ?? leagueNavItems(basePath);
 
   return (
     <nav
@@ -75,10 +78,10 @@ export function BottomNav({
       <div
         className="mx-auto grid max-w-lg"
         style={{
-          gridTemplateColumns: `repeat(${navItems.length}, minmax(0, 1fr))`,
+          gridTemplateColumns: `repeat(${items.length}, minmax(0, 1fr))`,
         }}
       >
-        {navItems.map((item) => {
+        {items.map((item) => {
           const Icon = iconMap[item.icon];
           const active =
             pathname === item.href ||
@@ -111,4 +114,24 @@ export function BottomNav({
       </div>
     </nav>
   );
+}
+
+/**
+ * The bar for whichever section the reader is in. Sections live under
+ * `/<slug>/<section>`, so the second path segment picks the bar; league-level
+ * pages (settings, admin) keep the last section's bar so nothing jumps.
+ */
+export function LeagueNav({
+  slug,
+  navs,
+}: {
+  slug: string;
+  navs: SectionNav[];
+}) {
+  const pathname = usePathname();
+  const segment = pathname.split("/")[2];
+  const nav = navs.find((n) => n.path === segment) ?? navs[0];
+  if (!nav) return null;
+  void slug;
+  return <BottomNav basePath={nav.basePath} items={nav.items} />;
 }

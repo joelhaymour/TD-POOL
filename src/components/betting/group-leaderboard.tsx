@@ -29,7 +29,7 @@ export async function GroupLeaderboard({
 }) {
   const store = getStore();
   const [slips, members] = await Promise.all([
-    store.listParlaysForLeague(league.id),
+    store.listParlaysForLeague(league.id, "group"),
     store.listMembers(league.id),
   ]);
 
@@ -59,7 +59,10 @@ export async function GroupLeaderboard({
       onSlip.add(leg.member_id);
       if (leg.result === "won") {
         row.won += 1;
-        if (!row.bestHit || leg.american_odds > row.bestHit.odds) {
+        if (
+          leg.american_odds != null &&
+          (!row.bestHit || leg.american_odds > row.bestHit.odds)
+        ) {
           row.bestHit = { odds: leg.american_odds, label: legTitle(leg) };
         }
       } else if (leg.result === "lost") {

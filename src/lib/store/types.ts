@@ -4,8 +4,10 @@ import type {
   GameStatus,
   League,
   LegResult,
+  NewParlay,
   NewParlayLeg,
   Parlay,
+  ParlayKind,
   ParlayLeg,
   ParlayShareLink,
   ParlayWithLegs,
@@ -241,14 +243,15 @@ export interface Store {
   listGameProps(gameId: string): Promise<GameProp[]>;
   getGameProp(id: string): Promise<GameProp | null>;
 
-  createParlay(input: {
-    league_id: string;
-    week_id: string;
-    title: string;
-    created_by_member_id: string | null;
-  }): Promise<Parlay>;
-  /** Every slip the league has built, newest first, with legs. */
-  listParlaysForLeague(leagueId: string): Promise<ParlayWithLegs[]>;
+  createParlay(input: NewParlay): Promise<Parlay>;
+  /**
+   * Every slip the league has, newest first, with legs. Group screens ask for
+   * `group` and ticket screens for `ticket`; settlement reads both.
+   */
+  listParlaysForLeague(
+    leagueId: string,
+    kind?: ParlayKind,
+  ): Promise<ParlayWithLegs[]>;
   getParlay(parlayId: string): Promise<ParlayWithLegs | null>;
   updateParlay(parlayId: string, patch: ParlayPatch): Promise<Parlay>;
   deleteParlay(parlayId: string): Promise<void>;
@@ -265,7 +268,14 @@ export interface Store {
   }): Promise<ParlayShareLink>;
   removeParlayShareLink(shareId: string): Promise<ParlayShareLink | null>;
   addParlayLeg(input: NewParlayLeg): Promise<ParlayLeg>;
+  /** A ticket's legs land together, in slip order. */
+  addParlayLegs(inputs: NewParlayLeg[]): Promise<ParlayLeg[]>;
   removeParlayLeg(parlayId: string, legId: string): Promise<ParlayLeg | null>;
+  /** "I'm riding" on a ticket, on or off. */
+  setParlayRide(
+    input: { parlay_id: string; league_id: string; member_id: string },
+    riding: boolean,
+  ): Promise<void>;
   gradeParlayLegs(updates: LegGradeUpdate[]): Promise<number>;
   listGamesByIds(ids: string[]): Promise<NflGame[]>;
 

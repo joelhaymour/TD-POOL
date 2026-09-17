@@ -4,11 +4,12 @@ import { storeErrorResponse } from "@/lib/api/store-error";
 import { requireApiMembership } from "@/lib/auth/api";
 import { loadGroupHome } from "@/lib/props/load-group-home";
 import { refreshGroupLeague } from "@/lib/services/refresh-group-league";
+import type { League } from "@/lib/types";
 
-function requireGroupBetting(league: { league_type: string }) {
-  if (league.league_type !== "group_betting") {
+function requireGroupBetting(league: League) {
+  if (!league.sections.group_bets) {
     return NextResponse.json(
-      { error: "This league is not a group betting league", code: "FORBIDDEN" },
+      { error: "Group bets are switched off in this league", code: "FORBIDDEN" },
       { status: 403 },
     );
   }

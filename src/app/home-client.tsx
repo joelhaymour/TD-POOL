@@ -3,8 +3,11 @@
 import { useRouter } from "next/navigation";
 import { useMemo, useState, type FormEvent } from "react";
 import { Button } from "@/components/ui/button";
+import { SectionToggles } from "@/components/league/section-toggles";
 import { useToast } from "@/components/ui/toast";
 import { generateJoinPin, normalizeJoinSlug } from "@/lib/league/join";
+import { ALL_SECTIONS_ON } from "@/lib/league/sections";
+import type { LeagueSections } from "@/lib/types";
 
 type CreatedLeague = {
   slug: string;
@@ -41,9 +44,7 @@ export function HomeClient({
 
   const [name, setName] = useState("");
   const [displayName, setDisplayName] = useState(accountName);
-  const [leagueType, setLeagueType] = useState<"td_pool" | "group_betting">(
-    "td_pool",
-  );
+  const [sections, setSections] = useState<LeagueSections>(ALL_SECTIONS_ON);
   const [maxProps, setMaxProps] = useState("3");
   const [creating, setCreating] = useState(false);
 
@@ -78,11 +79,10 @@ export function HomeClient({
           name: name.trim(),
           admin_display_name: displayName.trim(),
           join_pin: newJoinPin,
-          league_type: leagueType,
-          max_props_per_member:
-            leagueType === "group_betting"
-              ? Math.min(25, Math.max(1, Number(maxProps) || 3))
-              : undefined,
+          sections,
+          max_props_per_member: sections.group_bets
+            ? Math.min(25, Math.max(1, Number(maxProps) || 3))
+            : undefined,
         }),
       });
       const data = (await res.json()) as CreatedLeague & { error?: string };
@@ -250,45 +250,10 @@ export function HomeClient({
             Create a league
           </h2>
           <div>
-            <span className={labelClass}>League type</span>
-            <div className="grid grid-cols-1 gap-2">
-              {(
-                [
-                  {
-                    value: "td_pool",
-                    title: "Weekly TD Pool",
-                    blurb:
-                      "Everyone picks one player to score a TD each week. The classic.",
-                  },
-                  {
-                    value: "group_betting",
-                    title: "Group Betting",
-                    blurb:
-                      "Build shared parlays from every prop — TDs, yards, spreads — then open the slip in FanDuel.",
-                  },
-                ] as const
-              ).map((option) => (
-                <button
-                  key={option.value}
-                  type="button"
-                  className={`rounded-xl border p-3 text-left transition ${
-                    leagueType === option.value
-                      ? "border-turf bg-turf/10 ring-2 ring-turf/20"
-                      : "border-border-strong bg-field hover:border-turf"
-                  }`}
-                  onClick={() => setLeagueType(option.value)}
-                >
-                  <span className="block font-display text-sm font-bold uppercase tracking-wide text-ink">
-                    {option.title}
-                  </span>
-                  <span className="mt-0.5 block text-xs text-ink-muted">
-                    {option.blurb}
-                  </span>
-                </button>
-              ))}
-            </div>
+            <span className={labelClass}>What&apos;s in this league</span>
+            <SectionToggles value={sections} onChange={setSections} />
           </div>
-          {leagueType === "group_betting" ? (
+          {sections.group_bets ? (
             <label className="block">
               <span className={labelClass}>Picks per member, per slip</span>
               <input

@@ -146,7 +146,7 @@ export function TdHistory() {
                     <MemberChip name={p.memberName} />
                     <div className="min-w-0 flex-1">
                       <Link
-                        href={`/${slug}/players/${p.playerId}`}
+                        href={`/${slug}/pool/players/${p.playerId}`}
                         className="block truncate text-sm font-semibold text-ink hover:underline"
                       >
                         {p.playerName}

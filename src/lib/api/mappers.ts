@@ -52,7 +52,7 @@ export function toPlayerCard(
     goalLineStars: row.goal_line_rating,
     availability,
     takenByName: row.taken_by,
-    analysisHref: `/${slug}/players/${row.player.id}`,
+    analysisHref: `/${slug}/pool/players/${row.player.id}`,
     limitedData: Boolean(row.research_json.td_model?.limited_data),
   };
 }

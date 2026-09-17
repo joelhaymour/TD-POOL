@@ -2,14 +2,17 @@
 
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   MoneySettingsForm,
   type MoneySettingsValue,
 } from "@/components/league/money-settings-form";
+import { SectionToggles } from "@/components/league/section-toggles";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/components/ui/toast";
-import type { League, PickLockType } from "@/lib/types";
+import { ALL_SECTIONS_ON } from "@/lib/league/sections";
+import type { League, LeagueSections, PickLockType } from "@/lib/types";
 
 const inputClass =
   "h-11 w-full rounded-xl border border-border-strong bg-field px-3 text-sm font-semibold text-ink outline-none focus:border-turf focus:ring-2 focus:ring-turf/20";
@@ -25,6 +28,7 @@ export function SettingsForm({
   isAdmin: boolean;
 }) {
   const { toast } = useToast();
+  const router = useRouter();
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -38,7 +42,7 @@ export function SettingsForm({
   });
 
   const [joinPin, setJoinPin] = useState<string | null>(null);
-  const [leagueType, setLeagueType] = useState<League["league_type"]>("td_pool");
+  const [sections, setSections] = useState<LeagueSections>(ALL_SECTIONS_ON);
   const [maxProps, setMaxProps] = useState("3");
   const [inviteLoading, setInviteLoading] = useState(false);
 
@@ -60,7 +64,7 @@ export function SettingsForm({
         setLeagueName(l.name);
         setAllowPickChanges(l.allow_pick_changes);
         setLockType(l.pick_lock_type);
-        setLeagueType(l.league_type);
+        setSections(l.sections);
         setMaxProps(String(l.max_props_per_member || 3));
         setMoney({
           betting_mode: l.betting_mode,
@@ -128,9 +132,10 @@ export function SettingsForm({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name: leagueName,
+          sections,
           allow_pick_changes: allowPickChanges,
           pick_lock_type: lockType,
-          ...(leagueType === "group_betting"
+          ...(sections.group_bets
             ? {
                 max_props_per_member: Math.min(
                   25,
@@ -153,6 +158,8 @@ export function SettingsForm({
         return;
       }
       toast({ title: "Settings saved", tone: "success" });
+      // The header's section pills and the bottom bar are server-rendered.
+      router.refresh();
     } catch {
       toast({ title: "Network error", tone: "error" });
     } finally {
@@ -277,7 +284,12 @@ export function SettingsForm({
           />
         </label>
 
-        {leagueType === "group_betting" ? (
+        <div>
+          <span className={labelClass}>What&apos;s in this league</span>
+          <SectionToggles value={sections} onChange={setSections} disabled={!isAdmin} />
+        </div>
+
+        {sections.group_bets ? (
           <label className="block">
             <span className={labelClass}>Picks per member, per slip</span>
             <input

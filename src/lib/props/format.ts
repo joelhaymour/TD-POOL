@@ -1,4 +1,5 @@
 import { isAlternateMarket } from "@/lib/props/markets";
+import { formatAmerican } from "@/lib/utils/odds";
 import type { LegResult, NflGame, ParlayLeg } from "@/lib/types";
 
 type LabelLeg = Pick<
@@ -74,6 +75,15 @@ export function actualLabel(
   const unit = UNITS[key];
   const stat = unit ? `${v} ${unit}` : String(v);
   return leg.result === "pending" ? `${stat} so far` : stat;
+}
+
+/**
+ * "+140" / "-110", or null for a leg with no price of its own — a ticket
+ * read off a slip that only printed the combined odds. Callers leave the
+ * space empty rather than print "Unavailable" beside a bet that was placed.
+ */
+export function legPrice(american: number | null | undefined): string | null {
+  return american == null || american === 0 ? null : formatAmerican(american);
 }
 
 /** Wording for a graded leg. The mark itself is drawn — see ResultMark. */

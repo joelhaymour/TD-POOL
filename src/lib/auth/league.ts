@@ -1,7 +1,8 @@
 import { cache } from "react";
 import { redirect } from "next/navigation";
 import { notFound } from "next/navigation";
-import type { LeagueMember } from "@/lib/types";
+import type { League, LeagueMember, LeagueSection } from "@/lib/types";
+import { defaultSection } from "@/lib/league/sections";
 import { getStore } from "@/lib/store";
 import { requireUser } from "@/lib/auth/session";
 
@@ -31,4 +32,21 @@ export async function requireViewerMembership(
   const member = await getViewerMembership(slug);
   if (!member) redirect(`/?join=${encodeURIComponent(slug)}`);
   return member;
+}
+
+/**
+ * A section page for a section the league has switched off sends the reader
+ * to one it runs, rather than showing an empty screen with the wrong tabs.
+ */
+export async function requireSectionAccess(
+  slug: string,
+  section: LeagueSection,
+): Promise<{ member: LeagueMember; league: League }> {
+  const member = await requireViewerMembership(slug);
+  const league = await getStore().getLeagueBySlug(slug);
+  if (!league) notFound();
+  if (!league.sections[section]) {
+    redirect(`/${slug}/${defaultSection(league).path}`);
+  }
+  return { member, league };
 }

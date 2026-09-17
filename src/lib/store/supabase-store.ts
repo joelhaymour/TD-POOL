@@ -30,9 +30,12 @@ import type {
   GameProp,
   InjuryStatus,
   League,
+  NewParlay,
   NewParlayLeg,
   Parlay,
+  ParlayKind,
   ParlayLeg,
+  ParlayRide,
   ParlayShareLink,
   ParlayWithLegs,
   LeagueDashboard,
@@ -57,6 +60,7 @@ import {
   availabilityFromInjury,
   takenByActiveMembers,
 } from "@/lib/league/availability";
+import { ALL_SECTIONS_ON, mergeSections } from "@/lib/league/sections";
 
 function nowIso(): string {
   return new Date().toISOString();
@@ -113,8 +117,15 @@ function mapLeague(row: DbLeague): League {
     name: String(row.name),
     slug: String(row.slug),
     admin_user_id: row.admin_user_id ? String(row.admin_user_id) : null,
-    league_type:
-      row.league_type === "group_betting" ? "group_betting" : "td_pool",
+    // The section flags arrived with tickets; a row from before that reads
+    // its old single type so nothing changes for it until an admin saves.
+    sections: {
+      td_pool: Boolean(row.enable_td_pool ?? row.league_type !== "group_betting"),
+      group_bets: Boolean(
+        row.enable_group_bets ?? row.league_type === "group_betting",
+      ),
+      tickets: Boolean(row.enable_tickets ?? false),
+    },
     max_props_per_member: num(row.max_props_per_member, 3),
     currency: (row.currency as League["currency"]) ?? "USD",
     // Legacy "individual" leagues read as fixed at the amount they were
@@ -173,6 +184,7 @@ function mapParlay(row: Record<string, unknown>): Parlay {
     created_by_member_id: row.created_by_member_id
       ? String(row.created_by_member_id)
       : null,
+    kind: row.kind === "ticket" ? "ticket" : "group",
     status: row.status === "locked" ? "locked" : "open",
     stake: numOrNull(row.stake),
     result:
@@ -181,8 +193,22 @@ function mapParlay(row: Record<string, unknown>): Parlay {
         : "pending",
     payout: numOrNull(row.payout),
     settled_at: row.settled_at ? String(row.settled_at) : null,
+    sportsbook: row.sportsbook != null ? String(row.sportsbook) : null,
+    book_odds: numOrNull(row.book_odds),
+    book_payout: numOrNull(row.book_payout),
+    screenshot_path:
+      row.screenshot_path != null ? String(row.screenshot_path) : null,
     created_at: String(row.created_at),
     updated_at: String(row.updated_at),
+  };
+}
+
+function mapRide(row: Record<string, unknown>): ParlayRide {
+  return {
+    parlay_id: String(row.parlay_id),
+    league_id: String(row.league_id),
+    member_id: String(row.member_id),
+    created_at: String(row.created_at),
   };
 }
 
@@ -216,8 +242,8 @@ function mapParlayLeg(row: Record<string, unknown>): ParlayLeg {
     player_name: row.player_name != null ? String(row.player_name) : null,
     outcome_label: String(row.outcome_label),
     line: numOrNull(row.line),
-    american_odds: num(row.american_odds),
-    decimal_odds: num(row.decimal_odds),
+    american_odds: numOrNull(row.american_odds),
+    decimal_odds: numOrNull(row.decimal_odds),
     fd_market_id: row.fd_market_id != null ? String(row.fd_market_id) : null,
     fd_selection_id:
       row.fd_selection_id != null ? String(row.fd_selection_id) : null,
@@ -354,6 +380,12 @@ function mapPick(row: DbPick): Pick {
 function leagueToDbPatch(settings: UpdateLeagueSettingsInput): Record<string, unknown> {
   const patch: Record<string, unknown> = { updated_at: nowIso() };
   if (settings.name !== undefined) patch.name = settings.name;
+  if (settings.sections !== undefined) {
+    const s = settings.sections;
+    if (s.td_pool !== undefined) patch.enable_td_pool = s.td_pool;
+    if (s.group_bets !== undefined) patch.enable_group_bets = s.group_bets;
+    if (s.tickets !== undefined) patch.enable_tickets = s.tickets;
+  }
   if (settings.currency !== undefined) patch.currency = settings.currency;
   if (settings.max_props_per_member !== undefined) {
     patch.max_props_per_member = settings.max_props_per_member;
@@ -453,6 +485,7 @@ export class SupabaseStore implements Store {
 
     const createdAt = nowIso();
     const leagueId = randomUUID();
+    const sections = mergeSections(ALL_SECTIONS_ON, input.sections);
     const { data: leagueRow, error: leagueErr } = await this.client
       .from("leagues")
       .insert({
@@ -460,7 +493,13 @@ export class SupabaseStore implements Store {
         name: input.name.trim(),
         slug,
         admin_user_id: input.admin_user_id ?? null,
-        league_type: input.league_type ?? "td_pool",
+        enable_td_pool: sections.td_pool,
+        enable_group_bets: sections.group_bets,
+        enable_tickets: sections.tickets,
+        // The pre-sections column is still there and constrained; keep it
+        // honest for anything that reads it.
+        league_type:
+          sections.group_bets && !sections.td_pool ? "group_betting" : "td_pool",
         max_props_per_member: input.max_props_per_member ?? 3,
         currency: input.currency ?? "USD",
         betting_mode: input.betting_mode ?? "fixed",
@@ -1523,12 +1562,7 @@ export class SupabaseStore implements Store {
     return data ? mapGameProp(data) : null;
   }
 
-  async createParlay(input: {
-    league_id: string;
-    week_id: string;
-    title: string;
-    created_by_member_id: string | null;
-  }): Promise<Parlay> {
+  async createParlay(input: NewParlay): Promise<Parlay> {
     const createdAt = nowIso();
     const { data, error } = await this.client
       .from("parlays")
@@ -1538,7 +1572,13 @@ export class SupabaseStore implements Store {
         week_id: input.week_id,
         title: input.title,
         created_by_member_id: input.created_by_member_id,
-        status: "open",
+        kind: input.kind ?? "group",
+        status: input.status ?? "open",
+        stake: input.stake ?? null,
+        sportsbook: input.sportsbook ?? null,
+        book_odds: input.book_odds ?? null,
+        book_payout: input.book_payout ?? null,
+        screenshot_path: input.screenshot_path ?? null,
         created_at: createdAt,
         updated_at: createdAt,
       })
@@ -1548,42 +1588,28 @@ export class SupabaseStore implements Store {
     return mapParlay(data);
   }
 
-  async listParlaysForLeague(leagueId: string): Promise<ParlayWithLegs[]> {
-    const { data: parlayRows, error } = await this.client
+  async listParlaysForLeague(
+    leagueId: string,
+    kind?: ParlayKind,
+  ): Promise<ParlayWithLegs[]> {
+    let query = this.client
       .from("parlays")
       .select("*")
       .eq("league_id", leagueId)
       .order("created_at", { ascending: false });
+    if (kind) query = query.eq("kind", kind);
+    const { data: parlayRows, error } = await query;
     if (error) throw error;
     const parlays = (parlayRows ?? []).map(mapParlay);
     if (parlays.length === 0) return [];
 
-    const { data: legRows, error: legErr } = await this.client
-      .from("parlay_legs")
-      .select("*")
-      .in(
-        "parlay_id",
-        parlays.map((p) => p.id),
-      )
-      .order("added_at");
-    if (legErr) throw legErr;
-    const legs = (legRows ?? []).map(mapParlayLeg);
-
-    const { data: shareRows, error: shareErr } = await this.client
-      .from("parlay_share_links")
-      .select("*")
-      .in(
-        "parlay_id",
-        parlays.map((p) => p.id),
-      )
-      .order("created_at");
-    if (shareErr) throw shareErr;
-    const shares = (shareRows ?? []).map(mapShareLink);
-
+    const ids = parlays.map((p) => p.id);
+    const { legs, shares, rides } = await this.loadParlayChildren(ids);
     return parlays.map((parlay) => ({
       parlay,
       legs: legs.filter((l) => l.parlay_id === parlay.id),
       shares: shares.filter((s) => s.parlay_id === parlay.id),
+      rides: rides.filter((r) => r.parlay_id === parlay.id),
     }));
   }
 
@@ -1595,22 +1621,40 @@ export class SupabaseStore implements Store {
       .maybeSingle();
     if (error) throw error;
     if (!data) return null;
-    const { data: legRows, error: legErr } = await this.client
-      .from("parlay_legs")
-      .select("*")
-      .eq("parlay_id", parlayId)
-      .order("added_at");
-    if (legErr) throw legErr;
-    const { data: shareRows, error: shareErr } = await this.client
-      .from("parlay_share_links")
-      .select("*")
-      .eq("parlay_id", parlayId)
-      .order("created_at");
-    if (shareErr) throw shareErr;
+    const children = await this.loadParlayChildren([parlayId]);
+    return { parlay: mapParlay(data), ...children };
+  }
+
+  /** Legs, share links and rides for a set of slips, in one pass each. */
+  private async loadParlayChildren(parlayIds: string[]): Promise<{
+    legs: ParlayLeg[];
+    shares: ParlayShareLink[];
+    rides: ParlayRide[];
+  }> {
+    const [legRes, shareRes, rideRes] = await Promise.all([
+      this.client
+        .from("parlay_legs")
+        .select("*")
+        .in("parlay_id", parlayIds)
+        .order("added_at"),
+      this.client
+        .from("parlay_share_links")
+        .select("*")
+        .in("parlay_id", parlayIds)
+        .order("created_at"),
+      this.client
+        .from("parlay_rides")
+        .select("*")
+        .in("parlay_id", parlayIds)
+        .order("created_at"),
+    ]);
+    if (legRes.error) throw legRes.error;
+    if (shareRes.error) throw shareRes.error;
+    if (rideRes.error) throw rideRes.error;
     return {
-      parlay: mapParlay(data),
-      legs: (legRows ?? []).map(mapParlayLeg),
-      shares: (shareRows ?? []).map(mapShareLink),
+      legs: (legRes.data ?? []).map(mapParlayLeg),
+      shares: (shareRes.data ?? []).map(mapShareLink),
+      rides: (rideRes.data ?? []).map(mapRide),
     };
   }
 
@@ -1708,6 +1752,68 @@ export class SupabaseStore implements Store {
       throw error;
     }
     return mapParlayLeg(data);
+  }
+
+  async addParlayLegs(inputs: NewParlayLeg[]): Promise<ParlayLeg[]> {
+    if (inputs.length === 0) return [];
+    // Spaced timestamps keep the slip's printed order on read-back.
+    const base = Date.now();
+    const rows = inputs.map((input, i) => ({
+      id: randomUUID(),
+      parlay_id: input.parlay_id,
+      league_id: input.league_id,
+      member_id: input.member_id,
+      game_prop_id: input.game_prop_id,
+      game_id: input.game_id,
+      sportsbook: input.sportsbook,
+      market_key: input.market_key,
+      market_label: input.market_label,
+      player_name: input.player_name,
+      outcome_label: input.outcome_label,
+      line: input.line,
+      american_odds: input.american_odds,
+      decimal_odds: input.decimal_odds,
+      fd_market_id: input.fd_market_id,
+      fd_selection_id: input.fd_selection_id,
+      deep_link: input.deep_link,
+      added_at: new Date(base + i).toISOString(),
+    }));
+    const { data, error } = await this.client
+      .from("parlay_legs")
+      .insert(rows)
+      .select("*");
+    if (error) {
+      if (isUniqueViolation(error)) {
+        throw new StoreError(
+          "The same selection is on this ticket twice",
+          "CONFLICT",
+        );
+      }
+      throw error;
+    }
+    return (data ?? []).map(mapParlayLeg);
+  }
+
+  async setParlayRide(
+    input: { parlay_id: string; league_id: string; member_id: string },
+    riding: boolean,
+  ): Promise<void> {
+    if (riding) {
+      const { error } = await this.client
+        .from("parlay_rides")
+        .upsert(
+          { ...input, created_at: nowIso() },
+          { onConflict: "parlay_id,member_id", ignoreDuplicates: true },
+        );
+      if (error) throw error;
+      return;
+    }
+    const { error } = await this.client
+      .from("parlay_rides")
+      .delete()
+      .eq("parlay_id", input.parlay_id)
+      .eq("member_id", input.member_id);
+    if (error) throw error;
   }
 
   async removeParlayLeg(

@@ -25,8 +25,8 @@ export default function PlayerDetailPage() {
   // team's list rather than dropping the reader on the player board.
   const fromGame = useSearchParams().get("game");
   const backHref = fromGame
-    ? `/${slug}?game=${encodeURIComponent(fromGame)}`
-    : `/${slug}`;
+    ? `/${slug}/pool?game=${encodeURIComponent(fromGame)}`
+    : `/${slug}/pool`;
   const { toast } = useToast();
   const [data, setData] = useState<DetailResponse | null>(null);
   const [loading, setLoading] = useState(true);

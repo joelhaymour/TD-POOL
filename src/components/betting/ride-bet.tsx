@@ -45,6 +45,7 @@ export function RideBet({
   viewerMemberId,
   isAdmin,
   disabled,
+  canAdd = true,
   tone = "dark",
   onAdd,
   onRemove,
@@ -54,6 +55,8 @@ export function RideBet({
   viewerMemberId: string;
   isAdmin: boolean;
   disabled?: boolean;
+  /** False hides the paste prompt — a ticket's link belongs to its poster. */
+  canAdd?: boolean;
   /** "dark" sits on the slip hero; "light" on the parlay tiles. */
   tone?: "dark" | "light";
   onAdd: (url: string, note: string) => Promise<boolean>;
@@ -184,18 +187,20 @@ export function RideBet({
         </>
       ) : null}
 
-      <button
-        type="button"
-        className={cn(
-          "mt-2 flex items-center gap-1.5 text-[11px] font-medium underline-offset-2 transition hover:underline disabled:opacity-40",
-          dark ? "text-raised-fg/55 hover:text-raised-fg" : "text-ink-muted hover:text-ink",
-        )}
-        onClick={() => setOpen(true)}
-        disabled={disabled}
-      >
-        <Link2 className="h-3.5 w-3.5" aria-hidden />
-        {shares.length > 0 ? "Add another share link" : "Placed it? Add your share link"}
-      </button>
+      {canAdd ? (
+        <button
+          type="button"
+          className={cn(
+            "mt-2 flex items-center gap-1.5 text-[11px] font-medium underline-offset-2 transition hover:underline disabled:opacity-40",
+            dark ? "text-raised-fg/55 hover:text-raised-fg" : "text-ink-muted hover:text-ink",
+          )}
+          onClick={() => setOpen(true)}
+          disabled={disabled}
+        >
+          <Link2 className="h-3.5 w-3.5" aria-hidden />
+          {shares.length > 0 ? "Add another share link" : "Placed it? Add your share link"}
+        </button>
+      ) : null}
 
       <Sheet
         open={open}

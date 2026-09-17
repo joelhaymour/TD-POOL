@@ -19,7 +19,7 @@ export default async function AdminPage({ params }: PageProps<"/[slug]">) {
           href={`/${slug}`}
           className="inline-block text-sm font-bold text-turf hover:underline"
         >
-          Back to picks
+          Back to the league
         </Link>
       </div>
     );

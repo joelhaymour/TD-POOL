@@ -12,7 +12,7 @@ import {
   LegLineProgress,
   hasLineProgress,
 } from "@/components/betting/leg-line-progress";
-import { legTitle, gameLabel, actualLabel } from "@/lib/props/format";
+import { legTitle, gameLabel, actualLabel, legPrice } from "@/lib/props/format";
 import {
   gameStarted,
   slipEstimate,
@@ -144,7 +144,7 @@ export function ParlayBoard({
             No parlays going yet. Build one and it shows up here for everyone.
           </p>
           <Link
-            href={`/${slug}`}
+            href={`/${slug}/group`}
             className="mt-4 inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-raised px-5 font-display text-sm font-extrabold uppercase tracking-wider text-lime"
           >
             <Plus className="h-4 w-4" /> Create a parlay
@@ -285,9 +285,11 @@ export function ParlayBoard({
                                   .join(" · ")}
                               </span>
                             </span>
-                            <span className="shrink-0 font-display text-sm font-bold text-turf">
-                              {formatAmerican(leg.american_odds)}
-                            </span>
+                            {legPrice(leg.american_odds) ? (
+                              <span className="shrink-0 font-display text-sm font-bold text-turf">
+                                {legPrice(leg.american_odds)}
+                              </span>
+                            ) : null}
                             {hasLineProgress(leg) ? (
                               <LegLineProgress leg={leg} className="w-full" />
                             ) : null}
@@ -315,7 +317,7 @@ export function ParlayBoard({
 
                   {phase === "building" ? (
                     <Link
-                      href={`/${slug}?slip=${parlay.id}`}
+                      href={`/${slug}/group?slip=${parlay.id}`}
                       className="mt-3 flex h-11 items-center justify-center gap-2 rounded-xl border border-border-strong font-display text-sm font-bold uppercase tracking-wide text-ink transition hover:border-turf"
                     >
                       <Plus className="h-4 w-4" /> Add picks

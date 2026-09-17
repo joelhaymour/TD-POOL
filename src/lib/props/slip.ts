@@ -21,7 +21,12 @@ type StakeLeague = Pick<
   "betting_mode" | "contribution_per_member" | "fixed_weekly_stake" | "member_count"
 >;
 
-export function slipStake(parlay: Pick<Parlay, "stake">, league: StakeLeague): number {
+/** A group slip falls back to the league's weekly stake; a ticket is what was actually wagered. */
+export function slipStake(
+  parlay: Pick<Parlay, "stake" | "kind">,
+  league: StakeLeague,
+): number {
+  if (parlay.kind === "ticket") return parlay.stake ?? 0;
   return parlay.stake ?? calculateWeeklyStake(league);
 }
 
@@ -33,15 +38,19 @@ function round2(n: number): number {
 
 /**
  * Price every leg still in play. Pushes and voids drop out of a parlay rather
- * than killing it, so they are excluded instead of priced at even money.
+ * than killing it, so they are excluded instead of priced at even money. A
+ * leg with no price (a ticket read off a slip that only printed the total)
+ * makes the product meaningless, so nothing is estimated rather than a guess.
  */
 export function slipEstimate(
   legs: PricedLeg[],
   stake: number,
 ): { decimal: number | null; american: number | null; payout: number | null } {
   const live = legs.filter((l) => l.result !== "push" && l.result !== "void");
-  if (live.length === 0) return { decimal: null, american: null, payout: null };
-  const decimal = live.reduce((acc, l) => acc * l.decimal_odds, 1);
+  if (live.length === 0 || live.some((l) => l.decimal_odds == null)) {
+    return { decimal: null, american: null, payout: null };
+  }
+  const decimal = live.reduce((acc, l) => acc * l.decimal_odds!, 1);
   return {
     decimal: Number(decimal.toFixed(4)),
     american: decimalToAmerican(decimal),
@@ -52,11 +61,13 @@ export function slipEstimate(
 /**
  * Settle a slip from its graded legs. A single losing leg decides the result,
  * but `settled` waits for every leg so a busted slip stays on Home until the
- * rest of its games finish.
+ * rest of its games finish. A ticket pays what its slip printed
+ * (`fixedPayout`): a same-game parlay is priced by the book, not its legs.
  */
 export function settleSlip(
   legs: PricedLeg[],
   stake: number,
+  fixedPayout: number | null = null,
 ): { result: ParlayResult; payout: number | null; settled: boolean } {
   if (legs.length === 0) return { result: "pending", payout: null, settled: false };
   const allGraded = legs.every((l) => l.result !== "pending");
@@ -66,7 +77,11 @@ export function settleSlip(
   if (!allGraded) return { result: "pending", payout: null, settled: false };
   const won = legs.filter((l) => l.result === "won");
   if (won.length === 0) return { result: "push", payout: stake, settled: true };
-  const decimal = won.reduce((acc, l) => acc * l.decimal_odds, 1);
+  if (fixedPayout != null) return { result: "won", payout: fixedPayout, settled: true };
+  if (won.some((l) => l.decimal_odds == null)) {
+    return { result: "won", payout: null, settled: true };
+  }
+  const decimal = won.reduce((acc, l) => acc * l.decimal_odds!, 1);
   return { result: "won", payout: round2(stake * decimal), settled: true };
 }
 

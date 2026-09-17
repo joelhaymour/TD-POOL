@@ -6,8 +6,16 @@
  * product as the stake; see mapLeague.
  */
 export type BettingMode = "fixed" | "none";
-export type LeagueType = "td_pool" | "group_betting";
+/**
+ * What a league runs. Any combination: the classic weekly TD pool, shared
+ * parlays built from the prop board, and tickets — bets members placed
+ * themselves and posted for the rest of the league to follow and ride.
+ */
+export type LeagueSection = "td_pool" | "group_bets" | "tickets";
+export type LeagueSections = Record<LeagueSection, boolean>;
 export type ParlayStatus = "open" | "locked";
+/** A group slip is built together from the board; a ticket is one member's placed bet. */
+export type ParlayKind = "group" | "ticket";
 export type ParlayResult = "pending" | "won" | "lost" | "push";
 export type LegResult = "pending" | "won" | "lost" | "push" | "void";
 export type PropMarketGroup =
@@ -60,8 +68,8 @@ export interface League {
   name: string;
   slug: string;
   admin_user_id: string | null;
-  league_type: LeagueType;
-  /** Group betting: max legs each member may add to one parlay. */
+  sections: LeagueSections;
+  /** Group bets: max legs each member may add to one parlay. */
   max_props_per_member: number;
   currency: Currency;
   betting_mode: BettingMode;
@@ -329,7 +337,7 @@ export interface LeagueDashboard {
 export interface CreateLeagueInput {
   name: string;
   slug?: string;
-  league_type?: LeagueType;
+  sections?: Partial<LeagueSections>;
   max_props_per_member?: number;
   currency?: Currency;
   betting_mode?: BettingMode;
@@ -376,16 +384,40 @@ export interface Parlay {
   week_id: string;
   title: string;
   created_by_member_id: string | null;
+  kind: ParlayKind;
   status: ParlayStatus;
-  /** Null falls back to the league's weekly stake. */
+  /** Group: null falls back to the league's weekly stake. Ticket: what was wagered. */
   stake: number | null;
   result: ParlayResult;
   payout: number | null;
   /** Set once every leg is graded; the slip then belongs in History. */
   settled_at: string | null;
+  /** Ticket: the book it was placed at, and the numbers printed on the slip. */
+  sportsbook: string | null;
+  /** The slip's combined price — a same-game parlay is priced by the book, not by its legs. */
+  book_odds: number | null;
+  /** What the slip says it returns on a win. */
+  book_payout: number | null;
+  /** Storage path of the screenshot the ticket was read from. */
+  screenshot_path: string | null;
   created_at: string;
   updated_at: string;
 }
+
+/** Fields a slip is created with; results and settlement fill in the rest. */
+export type NewParlay = {
+  league_id: string;
+  week_id: string;
+  title: string;
+  created_by_member_id: string | null;
+  kind?: ParlayKind;
+  status?: ParlayStatus;
+  stake?: number | null;
+  sportsbook?: string | null;
+  book_odds?: number | null;
+  book_payout?: number | null;
+  screenshot_path?: string | null;
+};
 
 /** Snapshot of a selection at the moment it was added to a slip. */
 export interface ParlayLeg {
@@ -401,8 +433,9 @@ export interface ParlayLeg {
   player_name: string | null;
   outcome_label: string;
   line: number | null;
-  american_odds: number;
-  decimal_odds: number;
+  /** Null on a ticket leg whose slip showed no price per leg. */
+  american_odds: number | null;
+  decimal_odds: number | null;
   fd_market_id: string | null;
   fd_selection_id: string | null;
   deep_link: string | null;
@@ -438,10 +471,21 @@ export interface ParlayShareLink {
   updated_at: string;
 }
 
+/** A member who tapped "I'm riding" on a ticket. */
+export interface ParlayRide {
+  parlay_id: string;
+  league_id: string;
+  member_id: string;
+  created_at: string;
+}
+
 export interface ParlayWithLegs {
   parlay: Parlay;
   legs: ParlayLeg[];
   shares: ParlayShareLink[];
+  rides: ParlayRide[];
+  /** Signed, short-lived link to the screenshot; set on ticket payloads only. */
+  screenshot_url?: string | null;
 }
 
 export interface SelectPickInput {
@@ -453,6 +497,7 @@ export interface SelectPickInput {
 
 export interface UpdateLeagueSettingsInput {
   name?: string;
+  sections?: Partial<LeagueSections>;
   max_props_per_member?: number;
   currency?: Currency;
   betting_mode?: BettingMode;

@@ -95,14 +95,14 @@ export async function GET(request: Request) {
     }).catch(() => {});
   }
 
-  // Group betting settles here as well. Without it a parlay stays pending
-  // until somebody opens the app, which is how legs sat overnight.
+  // Group parlays and tickets settle here as well. Without it a slip stays
+  // pending until somebody opens the app, which is how legs sat overnight.
   let parlaysSettled = 0;
   try {
     await syncNflWeek(store, { season, week, scoresOnly: true });
     const leagues = await store.listLeagues();
     for (const league of leagues.filter(
-      (l) => l.league_type === "group_betting",
+      (l) => l.sections.group_bets || l.sections.tickets,
     )) {
       const summary = await settleLeagueParlays(store, league);
       parlaysSettled += summary.slipsSettled;

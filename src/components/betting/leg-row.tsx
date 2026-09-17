@@ -2,9 +2,14 @@
 
 import { X } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
-import { formatAmerican } from "@/lib/utils/odds";
 import { gameStarted } from "@/lib/props/slip";
-import { actualLabel, gameLabel, legTitle, RESULT_META } from "@/lib/props/format";
+import {
+  actualLabel,
+  gameLabel,
+  legPrice,
+  legTitle,
+  RESULT_META,
+} from "@/lib/props/format";
 import { MemberChip, ResultMark } from "@/components/ui/result-mark";
 import { LegLineProgress, hasLineProgress } from "@/components/betting/leg-line-progress";
 import type { LegResult, NflGame, ParlayLeg } from "@/lib/types";
@@ -85,9 +90,11 @@ export function LegRow({
           </select>
         ) : null}
       </div>
-      <span className="shrink-0 font-display text-sm font-bold text-ink">
-        {formatAmerican(leg.american_odds)}
-      </span>
+      {legPrice(leg.american_odds) ? (
+        <span className="shrink-0 font-display text-sm font-bold text-ink">
+          {legPrice(leg.american_odds)}
+        </span>
+      ) : null}
       {onRemove ? (
         <button
           type="button"

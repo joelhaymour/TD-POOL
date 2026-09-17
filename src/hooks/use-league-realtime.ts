@@ -5,6 +5,14 @@ import { createBrowserClient } from "@supabase/ssr";
 
 const PICKS_ONLY = ["picks"] as const;
 
+/** Every table a parlay screen (group or tickets) needs to hear about. */
+export const PARLAY_TABLES = [
+  "parlays",
+  "parlay_legs",
+  "parlay_share_links",
+  "parlay_rides",
+] as const;
+
 /**
  * Subscribes to postgres_changes on league-scoped tables (default `picks`)
  * when Supabase public env is set. No-ops (connected=false) otherwise.

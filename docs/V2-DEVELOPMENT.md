@@ -112,9 +112,71 @@ Sources: [Supabase environment guidance](https://supabase.com/docs/guides/deploy
 [Vercel Git deployment guidance](https://vercel.com/docs/git),
 [The Odds API bookmakers](https://the-odds-api.com/sports-odds-data/bookmaker-apis.html).
 
+## League sections
+
+A league runs any combination of three sections (`enable_td_pool`,
+`enable_group_bets`, `enable_tickets` on `leagues`; `league.sections` in code):
+
+- **TD Pool** — `/<slug>/pool` (Picks · Slip · History · Board)
+- **Group Bets** — `/<slug>/group` (Create · Parlays · History · Board)
+- **Tickets** — `/<slug>/tickets` (Tickets · History · Board)
+
+`/<slug>` redirects to the section the member was last in (cookie
+`tdp_section_<slug>`) or the first one that is on, carrying `?slip=` / `?game=`
+across. The header shows a pill per section when more than one is on; the
+bottom bar is picked client-side from the second path segment
+(`LeagueNav`), so league-level pages (settings, admin) keep the last bar.
+Admins toggle sections in Settings; at least one stays on (DB check +
+`mergeSections`). The old `league_type` column is still written for
+compatibility but nothing reads it. Migration
+`20260916090000_league_sections_and_tickets.sql` backfilled existing leagues to
+exactly what they were, plus tickets.
+
+The week roll follows the sections: a league with a TD pool waits for every
+game to go final (picks grade at the whistle); one without moves on at the
+last kickoff. The settle ticker and the daily cron grade any league with group
+bets or tickets on.
+
+## Tickets
+
+A ticket is a bet a member placed at their own book, posted for the league to
+follow live and ride. It reuses the parlay tables (`parlays.kind = 'ticket'`,
+`status = 'locked'`), so grading, live progress, share links, realtime and
+admin overrides are the same code as group bets. A ticket keeps the numbers
+its slip printed — `stake`, `book_odds`, `book_payout` — because a same-game
+parlay is priced by the book, not by multiplying its legs; `settleSlip` pays
+`book_payout` on a win. Leg prices are nullable (a slip may only print the
+total); `legPrice()` leaves the space blank rather than say "Unavailable".
+
+- **Posting.** `PostTicketSheet`: paste (a book's share puts the slip's
+  picture AND the link on the clipboard, and one paste event delivers both),
+  a Paste button (`navigator.clipboard.read()`), or the file picker. The
+  screenshot is redrawn as a ≤1568px JPEG client-side (`shrink-image.ts`)
+  before upload. `POST /tickets/read` sends it to Claude (vision) with the
+  week's games and our market catalogue and gets legs back through a forced
+  tool call (`reader.ts`); `normalize.ts` maps the answer onto our
+  `market_key` / `outcome_label` / `line` conventions and flags anything a
+  human must fix. The member reviews (`LegEditor`: game, market, player,
+  side, line, odds), then `POST /tickets` stores the slip, legs, share link
+  and the screenshot (private bucket `tickets`, signed URLs per page load).
+  "Enter the legs by hand" skips the picture entirely.
+- **Reader config.** Off unless `ENABLE_TICKET_READER=true` and
+  `ANTHROPIC_API_KEY` are set — separate from `ENABLE_PAID_PROVIDERS`, which
+  the staging guard requires false. `TICKET_READER=fixture` returns a sample
+  read with no model call (local dev). Model: `TICKET_READER_MODEL`, default
+  `claude-sonnet-5`; a read is ~1,500 image tokens, about 1-2¢.
+- **Rides.** `parlay_rides` — "I'm riding" per member per ticket; counted on
+  the card and the board ("most ridden"). You cannot ride your own ticket.
+- **Board.** `ticketStandings`: tickets cashed (W-L), net across settled
+  tickets with a stake, best hit by `book_odds`, rides received; this week or
+  season (`?range=season`).
+- **Feed.** Live → Upcoming → Settled this week; older settled tickets are in
+  History. A ticket is filed under the week of its earliest game
+  (`ticketWeekId`), so one posted Tuesday for Thursday lands on the right
+  week. Posting is refused only when every game on it is already over.
+
 ## Group betting
 
-A league is either a weekly TD pool or a group betting league (`league_type`).
 Group betting members build shared parlays: each member adds up to
 `max_props_per_member` legs per slip from the full FanDuel board of any game.
 
@@ -147,9 +209,10 @@ Group betting members build shared parlays: each member adds up to
   TD pools still wait for every game to go final.
 - **Tabs.** Create (build and name a parlay, add picks), Parlays (every slip in
   play as a tile leading with odds and payout, expandable to its legs and its
-  place-the-bet links), History (settled), Board. A league can carry many
-  parlays at once, so Create switches between them through a list rather than a
-  row of chips.
+  place-the-bet links), History (settled), Board — all under `/<slug>/group`.
+  A league can carry many parlays at once, so Create switches between them
+  through a list rather than a row of chips. Group screens read
+  `listParlaysForLeague(id, "group")`; tickets never appear on them.
 - **No prefilled FanDuel slip.** The launcher and `fanduel-link.ts` were
   removed: a share link the bettor pastes carries the real prices from the book
   they actually used, and needs no state subdomain, no indexed-array format and

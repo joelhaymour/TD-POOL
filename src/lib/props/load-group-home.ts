@@ -11,7 +11,7 @@ export async function loadGroupHome(
   league: League,
   weekId: string,
 ): Promise<{ slips: ParlayWithLegs[]; games: NflGame[] }> {
-  const all = await store.listParlaysForLeague(league.id);
+  const all = await store.listParlaysForLeague(league.id, "group");
   const slips = all.filter(
     (s) =>
       !s.parlay.settled_at && (s.parlay.week_id === weekId || s.legs.length > 0),
@@ -40,7 +40,7 @@ export async function countParlaysNeedingPicks(
   league: League,
   memberId: string,
 ): Promise<number> {
-  const slips = await store.listParlaysForLeague(league.id);
+  const slips = await store.listParlaysForLeague(league.id, "group");
   return slips.filter(
     (s) =>
       !s.parlay.settled_at &&

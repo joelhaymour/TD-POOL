@@ -37,8 +37,9 @@ export async function GET(request: Request) {
   }
 
   const store = getStore();
+  // Only sections that grade legs: group parlays and posted tickets.
   const leagues = (await store.listLeagues()).filter(
-    (l): l is League => l.league_type === "group_betting",
+    (l): l is League => l.sections.group_bets || l.sections.tickets,
   );
 
   const working: League[] = [];

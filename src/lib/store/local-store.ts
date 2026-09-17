@@ -37,6 +37,7 @@ import {
   availabilityForLeague,
   takenByActiveMembers,
 } from "@/lib/league/availability";
+import { ALL_SECTIONS_ON, mergeSections } from "@/lib/league/sections";
 import { consensusImpliedFromAmericans } from "@/lib/model/math";
 
 const STORE_PATH = path.join(process.cwd(), ".data", "store.json");
@@ -196,7 +197,7 @@ export class LocalFileStore implements Store {
         name: input.name.trim(),
         slug,
         admin_user_id: input.admin_user_id ?? null,
-        league_type: input.league_type ?? "td_pool",
+        sections: mergeSections(ALL_SECTIONS_ON, input.sections),
         max_props_per_member: input.max_props_per_member ?? 3,
         currency: input.currency ?? "USD",
         betting_mode: input.betting_mode ?? "fixed",
@@ -541,6 +542,7 @@ export class LocalFileStore implements Store {
 
       Object.assign(league, {
         ...settings,
+        sections: mergeSections(league.sections, settings.sections),
         updated_at: nowIso(),
       });
       return league;
@@ -1058,6 +1060,12 @@ export class LocalFileStore implements Store {
     this.groupBettingUnavailable();
   }
   async removeParlayLeg(): Promise<import("@/lib/types").ParlayLeg | null> {
+    this.groupBettingUnavailable();
+  }
+  async addParlayLegs(): Promise<import("@/lib/types").ParlayLeg[]> {
+    this.groupBettingUnavailable();
+  }
+  async setParlayRide(): Promise<void> {
     this.groupBettingUnavailable();
   }
 

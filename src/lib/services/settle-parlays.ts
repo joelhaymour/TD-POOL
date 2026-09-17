@@ -105,7 +105,11 @@ export async function settleLeagueParlays(
   let slipsSettled = 0;
   for (const { parlay, legs } of slips) {
     const current = legs.map((l) => ({ ...l, ...grades.get(l.id) }));
-    const outcome = settleSlip(current, slipStake(parlay, league));
+    const outcome = settleSlip(
+      current,
+      slipStake(parlay, league),
+      parlay.kind === "ticket" ? parlay.book_payout : null,
+    );
     // A slip whose legs all cleared early is decided, but it stays on Home
     // until its games actually end — there is still something to watch.
     const allFinal = current.every(

@@ -7,8 +7,8 @@ import type { League, NflWeek } from "@/lib/types";
 /**
  * Align a league onto the current pool week:
  * - Before season → Week 1
- * - After all games of active week are final → next week (group betting
- *   leagues move on at the last kickoff instead)
+ * - After all games of active week are final → next week (a league with no
+ *   TD pool moves on at the last kickoff instead)
  * - If active week is behind the calendar pool week → snap forward
  */
 export async function alignLeagueActiveWeek(
@@ -27,12 +27,14 @@ export async function alignLeagueActiveWeek(
       const games = await store.listGamesForWeek(active.id);
       // A group slip cannot take a leg from a game in progress, so once the
       // last game kicks off there is nothing left to build this week. Slips
-      // still in play stay on Home and keep grading after the move.
+      // still in play stay on Home and keep grading after the move. A TD
+      // pool's picks are only graded at the final whistle, so a league that
+      // runs one waits for it.
       const weekDone =
         games.length > 0 &&
-        (league.league_type === "group_betting"
-          ? games.every((g) => gameStarted(g, asOf.getTime()))
-          : games.every((g) => g.status === "final"));
+        (league.sections.td_pool
+          ? games.every((g) => g.status === "final")
+          : games.every((g) => gameStarted(g, asOf.getTime())));
 
       const activeBehind =
         active.season < pool.season ||
