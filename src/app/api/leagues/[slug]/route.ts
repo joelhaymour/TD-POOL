@@ -7,6 +7,7 @@ import {
   refreshLeagueData,
 } from "@/lib/league/load-dashboard";
 import { mergeSections, sectionsFromBody } from "@/lib/league/sections";
+import { removeLeagueTicketImages } from "@/lib/tickets/storage";
 import type { UpdateLeagueSettingsInput } from "@/lib/types";
 
 /** First-run board materialize can exceed the default timeout. */
@@ -69,11 +70,20 @@ export async function PATCH(
       logo_url,
       member_count,
       active_week_id,
-      max_props_per_member,
+      pick_mode,
       sections,
     } = body;
 
     const settings: UpdateLeagueSettingsInput = {};
+    if (pick_mode !== undefined) {
+      if (pick_mode !== "one_each" && pick_mode !== "open") {
+        return NextResponse.json(
+          { error: "pick_mode must be one_each or open", code: "VALIDATION" },
+          { status: 400 },
+        );
+      }
+      settings.pick_mode = pick_mode;
+    }
     if (sections !== undefined) {
       const next = mergeSections(league.sections, sectionsFromBody(sections));
       if (
@@ -85,16 +95,6 @@ export async function PATCH(
         );
       }
       settings.sections = next;
-    }
-    if (max_props_per_member !== undefined) {
-      const max = Number(max_props_per_member);
-      if (!Number.isInteger(max) || max < 1 || max > 25) {
-        return NextResponse.json(
-          { error: "Picks per member must be 1-25", code: "VALIDATION" },
-          { status: 400 },
-        );
-      }
-      settings.max_props_per_member = max;
     }
     if (name !== undefined) settings.name = name;
     if (currency !== undefined) settings.currency = currency;
@@ -129,6 +129,28 @@ export async function PATCH(
 
     const updated = await store.updateLeagueSettings(league.id, settings);
     return NextResponse.json(updated);
+  } catch (err) {
+    return storeErrorResponse(err);
+  }
+}
+
+/**
+ * Admin: delete the league. Members, picks, slips, links and rides go with
+ * it through the database; the ticket screenshots are cleared here because
+ * storage does not cascade.
+ */
+export async function DELETE(
+  _request: Request,
+  context: RouteContext<"/api/leagues/[slug]">,
+) {
+  try {
+    const { slug } = await context.params;
+    const access = await requireApiAdmin(slug);
+    if (!access.ok) return access.response;
+
+    await removeLeagueTicketImages(access.league.id);
+    await getStore().deleteLeague(access.league.id);
+    return NextResponse.json({ ok: true });
   } catch (err) {
     return storeErrorResponse(err);
   }

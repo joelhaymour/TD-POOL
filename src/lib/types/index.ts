@@ -14,6 +14,12 @@ export type BettingMode = "fixed" | "none";
 export type LeagueSection = "td_pool" | "group_bets" | "tickets";
 export type LeagueSections = Record<LeagueSection, boolean>;
 export type ParlayStatus = "open" | "locked";
+/**
+ * How a group slip fills. One pick each: it is complete, and locks itself,
+ * when the last member is in. Open: anyone adds as many as they like and
+ * whoever places the bet locks it in.
+ */
+export type PickMode = "one_each" | "open";
 /** A group slip is built together from the board; a ticket is one member's placed bet. */
 export type ParlayKind = "group" | "ticket";
 export type ParlayResult = "pending" | "won" | "lost" | "push";
@@ -69,8 +75,8 @@ export interface League {
   slug: string;
   admin_user_id: string | null;
   sections: LeagueSections;
-  /** Group bets: max legs each member may add to one parlay. */
-  max_props_per_member: number;
+  /** Group bets: one pick each, or an open slip. */
+  pick_mode: PickMode;
   currency: Currency;
   betting_mode: BettingMode;
   contribution_per_member: number | null;
@@ -338,7 +344,7 @@ export interface CreateLeagueInput {
   name: string;
   slug?: string;
   sections?: Partial<LeagueSections>;
-  max_props_per_member?: number;
+  pick_mode?: PickMode;
   currency?: Currency;
   betting_mode?: BettingMode;
   contribution_per_member?: number | null;
@@ -498,7 +504,7 @@ export interface SelectPickInput {
 export interface UpdateLeagueSettingsInput {
   name?: string;
   sections?: Partial<LeagueSections>;
-  max_props_per_member?: number;
+  pick_mode?: PickMode;
   currency?: Currency;
   betting_mode?: BettingMode;
   contribution_per_member?: number | null;

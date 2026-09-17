@@ -62,6 +62,11 @@ const UNITS: Record<string, string> = {
   team_totals: "pts",
 };
 
+/** "catches", "rec yds" — the unit a market's line is counted in, or null. */
+export function legUnit(marketKey: string): string | null {
+  return UNITS[marketKey.replace(/_alternate$/, "")] ?? null;
+}
+
 /** The graded stat in words: "23 rec yds", "won by 3", "42 rec yds so far". */
 export function actualLabel(
   leg: Pick<ParlayLeg, "market_key" | "actual_value"> & { result?: LegResult },

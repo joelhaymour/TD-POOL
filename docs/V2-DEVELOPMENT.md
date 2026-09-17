@@ -170,6 +170,11 @@ total); `legPrice()` leaves the space blank rather than say "Unavailable".
 - **Board.** `ticketStandings`: tickets cashed (W-L), net across settled
   tickets with a stake, best hit by `book_odds`, rides received; this week or
   season (`?range=season`).
+- **Cards** fold to three lines (who + title + state; odds, stake → to win and
+  a bar per leg; a line of context) so six members' three tickets each fit a
+  screen; tapping opens the legs with their own line bars, the screenshot,
+  the ride link and the riders. The numbers shown are always the slip's own
+  (`book_odds`, `stake`, `book_payout`), never a board price.
 - **Feed.** Live → Upcoming → Settled this week; older settled tickets are in
   History. A ticket is filed under the week of its earliest game
   (`ticketWeekId`), so one posted Tuesday for Thursday lands on the right
@@ -177,8 +182,24 @@ total); `legPrice()` leaves the space blank rather than say "Unavailable".
 
 ## Group betting
 
-Group betting members build shared parlays: each member adds up to
-`max_props_per_member` legs per slip from the full FanDuel board of any game.
+Group betting members build shared parlays from the full FanDuel board of any
+game. A league's `pick_mode` decides how a slip fills:
+
+- **One pick each** — every member adds exactly one leg; the slip is complete
+  and **locks itself** the moment the last active member is in (checked in the
+  legs POST route via `slipComplete`).
+- **Open slip** — no limit; **any member** can tap *Lock in bet* once the bet
+  is placed (PATCH `status: locked`). Unlocking stays admin-only.
+
+`max_props_per_member` is still written (1 or 25) for the old constraint but
+nothing reads it; migration `20260917090000_pick_mode.sql` mapped 1 → one
+each and anything else → open. The Create-tab badge counts slips the viewer
+has nothing on yet, in either mode.
+
+**Deleting a league** is admin-only from Settings (type the name to confirm):
+`DELETE /api/leagues/<slug>` clears the ticket screenshots from storage (no
+cascade there) and deletes the row; members, picks, slips, links and rides
+cascade in the database.
 
 - **Prop boards** are fetched per game on demand, shared by every league, and
   refreshed at most every `PROPS_SYNC_TTL_HOURS` (default 6). Refreshes stop
@@ -232,6 +253,13 @@ Group betting members build shared parlays: each member adds up to
 - **Leg progress** (`leg-progress.tsx`) draws one bar per leg on every parlay
   card — won lime, lost red, live pulsing, pending dim — so a parlay's state
   reads before any number does.
+- **Line progress** (`leg-line-progress.tsx`) sits under each leg from the
+  moment it is added: dim with its target before kickoff, filling as the box
+  score moves. Stats that come one at a time (catches, TDs, sacks, FGs,
+  tackles) are a box per unit — over 6.5 is seven boxes — up to 12 boxes;
+  yards and points, and bigger counts, are a smooth fill. Unders fill toward
+  danger instead. The number is the leg's own line, whatever book it came
+  from.
 - **Create tab badge** counts parlays waiting on the viewer's picks
   (`countParlaysNeedingPicks`), using the same visibility filter as Home so an
   empty slip from a past week never badges. It is server-rendered, so the

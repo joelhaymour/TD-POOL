@@ -32,8 +32,9 @@ export async function loadGroupHome(
 
 /**
  * Parlays still waiting on this member's picks — the Create tab's badge.
- * A locked or settled slip wants nothing, and neither does one where they
- * have already used their allowance.
+ * A locked or settled slip wants nothing, and neither does one they have
+ * already put a pick on: one each is then done, and an open slip does not
+ * nag for more.
  */
 export async function countParlaysNeedingPicks(
   store: Store,
@@ -48,7 +49,6 @@ export async function countParlaysNeedingPicks(
       // Same slips Home shows: an empty one from a past week is not waiting
       // on anybody, and nobody can see it to act on the badge.
       (s.parlay.week_id === league.active_week_id || s.legs.length > 0) &&
-      s.legs.filter((l) => l.member_id === memberId).length <
-        league.max_props_per_member,
+      !s.legs.some((l) => l.member_id === memberId),
   ).length;
 }

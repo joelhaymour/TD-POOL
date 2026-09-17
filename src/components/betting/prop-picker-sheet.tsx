@@ -123,7 +123,8 @@ export function PropPickerSheet({
   props: GameProp[];
   loading: boolean;
   note: string | null;
-  picksLeft: number;
+  /** Null on an open slip — no limit. */
+  picksLeft: number | null;
   slipLegs: ParlayLeg[];
   locked: boolean;
   busy: boolean;
@@ -176,10 +177,13 @@ export function PropPickerSheet({
     ? "Kicked off — picks are closed"
     : locked
       ? "This slip is locked"
-      : picksLeft <= 0
-        ? "Your picks are in"
-        : `${picksLeft} pick${picksLeft === 1 ? "" : "s"} left on this slip`;
-  const addDisabled = busy || started || locked || picksLeft <= 0;
+      : picksLeft == null
+        ? "Add as many as you like"
+        : picksLeft <= 0
+          ? "Your pick is in"
+          : "Make your one pick";
+  const addDisabled =
+    busy || started || locked || (picksLeft != null && picksLeft <= 0);
 
   function toggle(key: string) {
     setExpanded((cur) => {

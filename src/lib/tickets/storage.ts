@@ -26,6 +26,20 @@ export async function uploadTicketImage(
   return path;
 }
 
+/** A deleted league takes its screenshots with it; storage does not cascade. */
+export async function removeLeagueTicketImages(leagueId: string): Promise<void> {
+  const bucket = createAdminClient().storage.from(BUCKET);
+  const { data, error } = await bucket.list(leagueId, { limit: 1000 });
+  if (error) {
+    console.error("ticket image listing failed", leagueId, error);
+    return;
+  }
+  const paths = (data ?? []).map((f) => `${leagueId}/${f.name}`);
+  if (paths.length === 0) return;
+  const { error: removeErr } = await bucket.remove(paths);
+  if (removeErr) console.error("ticket image cleanup failed", leagueId, removeErr);
+}
+
 export async function removeTicketImage(path: string): Promise<void> {
   const { error } = await createAdminClient().storage.from(BUCKET).remove([path]);
   if (error) console.error("ticket image remove failed", path, error);

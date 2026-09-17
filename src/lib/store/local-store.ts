@@ -198,7 +198,7 @@ export class LocalFileStore implements Store {
         slug,
         admin_user_id: input.admin_user_id ?? null,
         sections: mergeSections(ALL_SECTIONS_ON, input.sections),
-        max_props_per_member: input.max_props_per_member ?? 3,
+        pick_mode: input.pick_mode ?? "open",
         currency: input.currency ?? "USD",
         betting_mode: input.betting_mode ?? "fixed",
         contribution_per_member: input.contribution_per_member ?? 10,
@@ -546,6 +546,13 @@ export class LocalFileStore implements Store {
         updated_at: nowIso(),
       });
       return league;
+    });
+  }
+
+  async deleteLeague(leagueId: string): Promise<void> {
+    await this.withData((data) => {
+      data.leagues = data.leagues.filter((l) => l.id !== leagueId);
+      data.members = data.members.filter((m) => m.league_id !== leagueId);
     });
   }
 

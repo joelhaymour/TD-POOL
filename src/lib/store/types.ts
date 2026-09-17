@@ -109,6 +109,8 @@ export function effectiveSyncTtl(
 export interface Store {
   getLeagueBySlug(slug: string): Promise<League | null>;
   createLeague(input: CreateLeagueInput): Promise<League>;
+  /** Admin: remove a league and everything under it. */
+  deleteLeague(leagueId: string): Promise<void>;
   /** Join via slug + join PIN; creates (or reactivates) a member row. */
   joinLeague(input: JoinLeagueInput): Promise<JoinLeagueResult>;
   listMembers(leagueId: string): Promise<LeagueMember[]>;

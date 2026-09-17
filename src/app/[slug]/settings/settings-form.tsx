@@ -7,12 +7,14 @@ import {
   MoneySettingsForm,
   type MoneySettingsValue,
 } from "@/components/league/money-settings-form";
+import { PickModeField } from "@/components/league/pick-mode-field";
 import { SectionToggles } from "@/components/league/section-toggles";
 import { Button } from "@/components/ui/button";
+import { Sheet } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/components/ui/toast";
 import { ALL_SECTIONS_ON } from "@/lib/league/sections";
-import type { League, LeagueSections, PickLockType } from "@/lib/types";
+import type { League, LeagueSections, PickLockType, PickMode } from "@/lib/types";
 
 const inputClass =
   "h-11 w-full rounded-xl border border-border-strong bg-field px-3 text-sm font-semibold text-ink outline-none focus:border-turf focus:ring-2 focus:ring-turf/20";
@@ -43,8 +45,11 @@ export function SettingsForm({
 
   const [joinPin, setJoinPin] = useState<string | null>(null);
   const [sections, setSections] = useState<LeagueSections>(ALL_SECTIONS_ON);
-  const [maxProps, setMaxProps] = useState("3");
+  const [pickMode, setPickMode] = useState<PickMode>("open");
   const [inviteLoading, setInviteLoading] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleteName, setDeleteName] = useState("");
+  const [deleting, setDeleting] = useState(false);
 
   const inviteUrl = useMemo(() => {
     if (typeof window === "undefined") return `/${slug}`;
@@ -65,7 +70,7 @@ export function SettingsForm({
         setAllowPickChanges(l.allow_pick_changes);
         setLockType(l.pick_lock_type);
         setSections(l.sections);
-        setMaxProps(String(l.max_props_per_member || 3));
+        setPickMode(l.pick_mode);
         setMoney({
           betting_mode: l.betting_mode,
           // A league that was on the old per-member mode reads back as fixed
@@ -135,14 +140,7 @@ export function SettingsForm({
           sections,
           allow_pick_changes: allowPickChanges,
           pick_lock_type: lockType,
-          ...(sections.group_bets
-            ? {
-                max_props_per_member: Math.min(
-                  25,
-                  Math.max(1, Number(maxProps) || 3),
-                ),
-              }
-            : {}),
+          ...(sections.group_bets ? { pick_mode: pickMode } : {}),
           betting_mode: money.betting_mode,
           fixed_weekly_stake: money.fixed_weekly_stake,
           currency: money.currency,
@@ -167,6 +165,30 @@ export function SettingsForm({
     }
   }
 
+  async function onDelete() {
+    setDeleting(true);
+    try {
+      const res = await fetch(`/api/leagues/${slug}`, { method: "DELETE" });
+      const data = (await res.json().catch(() => ({}))) as { error?: string };
+      if (!res.ok) {
+        toast({
+          title: "Couldn't delete the league",
+          description: data.error ?? "Try again.",
+          tone: "error",
+        });
+        return;
+      }
+      setDeleteOpen(false);
+      toast({ title: "League deleted", tone: "success" });
+      router.push("/");
+      router.refresh();
+    } catch {
+      toast({ title: "Network error", tone: "error" });
+    } finally {
+      setDeleting(false);
+    }
+  }
+
   if (loading) {
     return (
       <div className="space-y-3">
@@ -177,6 +199,7 @@ export function SettingsForm({
   }
 
   return (
+    <>
     <form onSubmit={onSave} className="space-y-5">
       <div>
         <h2 className="font-display text-xl font-extrabold uppercase tracking-wide text-ink">
@@ -290,18 +313,10 @@ export function SettingsForm({
         </div>
 
         {sections.group_bets ? (
-          <label className="block">
-            <span className={labelClass}>Picks per member, per slip</span>
-            <input
-              className={inputClass}
-              value={maxProps}
-              inputMode="numeric"
-              onChange={(e) => setMaxProps(e.target.value)}
-            />
-            <span className="mt-1 block text-xs text-ink-faint">
-              How many props each league member can add to one shared parlay.
-            </span>
-          </label>
+          <div>
+            <span className={labelClass}>Group bets</span>
+            <PickModeField value={pickMode} onChange={setPickMode} disabled={!isAdmin} />
+          </div>
         ) : null}
 
         <MoneySettingsForm value={money} onChange={setMoney} />
@@ -344,8 +359,66 @@ export function SettingsForm({
           >
             Open admin tools →
           </Link>
+
+          <section className="space-y-3 rounded-2xl border border-danger/30 bg-chalk p-4">
+            <h3 className="font-display text-base font-bold uppercase tracking-wide text-danger">
+              Delete this league
+            </h3>
+            <p className="text-sm text-ink-muted">
+              Every member, pick, parlay and ticket goes with it. There is no
+              undo.
+            </p>
+            <Button
+              type="button"
+              variant="danger"
+              fullWidth
+              onClick={() => {
+                setDeleteName("");
+                setDeleteOpen(true);
+              }}
+            >
+              Delete league…
+            </Button>
+          </section>
         </>
       ) : null}
     </form>
+
+    <Sheet
+      open={deleteOpen}
+      onClose={() => setDeleteOpen(false)}
+      title="Delete this league?"
+      description={`Type the league's name — ${leagueName} — to confirm. Everyone loses access immediately.`}
+    >
+      <div className="space-y-3 pb-2">
+        <input
+          autoFocus
+          className={inputClass}
+          value={deleteName}
+          placeholder={leagueName}
+          autoComplete="off"
+          onChange={(e) => setDeleteName(e.target.value)}
+        />
+        <Button
+          type="button"
+          variant="danger"
+          fullWidth
+          size="lg"
+          disabled={deleting || deleteName.trim().toLowerCase() !== leagueName.trim().toLowerCase()}
+          onClick={() => void onDelete()}
+        >
+          {deleting ? "Deleting…" : "Delete league for everyone"}
+        </Button>
+        <Button
+          type="button"
+          variant="secondary"
+          fullWidth
+          onClick={() => setDeleteOpen(false)}
+        >
+          Keep it
+        </Button>
+      </div>
+    </Sheet>
+    </>
   );
 }

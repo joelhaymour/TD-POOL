@@ -3,11 +3,12 @@
 import { useRouter } from "next/navigation";
 import { useMemo, useState, type FormEvent } from "react";
 import { Button } from "@/components/ui/button";
+import { PickModeField } from "@/components/league/pick-mode-field";
 import { SectionToggles } from "@/components/league/section-toggles";
 import { useToast } from "@/components/ui/toast";
 import { generateJoinPin, normalizeJoinSlug } from "@/lib/league/join";
 import { ALL_SECTIONS_ON } from "@/lib/league/sections";
-import type { LeagueSections } from "@/lib/types";
+import type { LeagueSections, PickMode } from "@/lib/types";
 
 type CreatedLeague = {
   slug: string;
@@ -45,7 +46,7 @@ export function HomeClient({
   const [name, setName] = useState("");
   const [displayName, setDisplayName] = useState(accountName);
   const [sections, setSections] = useState<LeagueSections>(ALL_SECTIONS_ON);
-  const [maxProps, setMaxProps] = useState("3");
+  const [pickMode, setPickMode] = useState<PickMode>("open");
   const [creating, setCreating] = useState(false);
 
   const [joinSlug, setJoinSlug] = useState(pendingJoinSlug);
@@ -80,9 +81,7 @@ export function HomeClient({
           admin_display_name: displayName.trim(),
           join_pin: newJoinPin,
           sections,
-          max_props_per_member: sections.group_bets
-            ? Math.min(25, Math.max(1, Number(maxProps) || 3))
-            : undefined,
+          pick_mode: sections.group_bets ? pickMode : undefined,
         }),
       });
       const data = (await res.json()) as CreatedLeague & { error?: string };
@@ -254,16 +253,10 @@ export function HomeClient({
             <SectionToggles value={sections} onChange={setSections} />
           </div>
           {sections.group_bets ? (
-            <label className="block">
-              <span className={labelClass}>Picks per member, per slip</span>
-              <input
-                value={maxProps}
-                onChange={(e) => setMaxProps(e.target.value)}
-                inputMode="numeric"
-                placeholder="3"
-                className={inputClass}
-              />
-            </label>
+            <div>
+              <span className={labelClass}>Group bets</span>
+              <PickModeField value={pickMode} onChange={setPickMode} />
+            </div>
           ) : null}
           <label className="block">
             <span className={labelClass}>League name</span>

@@ -81,7 +81,7 @@ export async function buildSeedPayload(): Promise<SeedPayload> {
     slug: "joels-league",
     admin_user_id: null,
     sections: { td_pool: true, group_bets: false, tickets: true },
-    max_props_per_member: 3,
+    pick_mode: "open",
     currency: "USD",
     betting_mode: "fixed",
     contribution_per_member: 10,

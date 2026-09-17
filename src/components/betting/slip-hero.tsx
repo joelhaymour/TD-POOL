@@ -75,7 +75,8 @@ export function SlipHero({
   title: string;
   phase: SlipPhase;
   legsIn: number;
-  capacity: number;
+  /** Null on an open slip — there is no ceiling to count toward. */
+  capacity: number | null;
   american: number | null;
   stake: number;
   payout: number | null;
@@ -120,7 +121,9 @@ export function SlipHero({
 
         <p className="mt-3 font-display text-4xl font-extrabold leading-none tracking-tight">
           {legsIn}
-          <span className="text-raised-fg/40"> / {capacity}</span>
+          {capacity != null ? (
+            <span className="text-raised-fg/40"> / {capacity}</span>
+          ) : null}
         </p>
         <p className="mt-1 text-xs font-medium text-raised-fg/65">Legs in</p>
         {progress ? <div className="mt-3">{progress}</div> : null}

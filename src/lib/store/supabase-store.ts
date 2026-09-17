@@ -126,7 +126,7 @@ function mapLeague(row: DbLeague): League {
       ),
       tickets: Boolean(row.enable_tickets ?? false),
     },
-    max_props_per_member: num(row.max_props_per_member, 3),
+    pick_mode: row.pick_mode === "one_each" ? "one_each" : "open",
     currency: (row.currency as League["currency"]) ?? "USD",
     // Legacy "individual" leagues read as fixed at the amount they were
     // already wagering, so nothing changes for them and no migration is
@@ -387,8 +387,10 @@ function leagueToDbPatch(settings: UpdateLeagueSettingsInput): Record<string, un
     if (s.tickets !== undefined) patch.enable_tickets = s.tickets;
   }
   if (settings.currency !== undefined) patch.currency = settings.currency;
-  if (settings.max_props_per_member !== undefined) {
-    patch.max_props_per_member = settings.max_props_per_member;
+  if (settings.pick_mode !== undefined) {
+    patch.pick_mode = settings.pick_mode;
+    // The pre-pick-mode column is still constrained; keep it honest.
+    patch.max_props_per_member = settings.pick_mode === "one_each" ? 1 : 25;
   }
   if (settings.betting_mode !== undefined) patch.betting_mode = settings.betting_mode;
   if (settings.contribution_per_member !== undefined) {
@@ -500,7 +502,8 @@ export class SupabaseStore implements Store {
         // honest for anything that reads it.
         league_type:
           sections.group_bets && !sections.td_pool ? "group_betting" : "td_pool",
-        max_props_per_member: input.max_props_per_member ?? 3,
+        pick_mode: input.pick_mode ?? "open",
+        max_props_per_member: input.pick_mode === "one_each" ? 1 : 25,
         currency: input.currency ?? "USD",
         betting_mode: input.betting_mode ?? "fixed",
         contribution_per_member: input.contribution_per_member ?? 10,
@@ -546,6 +549,12 @@ export class SupabaseStore implements Store {
     if (membersErr) throw membersErr;
 
     return mapLeague(leagueRow);
+  }
+
+  /** Everything under the league goes with it — members, picks, slips, links, rides. */
+  async deleteLeague(leagueId: string): Promise<void> {
+    const { error } = await this.client.from("leagues").delete().eq("id", leagueId);
+    if (error) throw error;
   }
 
   async joinLeague(input: JoinLeagueInput): Promise<JoinLeagueResult> {

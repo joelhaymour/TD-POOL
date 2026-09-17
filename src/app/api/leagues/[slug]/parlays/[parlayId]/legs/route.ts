@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getStore } from "@/lib/store";
 import { storeErrorResponse } from "@/lib/api/store-error";
 import { requireApiMembership } from "@/lib/auth/api";
+import { maxLegsPerMember, slipComplete } from "@/lib/props/pick-mode";
 import { gameStarted } from "@/lib/props/slip";
 import type { GameProp, ParlayLeg } from "@/lib/types";
 
@@ -56,9 +57,8 @@ export async function POST(
     if (found.parlay.status === "locked") return locked("This slip is locked");
 
     const mine = found.legs.filter((l) => l.member_id === access.member.id);
-    const max = access.league.max_props_per_member;
-    if (mine.length >= max) {
-      return locked(`You have used all ${max} of your picks on this slip`);
+    if (mine.length >= maxLegsPerMember(access.league)) {
+      return locked("You've made your pick on this slip");
     }
 
     const prop = await store.getGameProp(body.game_prop_id);
@@ -107,7 +107,20 @@ export async function POST(
       fd_selection_id: prop.fd_selection_id,
       deep_link: prop.deep_link,
     });
-    return NextResponse.json({ leg }, { status: 201 });
+
+    // One pick each: the slip is complete, and locks, when the last member is in.
+    let lockedNow = false;
+    if (
+      slipComplete(
+        access.league,
+        [...found.legs, leg],
+        await store.listMembers(access.league.id),
+      )
+    ) {
+      await store.updateParlay(found.parlay.id, { status: "locked" });
+      lockedNow = true;
+    }
+    return NextResponse.json({ leg, locked: lockedNow }, { status: 201 });
   } catch (err) {
     return storeErrorResponse(err);
   }

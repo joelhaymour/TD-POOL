@@ -32,7 +32,7 @@ export async function POST(request: Request) {
       admin_display_name: body.admin_display_name.trim(),
       admin_user_id: auth.user.id,
       sections: sectionsFromBody(body.sections),
-      max_props_per_member: body.max_props_per_member,
+      pick_mode: body.pick_mode === "one_each" ? "one_each" : "open",
       join_pin: body.join_pin ?? "0000",
       currency: body.currency,
       betting_mode: body.betting_mode === "none" ? "none" : "fixed",

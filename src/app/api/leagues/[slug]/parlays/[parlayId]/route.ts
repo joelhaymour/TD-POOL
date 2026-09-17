@@ -34,8 +34,9 @@ export async function GET(
 }
 
 /**
- * Edit a slip. Locking (the bet is placed, no more changes) is admin-only;
- * the stake and title can also be set by whoever started the slip.
+ * Edit a slip. Locking (the bet is placed, no more changes) is any member's
+ * call on an open slip and an admin's otherwise; the stake and title can also
+ * be set by whoever started the slip.
  */
 export async function PATCH(
   request: Request,
@@ -66,7 +67,13 @@ export async function PATCH(
     const patch: ParlayPatch = {};
 
     if (body.status !== undefined) {
-      if (!isAdmin) return forbidden("Only an admin can lock a slip");
+      // An open slip is locked in by whoever places the bet; a one-each slip
+      // locks itself when the last member is in. Only an admin ever unlocks.
+      const memberMayLock =
+        access.league.pick_mode === "open" && body.status === "locked";
+      if (!isAdmin && !memberMayLock) {
+        return forbidden("Only an admin can change whether a slip is locked");
+      }
       if (body.status !== "open" && body.status !== "locked") {
         return NextResponse.json(
           { error: "status must be open or locked", code: "VALIDATION" },

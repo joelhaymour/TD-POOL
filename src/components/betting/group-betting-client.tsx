@@ -120,7 +120,9 @@ export function GroupBettingClient({
   const [picker, setPicker] = useState<Picker | null>(null);
   const [stakeDraft, setStakeDraft] = useState<string | null>(null);
   const [membersOpen, setMembersOpen] = useState(true);
-  const [sheet, setSheet] = useState<null | "switch" | "new" | "rename" | "delete">(null);
+  const [sheet, setSheet] = useState<
+    null | "switch" | "new" | "rename" | "delete" | "lock"
+  >(null);
   const [nameDraft, setNameDraft] = useState("");
 
   const refresh = useCallback(async () => {
@@ -153,7 +155,7 @@ export function GroupBettingClient({
     slips.find((s) => s.parlay.id === selectedId) ?? slips[0] ?? null;
   const legs = useMemo(() => selected?.legs ?? [], [selected]);
 
-  const max = league.max_props_per_member;
+  const oneEach = league.pick_mode === "one_each";
   const stake = selected
     ? slipStake(selected.parlay, league)
     : calculateWeeklyStake(league);
@@ -161,9 +163,11 @@ export function GroupBettingClient({
   const phase: SlipPhase = selected
     ? slipPhase(selected.parlay, legs, gamesById)
     : "building";
-  const capacity = Math.max(1, members.length) * max;
+  const capacity = oneEach ? Math.max(1, members.length) : null;
   const myLegs = legs.filter((l) => l.member_id === viewer.memberId).length;
-  const picksLeft = Math.max(0, max - myLegs);
+  /** Null means no limit — an open slip takes as many as anyone adds. */
+  const picksLeft = oneEach ? Math.max(0, 1 - myLegs) : null;
+  const canAddMore = picksLeft == null || picksLeft > 0;
   const slipLocked = selected?.parlay.status === "locked";
   const canEditSlip =
     viewer.isAdmin || selected?.parlay.created_by_member_id === viewer.memberId;
@@ -182,7 +186,7 @@ export function GroupBettingClient({
     }
     return rows;
   }, [members, legs]);
-  const membersDone = byMember.filter((m) => m.id !== "former" && m.legs.length >= max).length;
+  const membersDone = byMember.filter((m) => m.id !== "former" && m.legs.length >= 1).length;
 
   const upcoming = games.filter((g) => !gameStarted(g));
   const underway = games.filter((g) => gameStarted(g));
@@ -257,13 +261,17 @@ export function GroupBettingClient({
         if (r.status === 404 && picker) void openGame(picker.game);
         return;
       }
-      const left = picksLeft - 1;
+      const lockedNow = Boolean(r.data.locked);
       toast({
         title: `Added ${prop.player_name ?? prop.outcome_label}`,
-        description: left > 0 ? `${left} pick${left === 1 ? "" : "s"} left` : "Your picks are in",
+        description: lockedNow
+          ? "That was the last pick — the bet is locked in"
+          : oneEach
+            ? "Your pick is in"
+            : "Add more, or lock in the bet once it's placed",
         tone: "success",
       });
-      if (left <= 0) setPicker(null);
+      if (oneEach) setPicker(null);
       await refresh();
       // The Create tab's badge is server-rendered; re-render it too.
       router.refresh();
@@ -481,6 +489,24 @@ export function GroupBettingClient({
             <LegProgress legs={legs} gamesById={gamesById} tone="dark" />
           }
         >
+          {/* An open slip is locked in by whoever places the bet; a one-each
+              slip locks itself, so it just says how close it is. */}
+          {phase === "building" && !slipLocked ? (
+            oneEach ? (
+              <p className="text-xs font-medium text-raised-fg/60">
+                Locks itself once everyone has picked · {membersDone} of{" "}
+                {members.length} in
+              </p>
+            ) : legs.length > 0 ? (
+              <button
+                type="button"
+                onClick={() => setSheet("lock")}
+                className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-lime font-display text-sm font-extrabold uppercase tracking-wider text-accent-fg transition active:scale-[0.98]"
+              >
+                <Lock className="h-4 w-4" /> Lock in bet
+              </button>
+            ) : null
+          ) : null}
           {legs.length > 0 || selected.shares.length > 0 ? (
             <RideBet
               shares={selected.shares}
@@ -499,9 +525,12 @@ export function GroupBettingClient({
             Week {week.week} Parlay
           </h2>
           <p className="mt-2 text-sm text-raised-fg/70">
-            Start the group&apos;s parlay. Everyone adds up to {max} pick
-            {max === 1 ? "" : "s"} from any game — TDs, yards, spreads, totals.
-            Whoever places it shares the link so the rest can ride it.
+            Start the group&apos;s parlay.{" "}
+            {oneEach
+              ? "Everyone makes one pick from any game"
+              : "Everyone adds as many picks as they like from any game"}{" "}
+            — TDs, yards, spreads, totals. Whoever places it shares the link
+            so the rest can ride it.
           </p>
           <button
             type="button"
@@ -531,7 +560,8 @@ export function GroupBettingClient({
                 Member Picks
               </h2>
               <p className="text-xs text-ink-muted">
-                {membersDone} of {members.length} done · {max} each
+                {membersDone} of {members.length}{" "}
+                {oneEach ? "picked · one each" : "in · no limit"}
               </p>
             </div>
             <ChevronDown
@@ -545,7 +575,7 @@ export function GroupBettingClient({
             <ul className="divide-y divide-border border-t border-border">
               {byMember.map((m) => {
                 const isViewer = m.id === viewer.memberId;
-                const done = m.legs.length >= max;
+                const done = m.legs.length >= 1;
                 return (
                   <li key={m.id} className={cn("px-4 py-2.5", isViewer && "bg-turf/5")}>
                     <div className="flex items-center gap-2.5 text-sm">
@@ -563,7 +593,13 @@ export function GroupBettingClient({
                       </span>
                       {m.id !== "former" ? (
                         <span className="text-xs font-semibold text-ink-faint">
-                          {m.legs.length === 0 ? "Needs picks" : `${m.legs.length}/${max}`}
+                          {m.legs.length === 0
+                            ? oneEach
+                              ? "Needs pick"
+                              : "Nothing yet"
+                            : oneEach
+                              ? "Picked"
+                              : `${m.legs.length} leg${m.legs.length === 1 ? "" : "s"}`}
                         </span>
                       ) : null}
                     </div>
@@ -610,9 +646,11 @@ export function GroupBettingClient({
             <p className="text-xs text-ink-muted">
               {slipLocked
                 ? "Slip is locked — the bet's placed."
-                : picksLeft > 0
-                  ? `Tap a game for every prop it lists · ${picksLeft} left`
-                  : "Your picks are in — browse, or start another slip"}
+                : !canAddMore
+                  ? "Your pick is in — it locks once everyone's picked"
+                  : oneEach
+                    ? "Tap a game and make your one pick"
+                    : "Tap a game for every prop it lists · add as many as you like"}
             </p>
           </div>
         </div>
@@ -786,6 +824,33 @@ export function GroupBettingClient({
             onClick={() => setSheet(null)}
           >
             Keep it
+          </button>
+        </div>
+      </Sheet>
+
+      <Sheet
+        open={sheet === "lock"}
+        onClose={() => setSheet(null)}
+        title="Lock in this bet?"
+        description="No more picks can be added once it's locked. An admin can unlock it if something's wrong."
+      >
+        <div className="space-y-2 pb-2">
+          <button
+            type="button"
+            className="h-12 w-full rounded-xl bg-lime font-display text-sm font-extrabold uppercase tracking-wider text-accent-fg transition active:scale-[0.98]"
+            onClick={() => {
+              setSheet(null);
+              void patchSlip({ status: "locked" });
+            }}
+          >
+            Lock it in
+          </button>
+          <button
+            type="button"
+            className="h-11 w-full rounded-xl border border-border font-semibold text-ink"
+            onClick={() => setSheet(null)}
+          >
+            Not yet
           </button>
         </div>
       </Sheet>
