@@ -105,14 +105,14 @@ export async function TicketHistory({
                     name={who}
                     className={mine ? "bg-lime/20 text-lime" : undefined}
                   />
-                  <span className="truncate text-xs font-semibold text-ink-muted">{who}</span>
+                  <h3 className="truncate font-display text-base font-bold uppercase tracking-wide text-ink">
+                    {who}
+                  </h3>
                   <BookBadge book={parlay.sportsbook} />
                 </div>
-                <h3 className="mt-1.5 truncate font-display text-base font-bold uppercase tracking-wide text-ink">
-                  {parlay.title}
-                </h3>
-                <p className="text-xs text-ink-muted">
+                <p className="mt-1 text-xs text-ink-muted">
                   {week?.label ?? (week ? `Week ${week.week}` : "")}
+                  {` · ${legs.length === 1 ? "single" : `${legs.length}-leg parlay`}`}
                   {` · ${hits}/${graded} hit`}
                   {parlay.book_odds != null ? ` · ${formatAmerican(parlay.book_odds)}` : ""}
                   {showMoney && parlay.stake != null

@@ -9,7 +9,6 @@ import { BookBadge } from "@/components/tickets/book-badge";
 import { Sheet } from "@/components/ui/sheet";
 import { MemberChip } from "@/components/ui/result-mark";
 import { gameStarted, slipEstimate, slipPhase } from "@/lib/props/slip";
-import { sportsbookName } from "@/lib/props/sportsbooks";
 import { ticketPhaseLabel } from "@/lib/tickets/format";
 import { cn } from "@/lib/utils/cn";
 import { formatAmerican, formatMoney } from "@/lib/utils/odds";
@@ -94,11 +93,18 @@ export function TicketCard({
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
       >
+        {/* Whose bet leads: the bars underneath already say what it is. */}
         <div className="flex items-center gap-2">
           <MemberChip name={posterName} />
           <h3 className="min-w-0 flex-1 truncate font-display text-sm font-bold uppercase tracking-wide text-ink">
-            {parlay.title}
+            {posterName}
+            {mine ? (
+              <span className="ml-1.5 text-[10px] font-bold tracking-wider text-turf">
+                You
+              </span>
+            ) : null}
           </h3>
+          <BookBadge book={parlay.sportsbook} />
           <span
             className={cn(
               "shrink-0 rounded-md px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider",
@@ -131,8 +137,7 @@ export function TicketCard({
           ) : null}
           <span className="ml-auto min-w-0 truncate text-[11px] text-ink-faint">
             {[
-              mine ? "You" : posterName,
-              parlay.sportsbook ? sportsbookName(parlay.sportsbook) : null,
+              legs.length === 1 ? "Single" : `${legs.length}-leg parlay`,
               legProgressLabel(legs),
               rides.length > 0 ? `${rides.length} riding` : null,
             ]
@@ -167,7 +172,6 @@ export function TicketCard({
           </ul>
 
           <div className="mt-3 flex flex-wrap items-center gap-2">
-            <BookBadge book={parlay.sportsbook} />
             {ticket.screenshot_url ? (
               <button
                 type="button"
@@ -239,8 +243,8 @@ export function TicketCard({
       <Sheet
         open={picture}
         onClose={() => setPicture(false)}
-        title={parlay.title}
-        description={`${posterName}'s slip, as posted`}
+        title={`${posterName}'s slip`}
+        description="As posted, straight from the book"
       >
         {ticket.screenshot_url ? (
           // eslint-disable-next-line @next/next/no-img-element
@@ -256,7 +260,7 @@ export function TicketCard({
         open={confirmDelete}
         onClose={() => setConfirmDelete(false)}
         title="Take this ticket down?"
-        description={`"${parlay.title}" goes for everyone, rides included. This can't be undone.`}
+        description="It goes for everyone, rides included. This can't be undone."
       >
         <div className="space-y-2 pb-2">
           <button

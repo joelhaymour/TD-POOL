@@ -170,10 +170,12 @@ total); `legPrice()` leaves the space blank rather than say "Unavailable".
 - **Board.** `ticketStandings`: tickets cashed (W-L), net across settled
   tickets with a stake, best hit by `book_odds`, rides received; this week or
   season (`?range=season`).
-- **Cards** fold to three lines (who + title + state; odds, stake → to win and
-  a bar per leg; a line of context) so six members' three tickets each fit a
-  screen; tapping opens the legs with their own line bars, the screenshot,
-  the ride link and the riders. The numbers shown are always the slip's own
+- **Cards** fold to three lines (who + book + state; odds, stake → to win;
+  a bar per leg with the pick named under it) so six members' three tickets
+  each fit a screen; tapping opens the legs with their own line bars, the
+  screenshot, the ride link and the riders. Nobody names a ticket: the poster
+  leads the card and the bar labels say what the bet is; `title` is still
+  filled from the legs (`autoTicketTitle`) for History and the board. The numbers shown are always the slip's own
   (`book_odds`, `stake`, `book_payout`), never a board price.
 - **Feed.** Live → Upcoming → Settled this week; older settled tickets are in
   History. A ticket is filed under the week of its earliest game
@@ -228,7 +230,8 @@ cascade in the database.
   kickoff, not the last final — nothing can be added once every game has
   started. Scores keep syncing for earlier weeks that still have open legs.
   TD pools still wait for every game to go final.
-- **Tabs.** Create (build and name a parlay, add picks), Parlays (every slip in
+- **Tabs.** Create (start a parlay — titled "Week N parlay" automatically, the
+  pencil renames it — and add picks), Parlays (every slip in
   play as a tile leading with odds and payout, expandable to its legs and its
   place-the-bet links), History (settled), Board — all under `/<slug>/group`.
   A league can carry many parlays at once, so Create switches between them

@@ -121,7 +121,7 @@ export function GroupBettingClient({
   const [stakeDraft, setStakeDraft] = useState<string | null>(null);
   const [membersOpen, setMembersOpen] = useState(true);
   const [sheet, setSheet] = useState<
-    null | "switch" | "new" | "rename" | "delete" | "lock"
+    null | "switch" | "rename" | "delete" | "lock"
   >(null);
   const [nameDraft, setNameDraft] = useState("");
 
@@ -191,6 +191,19 @@ export function GroupBettingClient({
   const upcoming = games.filter((g) => !gameStarted(g));
   const underway = games.filter((g) => gameStarted(g));
 
+  /**
+   * Nobody wants to name a slip before they can pick: "Week 2 parlay", then
+   * "Week 2 parlay 2" if the group starts another. The pencil renames it.
+   */
+  function nextSlipTitle(): string {
+    const base = `Week ${week.week} parlay`;
+    const taken = new Set(slips.map((s) => s.parlay.title));
+    if (!taken.has(base)) return base;
+    let n = 2;
+    while (taken.has(`${base} ${n}`)) n += 1;
+    return `${base} ${n}`;
+  }
+
   async function createSlip(title?: string): Promise<string | null> {
     setCreating(true);
     try {
@@ -217,7 +230,7 @@ export function GroupBettingClient({
     game: NflGame,
     options: { refresh?: boolean; tier?: "core" | "extended" } = {},
   ) {
-    if (!selected && !(await createSlip())) return;
+    if (!selected && !(await createSlip(nextSlipTitle()))) return;
     // Loading the extra markets keeps the board on screen underneath.
     setPicker((cur) => ({
       game,
@@ -456,10 +469,7 @@ export function GroupBettingClient({
           <button
             type="button"
             disabled={creating}
-            onClick={() => {
-              setNameDraft("");
-              setSheet("new");
-            }}
+            onClick={() => void createSlip(nextSlipTitle())}
             className="flex h-[3.25rem] shrink-0 items-center gap-1 rounded-xl border border-dashed border-border-strong px-3 font-display text-xs font-bold uppercase tracking-wide text-ink-muted transition hover:text-ink disabled:opacity-50"
           >
             <Plus className="h-4 w-4" /> New
@@ -535,14 +545,11 @@ export function GroupBettingClient({
           <button
             type="button"
             disabled={creating}
-            onClick={() => {
-              setNameDraft("");
-              setSheet("new");
-            }}
+            onClick={() => void createSlip(nextSlipTitle())}
             className="mt-4 flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-lime font-display text-sm font-extrabold uppercase tracking-wider text-accent-fg transition active:scale-[0.98] disabled:opacity-60"
           >
             <Plus className="h-4 w-4" />
-            {creating ? "Starting…" : "Name a parlay"}
+            {creating ? "Starting…" : "Start a parlay"}
           </button>
         </section>
       )}
@@ -761,23 +768,12 @@ export function GroupBettingClient({
       </Sheet>
 
       <Sheet
-        open={sheet === "new" || sheet === "rename"}
+        open={sheet === "rename"}
         onClose={() => setSheet(null)}
-        title={sheet === "rename" ? "Rename parlay" : "New parlay"}
-        description={
-          sheet === "rename"
-            ? "Everyone in the league sees this name."
-            : "Give it a name so the group can tell it apart."
-        }
+        title="Rename parlay"
+        description="Optional — everyone in the league sees this name."
       >
-        <form
-          className="space-y-3 pb-2"
-          onSubmit={(e) => {
-            if (sheet === "rename") return void renameSlip(e);
-            e.preventDefault();
-            void createSlip(nameDraft);
-          }}
-        >
+        <form className="space-y-3 pb-2" onSubmit={(e) => void renameSlip(e)}>
           <input
             autoFocus
             value={nameDraft}
@@ -786,16 +782,8 @@ export function GroupBettingClient({
             placeholder={`Week ${week.week} parlay`}
             className="h-11 w-full rounded-xl border border-border-strong bg-field px-3 text-sm font-semibold text-ink outline-none focus:border-turf focus:ring-2 focus:ring-turf/20"
           />
-          <Button
-            type="submit"
-            fullWidth
-            disabled={creating || (sheet === "rename" && !nameDraft.trim())}
-          >
-            {sheet === "rename"
-              ? "Save name"
-              : creating
-                ? "Starting…"
-                : "Start parlay"}
+          <Button type="submit" fullWidth disabled={!nameDraft.trim()}>
+            Save name
           </Button>
         </form>
       </Sheet>

@@ -14,7 +14,6 @@ import { BookBadge } from "@/components/tickets/book-badge";
 import { LegEditor, blankLeg } from "@/components/tickets/leg-editor";
 import { apiError, apiForm, apiJson } from "@/lib/api/client";
 import { SHARE_BOOKS } from "@/lib/props/sportsbooks";
-import { autoTicketTitle } from "@/lib/tickets/format";
 import type { TicketDraft, TicketLegDraft } from "@/lib/tickets/normalize";
 import type { TicketReaderStatus } from "@/lib/tickets/reader";
 import { shrinkImage, type ShrunkImage } from "@/lib/tickets/shrink-image";
@@ -66,14 +65,6 @@ export function PostTicketSheet({
   const [games, setGames] = useState<NflGame[]>([]);
   const [reader, setReader] = useState<TicketReaderStatus | null>(null);
   const [legs, setLegs] = useState<TicketLegDraft[]>([]);
-  // The title follows the legs until the member types their own.
-  const [ownTitle, setOwnTitle] = useState<string | null>(null);
-  const readyLegs = legs.filter((l) => l.market_key && l.issues.length === 0);
-  const title =
-    ownTitle ??
-    (readyLegs.length > 0
-      ? autoTicketTitle(readyLegs.map((l) => ({ ...l, market_key: l.market_key! })))
-      : "");
   const [book, setBook] = useState<string | null>(null);
   const [stake, setStake] = useState("");
   const [odds, setOdds] = useState("");
@@ -91,7 +82,6 @@ export function PostTicketSheet({
     setHint(null);
     setError(null);
     setLegs([]);
-    setOwnTitle(null);
     setBook(null);
     setStake("");
     setOdds("");
@@ -241,8 +231,9 @@ export function PostTicketSheet({
       const n = Number.parseFloat(s.replace(/[^0-9.+-]/g, ""));
       return Number.isFinite(n) ? n : null;
     };
+    // No name to type: the server titles it from its legs, and the card
+    // leads with the poster anyway.
     const payload = {
-      title: title.trim() || undefined,
       sportsbook: book,
       stake: num(stake),
       book_odds: (() => {
@@ -431,17 +422,6 @@ export function PostTicketSheet({
               {notes ? <p className="mt-1 text-[11px] text-warning">{notes}</p> : null}
             </div>
           </div>
-
-          <label className="block">
-            <span className={labelClass}>Name it</span>
-            <input
-              className={inputClass}
-              value={title}
-              maxLength={60}
-              placeholder="DJ Moore + 2 more"
-              onChange={(e) => setOwnTitle(e.target.value)}
-            />
-          </label>
 
           <div>
             <span className={labelClass}>Legs</span>
