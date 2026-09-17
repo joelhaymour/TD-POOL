@@ -1,6 +1,6 @@
 import { TEAM_ABBR_TO_FULL, normalizeTeamAbbr, teamNickname } from "@/lib/nfl/teams";
 import { isAlternateMarket, propMarketDef } from "@/lib/props/markets";
-import { sportsbook, type SportsbookKey } from "@/lib/props/sportsbooks";
+import { sportsbook } from "@/lib/props/sportsbooks";
 import { americanToDecimal, decimalToAmerican } from "@/lib/utils/odds";
 import type { ReadLegRaw, ReadTicketRaw } from "@/lib/tickets/reader";
 import type { NflGame } from "@/lib/types";
@@ -26,7 +26,8 @@ export type TicketLegDraft = {
 };
 
 export type TicketDraft = {
-  sportsbook: SportsbookKey | null;
+  /** A known book's key, or a share link's bare host. */
+  sportsbook: string | null;
   bet_type: ReadTicketRaw["bet_type"];
   stake: number | null;
   currency: "USD" | "CAD" | null;
@@ -173,7 +174,7 @@ export function normalizeLeg(
 export function normalizeTicket(
   raw: ReadTicketRaw,
   games: NflGame[],
-  bookHint: SportsbookKey | null,
+  bookHint: string | null,
 ): TicketDraft {
   const book = raw.sportsbook ? sportsbook(raw.sportsbook)?.key ?? null : null;
   return {

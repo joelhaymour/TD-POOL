@@ -4,7 +4,7 @@
  * Adding one is a single entry here: the share-link parser, the branded
  * button, and the API validation all read from this list.
  */
-export type SportsbookKey = "fanduel" | "bet365" | "draftkings" | "betmgm";
+export type SportsbookKey = "fanduel" | "bet365" | "draftkings" | "betmgm" | "stake";
 
 export type SportsbookDef = {
   key: SportsbookKey;
@@ -47,6 +47,14 @@ export const SPORTSBOOKS: SportsbookDef[] = [
     hosts: ["betmgm.com"],
     shareHint: "Open the bet, tap Share, then copy the link.",
   },
+  {
+    key: "stake",
+    name: "Stake",
+    brand: { bg: "#1475E1", fg: "#FFFFFF" },
+    hosts: ["stake.com", "stake.us", "stake.ca"],
+    // Stake shares a bare link with no picture, so the screenshot is added after.
+    shareHint: "Open the bet in My Bets, tap Share, then Copy link. Add a screenshot after.",
+  },
 ];
 
 const BY_KEY = new Map(SPORTSBOOKS.map((b) => [b.key, b]));
@@ -62,17 +70,22 @@ export function sportsbookName(key: string): string {
 /** Every book we accept a share link from, in button order. */
 export const SHARE_BOOKS = SPORTSBOOKS;
 
+/**
+ * The book's key when it is one we know, otherwise the link's bare host
+ * ("thescore.bet") — the button then carries that host on a plain colour.
+ */
 export type ShareLinkParse =
-  | { ok: true; sportsbook: SportsbookKey; url: string }
+  | { ok: true; sportsbook: SportsbookKey | string; url: string }
   | { ok: false; error: string };
 
 /**
  * Work out which book a pasted share link belongs to.
  *
  * Share sheets paste a sentence around the URL ("Check out my bet: https://…"),
- * so the first link in the text is used. The host has to match a known book:
- * these links become buttons other members tap, and an open text field would
- * make the slip a place to post any link at all.
+ * so the first link in the text is used. A known book gets its branded
+ * button; any other https host is kept under its own name — every friend's
+ * book cannot be listed in advance, and a link that shows its domain on the
+ * button is not a place to hide anything.
  */
 export function parseShareLink(raw: string): ShareLinkParse {
   const text = (raw ?? "").trim();
@@ -99,16 +112,15 @@ export function parseShareLink(raw: string): ShareLinkParse {
   }
 
   const host = url.hostname.toLowerCase().replace(/^www\./, "");
+  if (!host.includes(".")) {
+    return { ok: false, error: "That doesn't look like a link" };
+  }
   const book = SHARE_BOOKS.find(
     (b) =>
       b.hosts.some((h) => host === h || host.endsWith(`.${h}`)),
   );
-  if (!book) {
-    const names = SHARE_BOOKS.map((b) => b.name).join(", ");
-    return { ok: false, error: `Share links are supported for ${names}` };
-  }
 
   // Trailing junk from a paste (quotes, a stray paren) would 404 at the book.
   url.hash = url.hash.replace(/[)\]"']+$/, "");
-  return { ok: true, sportsbook: book.key, url: url.toString() };
+  return { ok: true, sportsbook: book?.key ?? host, url: url.toString() };
 }

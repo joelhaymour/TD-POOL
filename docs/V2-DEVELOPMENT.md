@@ -289,10 +289,12 @@ cascade in the database.
   theirs (`parlay_share_links`) and everyone else gets a branded button that
   loads the same selections in their own account. One link per member per book,
   so several books can sit side by side. The pasted text is scanned for the
-  first URL and its host must match a book in `src/lib/props/sportsbooks.ts` —
-  these become buttons other members tap, so an open field would turn a slip
-  into a place to post any link. **Adding a book is one entry in that file**;
-  nothing else changes. `deepLink: true` marks the books we can also prefill
+  first URL. A host listed in `src/lib/props/sportsbooks.ts` gets that book's
+  branded button; any other https host is kept under its own domain on a plain
+  button (a friend's Stake link arrived before Stake was listed, and a
+  rejected link is a ticket nobody can ride). **Adding a book is one entry in
+  that file**; nothing else changes. Stake shares a bare link with no picture,
+  so its tickets always take the screenshot as a second step. `deepLink: true` marks the books we can also prefill
   from our own board (FanDuel today).
 - **Live grading.** A leg on a game that is UNDER WAY is graded by
   `gradeLegLive`, which calls only what is already certain: a counting stat

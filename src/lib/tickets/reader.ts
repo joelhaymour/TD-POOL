@@ -74,7 +74,7 @@ const SCHEMA = {
     sportsbook: {
       type: ["string", "null"],
       description:
-        "Which book the slip is from, lowercase: bet365, fanduel, draftkings, betmgm. Null if not visible.",
+        "Which book the slip is from, lowercase: bet365, fanduel, draftkings, betmgm, stake. Null if not visible.",
     },
     bet_type: {
       type: "string",
