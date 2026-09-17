@@ -253,7 +253,7 @@ export function LegEditor({
                 className={inputClass}
                 inputMode="decimal"
                 value={leg.line ?? ""}
-                placeholder={isTeamMarket(key) ? "-3.5" : "4.5"}
+                placeholder={isTeamMarket(key) ? "Spread" : "Line"}
                 onChange={(e) => {
                   const n = Number.parseFloat(e.target.value);
                   update({ line: Number.isFinite(n) ? n : null });
@@ -269,7 +269,7 @@ export function LegEditor({
                 className={inputClass}
                 inputMode="numeric"
                 value={leg.american_odds ?? ""}
-                placeholder="+140"
+                placeholder="American"
                 onChange={(e) => {
                   const n = Number.parseInt(e.target.value.replace(/[^0-9-]/g, ""), 10);
                   update({ american_odds: Number.isFinite(n) && n !== 0 ? n : null });

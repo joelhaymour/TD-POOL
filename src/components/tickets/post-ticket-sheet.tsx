@@ -2,6 +2,7 @@
 
 import {
   useCallback,
+  useEffect,
   useRef,
   useState,
   type ClipboardEvent,
@@ -73,6 +74,23 @@ export function PostTicketSheet({
 
   const fileInput = useRef<HTMLInputElement>(null);
   const legSeq = useRef(0);
+
+  // Whether this site can read a picture at all, so the sheet says so up
+  // front instead of after a tap that goes nowhere.
+  const [readerHere, setReaderHere] = useState<TicketReaderStatus | null>(null);
+  useEffect(() => {
+    if (!open || readerHere != null) return;
+    let cancelled = false;
+    void apiJson<{ reader: TicketReaderStatus }>(`/api/leagues/${slug}/tickets/read`).then(
+      (r) => {
+        if (!cancelled && r.ok) setReaderHere(r.data.reader);
+      },
+    );
+    return () => {
+      cancelled = true;
+    };
+  }, [open, readerHere, slug]);
+  const readerOff = readerHere === "off";
 
   const reset = useCallback(() => {
     setStage("pick");
@@ -366,23 +384,37 @@ export function PostTicketSheet({
 
           {error ? <p className="text-sm text-danger">{error}</p> : null}
 
-          <Button
-            type="button"
-            fullWidth
-            size="lg"
-            disabled={!picture || stage === "reading"}
-            onClick={() => void readTicket()}
-          >
-            <ScanLine className="h-4 w-4" />
-            {stage === "reading" ? "Reading your ticket…" : "Read the ticket"}
-          </Button>
-          <button
-            type="button"
-            className="block w-full text-center text-xs font-bold uppercase tracking-wider text-ink-faint hover:text-ink"
-            onClick={() => void enterByHand()}
-          >
-            Or enter the legs by hand
-          </button>
+          {readerOff ? (
+            <>
+              <p className="rounded-xl border border-warning/40 bg-warning/10 px-3 py-2 text-xs text-warning">
+                Reading pictures isn&apos;t switched on for this site yet, so the
+                legs go in by hand. The screenshot is still saved with the ticket.
+              </p>
+              <Button type="button" fullWidth size="lg" onClick={() => void enterByHand()}>
+                Enter the legs
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button
+                type="button"
+                fullWidth
+                size="lg"
+                disabled={!picture || stage === "reading"}
+                onClick={() => void readTicket()}
+              >
+                <ScanLine className="h-4 w-4" />
+                {stage === "reading" ? "Reading your ticket…" : "Read the ticket"}
+              </Button>
+              <button
+                type="button"
+                className="block w-full text-center text-xs font-bold uppercase tracking-wider text-ink-faint hover:text-ink"
+                onClick={() => void enterByHand()}
+              >
+                Or enter the legs by hand
+              </button>
+            </>
+          )}
 
           <div className="rounded-xl border border-border bg-field p-3">
             <p className="text-[11px] font-bold uppercase tracking-wide text-ink-faint">
@@ -413,10 +445,10 @@ export function PostTicketSheet({
                 <BookBadge book={book} />
                 <span className="text-[11px] text-ink-faint">
                   {reader === "claude"
-                    ? "Read from your screenshot"
+                    ? "Read from your screenshot — check each leg"
                     : reader === "fixture"
                       ? "Sample read (reader off here)"
-                      : "Entered by hand"}
+                      : "Legs go in by hand"}
                 </span>
               </div>
               {notes ? <p className="mt-1 text-[11px] text-warning">{notes}</p> : null}
@@ -446,13 +478,15 @@ export function PostTicketSheet({
           </div>
 
           <div className="grid grid-cols-3 gap-2">
+            {/* Word placeholders only: a number here reads as a value
+                the app filled in, and an empty box must look empty. */}
             <label className="block">
               <span className={labelClass}>Stake ({currency})</span>
               <input
                 className={inputClass}
                 inputMode="decimal"
                 value={stake}
-                placeholder="20"
+                placeholder="Wager"
                 onChange={(e) => setStake(e.target.value)}
               />
             </label>
@@ -462,7 +496,7 @@ export function PostTicketSheet({
                 className={inputClass}
                 inputMode="numeric"
                 value={odds}
-                placeholder="+612"
+                placeholder="American"
                 onChange={(e) => setOdds(e.target.value)}
               />
             </label>
@@ -472,7 +506,7 @@ export function PostTicketSheet({
                 className={inputClass}
                 inputMode="decimal"
                 value={payout}
-                placeholder="142.40"
+                placeholder="Return"
                 onChange={(e) => setPayout(e.target.value)}
               />
             </label>
