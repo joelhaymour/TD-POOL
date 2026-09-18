@@ -52,7 +52,7 @@ export function Sheet({
       <button
         type="button"
         aria-label="Close sheet"
-        className="absolute inset-0 bg-scrim animate-fade-in"
+        className="absolute inset-0 touch-none bg-scrim animate-fade-in"
         onClick={onClose}
       />
       <div
@@ -60,7 +60,8 @@ export function Sheet({
         aria-modal="true"
         aria-labelledby={title ? titleId : undefined}
         className={cn(
-          "relative z-10 flex max-h-[88vh] w-full max-w-lg flex-col rounded-t-2xl border border-border bg-raised shadow-card sm:rounded-2xl",
+          // dvh, not vh: the on-screen keyboard shrinks the viewport on phones.
+          "relative z-10 flex max-h-[88dvh] w-full max-w-lg flex-col rounded-t-2xl border border-border bg-raised pb-[env(safe-area-inset-bottom)] shadow-card sm:rounded-2xl",
           "animate-sheet-up",
           className,
         )}

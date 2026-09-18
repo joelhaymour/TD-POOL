@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>TD Pool</title>
+    <style>
+      html, body { height: 100%; margin: 0; background: #0a0e0b; color: #fff; font-family: -apple-system, system-ui, sans-serif; }
+      body { display: flex; align-items: center; justify-content: center; text-align: center; padding: 24px; box-sizing: border-box; }
+      main { max-width: 22rem; }
+      h1 { font-size: 28px; letter-spacing: 0.04em; text-transform: uppercase; margin: 0 0 8px; }
+      p { color: rgba(255,255,255,0.66); font-size: 15px; line-height: 1.5; margin: 0 0 20px; }
+      button { appearance: none; border: 0; border-radius: 12px; background: #c7f94b; color: #0a1a0f; font-weight: 800; font-size: 14px; letter-spacing: 0.06em; text-transform: uppercase; padding: 14px 22px; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>TD Pool</h1>
+      <p>Couldn't reach TD Pool. Check your connection and try again.</p>
+      <button type="button" onclick="retry()">Try again</button>
+    </main>
+    <script>
+      // MainViewController injects TD_POOL_SITE (the address the shell loads)
+      // into every page it hosts, so a retry goes back to the live site.
+      function retry() {
+        var site = window.TD_POOL_SITE;
+        location.replace(typeof site === "string" && /^https?:\/\//.test(site) ? site : "/");
+      }
+    </script>
+  </body>
+</html>

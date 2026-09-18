@@ -556,6 +556,28 @@ export class LocalFileStore implements Store {
     });
   }
 
+  async deleteAccount(userId: string): Promise<void> {
+    await this.withData((data) => {
+      const seats = data.members.filter((m) => m.user_id === userId);
+      for (const seat of seats) {
+        const others = data.members.filter(
+          (o) => o.league_id === seat.league_id && o.id !== seat.id,
+        );
+        if (others.length === 0) {
+          data.leagues = data.leagues.filter((l) => l.id !== seat.league_id);
+          data.members = data.members.filter((o) => o.league_id !== seat.league_id);
+          continue;
+        }
+        if (seat.role === "admin" && !others.some((o) => o.role === "admin" && o.active)) {
+          (others.find((o) => o.active) ?? others[0]).role = "admin";
+        }
+        data.members = data.members.filter((o) => o.id !== seat.id);
+      }
+      const gone = new Set(seats.map((s) => s.id));
+      data.picks = data.picks.filter((p) => !gone.has(p.member_id));
+    });
+  }
+
   async getWeekBySeasonWeek(
     season: number,
     week: number,

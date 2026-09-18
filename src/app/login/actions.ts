@@ -3,6 +3,8 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { getStore } from "@/lib/store";
 
 export type AuthState = {
   error: string | null;
@@ -99,6 +101,31 @@ export async function signUp(
 
 export async function signOut(): Promise<void> {
   const supabase = await createClient();
+  await supabase.auth.signOut();
+  revalidatePath("/", "layout");
+  redirect("/login");
+}
+
+/**
+ * Delete the signed-in account and everything it owns. App Store rule 5.1.1(v):
+ * an app that creates accounts must delete them from inside the app.
+ */
+export async function deleteAccount(): Promise<{ error: string } | undefined> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
+
+  try {
+    await getStore().deleteAccount(user.id);
+    const { error } = await createAdminClient().auth.admin.deleteUser(user.id);
+    if (error) throw error;
+  } catch (err) {
+    console.error("account deletion failed", user.id, err);
+    return { error: "Couldn't delete the account. Try again in a minute." };
+  }
+
   await supabase.auth.signOut();
   revalidatePath("/", "layout");
   redirect("/login");

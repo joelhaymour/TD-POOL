@@ -1,5 +1,6 @@
 import { randomUUID } from "crypto";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { removeLeagueTicketImages, removeTicketImage } from "@/lib/tickets/storage";
 import {
   StoreError,
   type ApplyOddsRefreshInput,
@@ -555,6 +556,71 @@ export class SupabaseStore implements Store {
   async deleteLeague(leagueId: string): Promise<void> {
     const { error } = await this.client.from("leagues").delete().eq("id", leagueId);
     if (error) throw error;
+  }
+
+  async deleteAccount(userId: string): Promise<void> {
+    const { data: seats, error: seatsErr } = await this.client
+      .from("league_members")
+      .select("id, league_id, role")
+      .eq("user_id", userId);
+    if (seatsErr) throw seatsErr;
+
+    for (const seat of seats ?? []) {
+      const memberId = String(seat.id);
+      const leagueId = String(seat.league_id);
+
+      const { data: others, error: othersErr } = await this.client
+        .from("league_members")
+        .select("id, role, active")
+        .eq("league_id", leagueId)
+        .neq("id", memberId)
+        .order("created_at", { ascending: true });
+      if (othersErr) throw othersErr;
+
+      // Nobody else: the league is theirs alone and goes with them.
+      if (!others?.length) {
+        await removeLeagueTicketImages(leagueId);
+        await this.deleteLeague(leagueId);
+        continue;
+      }
+
+      // Their tickets and screenshots go; group slips they started stay with
+      // the league (the creator just reads as a former member).
+      const { data: tickets, error: ticketsErr } = await this.client
+        .from("parlays")
+        .select("id, screenshot_path")
+        .eq("league_id", leagueId)
+        .eq("created_by_member_id", memberId)
+        .eq("kind", "ticket");
+      if (ticketsErr) throw ticketsErr;
+      for (const ticket of tickets ?? []) {
+        if (ticket.screenshot_path) await removeTicketImage(String(ticket.screenshot_path));
+        await this.deleteParlay(String(ticket.id));
+      }
+
+      // Never leave a league without an admin.
+      if (seat.role === "admin" && !others.some((o) => o.role === "admin" && o.active)) {
+        const heir = others.find((o) => o.active) ?? others[0];
+        const { error: promoteErr } = await this.client
+          .from("league_members")
+          .update({ role: "admin" })
+          .eq("id", heir.id);
+        if (promoteErr) throw promoteErr;
+      }
+
+      // Picks, legs and rides hang off the seat and cascade with it.
+      const { error: seatErr } = await this.client
+        .from("league_members")
+        .delete()
+        .eq("id", memberId);
+      if (seatErr) throw seatErr;
+
+      const members = await this.listMembers(leagueId);
+      await this.client
+        .from("leagues")
+        .update({ member_count_setting: members.length, updated_at: nowIso() })
+        .eq("id", leagueId);
+    }
   }
 
   async joinLeague(input: JoinLeagueInput): Promise<JoinLeagueResult> {

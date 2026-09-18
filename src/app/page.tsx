@@ -2,6 +2,7 @@ import Link from "next/link";
 import { getStore } from "@/lib/store";
 import { accountDisplayName, requireUser } from "@/lib/auth/session";
 import { enabledSections } from "@/lib/league/sections";
+import { DeleteAccount } from "./delete-account";
 import { HomeClient } from "./home-client";
 import { signOut } from "./login/actions";
 
@@ -26,7 +27,7 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
             "radial-gradient(ellipse at 20% 0%, rgba(184,242,74,0.28), transparent 45%), radial-gradient(ellipse at 90% 30%, rgba(31,138,76,0.22), transparent 50%)",
         }}
       />
-      <main className="relative mx-auto flex min-h-dvh w-full max-w-lg flex-col justify-center px-5 py-12">
+      <main className="relative mx-auto flex min-h-dvh w-full max-w-lg flex-col justify-center px-5 pb-[max(3rem,calc(env(safe-area-inset-bottom)+1.5rem))] pt-[max(3rem,calc(env(safe-area-inset-top)+1.5rem))]">
         <div className="flex items-start justify-between gap-3">
           <div>
             <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-turf">
@@ -36,14 +37,17 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
               TD POOL
             </h1>
           </div>
-          <form action={signOut}>
-            <button
-              type="submit"
-              className="mt-1 text-xs font-bold uppercase tracking-wider text-ink-faint hover:text-ink"
-            >
-              Sign out
-            </button>
-          </form>
+          <div className="flex flex-col items-end gap-2">
+            <form action={signOut}>
+              <button
+                type="submit"
+                className="mt-1 text-xs font-bold uppercase tracking-wider text-ink-faint hover:text-ink"
+              >
+                Sign out
+              </button>
+            </form>
+            <DeleteAccount email={user.email ?? "your account"} />
+          </div>
         </div>
 
         {leagues.length > 0 ? (

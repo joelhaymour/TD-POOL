@@ -111,6 +111,13 @@ export interface Store {
   createLeague(input: CreateLeagueInput): Promise<League>;
   /** Admin: remove a league and everything under it. */
   deleteLeague(leagueId: string): Promise<void>;
+  /**
+   * Everything a person owns across leagues: their seats (and with them
+   * picks and legs), their tickets and screenshots. A league where they were
+   * the only member goes too; one where they were the last admin passes the
+   * role on. The auth user itself is removed by the caller.
+   */
+  deleteAccount(userId: string): Promise<void>;
   /** Join via slug + join PIN; creates (or reactivates) a member row. */
   joinLeague(input: JoinLeagueInput): Promise<JoinLeagueResult>;
   listMembers(leagueId: string): Promise<LeagueMember[]>;

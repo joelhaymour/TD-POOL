@@ -28,7 +28,7 @@ export function ConfirmDialog({
 }: ConfirmDialogProps) {
   return (
     <Sheet open={open} onClose={onClose} title={title} description={description}>
-      <div className="flex flex-col gap-3 pb-[env(safe-area-inset-bottom)]">
+      <div className="flex flex-col gap-3">
         <Button
           variant={danger ? "danger" : "primary"}
           fullWidth

@@ -26,7 +26,7 @@ export function AppShell({
   return (
     <div className={cn("relative mx-auto flex min-h-dvh w-full max-w-lg flex-col", className)}>
       {header ? (
-        <header className="sticky top-0 z-30 border-b border-border/80 bg-field/90 px-4 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))] backdrop-blur-md">
+        <header className="sticky top-[var(--banner-h,0px)] z-30 border-b border-border/80 bg-field/90 px-4 pb-3 pt-[max(0.75rem,var(--top-inset,env(safe-area-inset-top)))] backdrop-blur-md">
           {header}
         </header>
       ) : null}

@@ -1,0 +1,21 @@
+{
+	"appId": "com.joelhaymour.tdpool",
+	"appName": "TD Pool",
+	"webDir": "native/www",
+	"backgroundColor": "#0a0e0b",
+	"zoomEnabled": false,
+	"appendUserAgent": "TDPoolApp",
+	"server": {
+		"url": "https://td-pool-five.vercel.app",
+		"cleartext": false,
+		"errorPath": "error.html"
+	},
+	"ios": {
+		"contentInset": "never",
+		"allowsLinkPreview": false,
+		"preferredContentMode": "mobile"
+	},
+	"packageClassList": [
+		"KeyboardPlugin"
+	]
+}

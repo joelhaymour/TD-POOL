@@ -20,7 +20,8 @@ function BookButton({
   return (
     <a
       href={share.url}
-      rel="noopener"
+      target="_blank"
+      rel="noopener noreferrer"
       className="flex h-12 flex-1 items-center justify-center gap-2 rounded-xl px-3 font-display text-sm font-extrabold tracking-wide shadow-sm ring-1 ring-inset ring-white/20 transition active:scale-[0.98]"
       style={{
         backgroundColor: book?.brand.bg ?? "#333333",

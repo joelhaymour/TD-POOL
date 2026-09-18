@@ -1,6 +1,9 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
+/** Pages anyone can read signed out: the login screen and the privacy notice. */
+const PUBLIC_PATHS = new Set(["/login", "/privacy"]);
+
 /**
  * Refreshes the Supabase session cookie on every navigation and bounces signed
  * out visitors to the login screen.
@@ -43,7 +46,7 @@ export async function proxy(request: NextRequest) {
   // opt out of the redirect and check the session themselves.
   if (pathname.startsWith("/api/")) return response;
 
-  if (!user && pathname !== "/login") {
+  if (!user && !PUBLIC_PATHS.has(pathname)) {
     const login = request.nextUrl.clone();
     login.pathname = "/login";
     login.search = pathname === "/" ? "" : `?next=${encodeURIComponent(pathname)}`;

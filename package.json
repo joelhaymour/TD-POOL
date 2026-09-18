@@ -15,9 +15,15 @@
     "setup:v2": "node scripts/setup-v2.mjs",
     "seed": "curl -X POST http://localhost:3000/api/seed",
     "test:model": "npx --yes tsx scripts/verify-td-model.ts",
-    "backtest": "npx --yes tsx scripts/backtest-td-pool.ts"
+    "backtest": "npx --yes tsx scripts/backtest-td-pool.ts",
+    "ios:sync": "cap sync ios",
+    "ios:open": "cap open ios",
+    "ios:assets": "capacitor-assets generate --ios --assetPath native/assets --iosProject ios/App",
+    "ios:artwork": "swift native/make-artwork.swift"
   },
   "dependencies": {
+    "@capacitor/core": "^8.5.2",
+    "@capacitor/keyboard": "^8.0.5",
     "@supabase/ssr": "^0.12.6",
     "@supabase/supabase-js": "^2.115.0",
     "ai": "^7.0.93",
@@ -31,6 +37,9 @@
     "zustand": "^5.0.15"
   },
   "devDependencies": {
+    "@capacitor/assets": "^3.0.5",
+    "@capacitor/cli": "^8.5.2",
+    "@capacitor/ios": "^8.5.2",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20.19.43",
     "@types/react": "^19",

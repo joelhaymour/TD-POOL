@@ -54,6 +54,37 @@
 
 
 
+/* iOS zooms the whole page into any field smaller than 16px and leaves it
+   zoomed. Unlayered on purpose: on touch screens this beats text-sm. */
+@media (pointer: coarse) {
+  input,
+  select,
+  textarea {
+    font-size: 16px;
+  }
+}
+
+/* In the base layer so utilities (touch-none, select-text) still win. */
+@layer base {
+  html {
+    /* iOS: no grey flash on tap, no font inflation, no rubber-band past the top. */
+    -webkit-tap-highlight-color: transparent;
+    -webkit-text-size-adjust: 100%;
+    overscroll-behavior-y: none;
+  }
+
+  /* Controls behave like native ones: no long-press link preview or text
+     selection, and no 300ms double-tap wait. Not on labels: WebKit inherits
+     user-select into the input inside, and iOS then refuses to focus it. */
+  a,
+  button,
+  nav {
+    -webkit-touch-callout: none;
+    user-select: none;
+    touch-action: manipulation;
+  }
+}
+
 body {
   background-color: var(--field);
   color: var(--ink);

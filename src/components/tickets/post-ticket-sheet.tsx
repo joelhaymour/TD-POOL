@@ -13,6 +13,7 @@ import { Sheet } from "@/components/ui/sheet";
 import { BookBadge } from "@/components/tickets/book-badge";
 import { LegEditor, blankLeg } from "@/components/tickets/leg-editor";
 import { apiError, apiForm, apiJson } from "@/lib/api/client";
+import { readNativeClipboard } from "@/lib/native/clipboard";
 import { parseShareLink, SHARE_BOOKS } from "@/lib/props/sportsbooks";
 import type { TicketDraft, TicketLegDraft } from "@/lib/tickets/normalize";
 import type { TicketReaderStatus } from "@/lib/tickets/reader";
@@ -191,22 +192,38 @@ export function PostTicketSheet({
     let gotImage = false;
     let gotLink = false;
     let gotText = false;
-    const clipboard = (navigator.clipboard ?? null) as
-      | (Clipboard & { read?: () => Promise<ClipboardItem[]> })
-      | null;
+    // In the iOS app the native pasteboard is read directly: the picture and
+    // the link come together, and iOS asks with a clear Allow/Don't Allow
+    // alert instead of a bubble. Anywhere else this is null.
+    const native = await readNativeClipboard().catch(() => null);
+    if (native?.denied) {
+      setHint("iPhone blocked the paste. Tap Allow when it asks, or turn it on in Settings › TD Pool › Paste from Other Apps.");
+      return;
+    }
+    const web = native
+      ? null
+      : ((navigator.clipboard ?? null) as
+          | (Clipboard & { read?: () => Promise<ClipboardItem[]> })
+          | null);
 
     // No clipboard API at all (some in-app browsers): the roll is the only way.
-    if (!clipboard) {
+    if (!native && !web) {
       setOfferPicker(true);
       setHint("This browser can't paste here. Choose the screenshot from your photos and paste the link into the box below.");
       return;
     }
 
     try {
-      if (typeof clipboard.read === "function") {
+      if (native) {
+        if (native.text) {
+          gotText = true;
+          gotLink = takeLink(native.text);
+        }
+        if (native.image) gotImage = await takePicture(native.image);
+      } else if (web && typeof web.read === "function") {
         // Read every part first — the image is shrunk afterwards, so a slow
         // resize can never leave the link unread.
-        const items = await clipboard.read();
+        const items = await web.read();
         let imageBlob: Blob | null = null;
         let text = "";
         for (const item of items) {
@@ -221,9 +238,9 @@ export function PostTicketSheet({
           gotLink = takeLink(text);
         }
         if (imageBlob) gotImage = await takePicture(imageBlob);
-      } else {
+      } else if (web) {
         // readText only (older WebKit): a picture can never come this way.
-        const text = (await clipboard.readText()).trim();
+        const text = (await web.readText()).trim();
         if (text) {
           gotText = true;
           gotLink = takeLink(text);

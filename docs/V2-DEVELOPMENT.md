@@ -383,6 +383,29 @@ Enabled on both environments as of 2026-09-15. Production had no
 it now has one, which also makes Vercel send it as a bearer token on its own
 scheduled calls.
 
+## iPhone app
+
+`ios/` is a Capacitor shell whose web view loads the live site (`server.url`
+in `capacitor.config.ts`), so the app updates with every deploy of `main`.
+Everything about building it, signing, TestFlight and App Review lives in
+[IOS-APP.md](IOS-APP.md). Web-side rules that came with it:
+
+- The status bar is translucent (`black-translucent`, `viewport-fit=cover`),
+  so any screen outside `AppShell` pads with `env(safe-area-inset-top)`;
+  sheets pad the bottom themselves (`Sheet`), not their children.
+- `target="_blank"` on an internal link would throw the shell out to Safari —
+  use it only for links that should leave the app (ride links).
+- `src/lib/native/clipboard.ts` is the one place the site talks to the shell;
+  it resolves `null` in a browser. Gate anything else native the same way
+  (`Capacitor.isNativePlatform()`), never on the user agent alone.
+- `/privacy` is public (see `PUBLIC_PATHS` in `src/proxy.ts`), and the home
+  page carries **Delete account** (`deleteAccount` in `src/app/login/actions.ts`
+  → `store.deleteAccount`): Apple requires in-app deletion when sign-up is
+  in-app. A seat's tickets and screenshots go, group slips stay, a sole-member
+  league is deleted, a departing last admin hands the role on.
+- Form fields are 16px on touch screens (`globals.css`), because iOS zooms the
+  page into anything smaller and leaves it zoomed.
+
 ## Releasing later
 
 Feature work stays on `v2` or branches based on it. Review and test code and

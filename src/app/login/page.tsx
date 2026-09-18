@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { LoginForm } from "./login-form";
 
 export default async function LoginPage({ searchParams }: PageProps<"/login">) {
@@ -13,7 +14,7 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
             "radial-gradient(ellipse at 20% 0%, rgba(184,242,74,0.28), transparent 45%), radial-gradient(ellipse at 90% 30%, rgba(31,138,76,0.22), transparent 50%)",
         }}
       />
-      <main className="relative mx-auto flex min-h-dvh w-full max-w-lg flex-col justify-center px-5 py-12">
+      <main className="relative mx-auto flex min-h-dvh w-full max-w-lg flex-col justify-center px-5 pb-[max(3rem,calc(env(safe-area-inset-bottom)+1.5rem))] pt-[max(3rem,calc(env(safe-area-inset-top)+1.5rem))]">
         <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-turf">
           Weekly anytime TD
         </p>
@@ -26,6 +27,12 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
         </p>
 
         <LoginForm next={returnTo} />
+        <Link
+          href="/privacy"
+          className="mt-6 self-start text-[11px] font-bold uppercase tracking-wider text-ink-faint underline-offset-2 hover:underline"
+        >
+          Privacy
+        </Link>
       </main>
     </div>
   );
