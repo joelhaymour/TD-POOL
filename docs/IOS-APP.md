@@ -16,6 +16,13 @@ a web change. What the shell adds on top of Safari:
 - an offline page (`native/www/error.html`) with a retry when the site can't
   be reached.
 
+**Group bets are not in the app.** The site checks for the app's user agent
+(`TDPoolApp`) and hides the Group Bets section everywhere inside it: the
+league header, bottom bars, create-league and settings toggles, and the
+`/<slug>/group` routes (they redirect to the league's first other section).
+The website is unchanged, and a league's saved settings are never altered.
+The switch is `APP_HIDDEN_SECTIONS` in `src/lib/native/server.ts`.
+
 The same web changes also make the site a better **home-screen app**: on any
 iPhone, open the site in Safari → Share → *Add to Home Screen*. That needs no
 Apple account and works today.
@@ -120,6 +127,45 @@ The App Store adds full App Review. Two guidelines matter for this app:
   own licensed sportsbook app." Rate the app 17+ and answer *Gambling and
   Contests: Infrequent/Mild* honestly. Keep the app free with no in-app
   purchases.
+
+### App Store listing (copy/paste)
+
+- **Name:** TD Pool
+- **Subtitle:** Weekly TD picks with friends
+- **Category:** Sports. **Price:** Free, no in-app purchases.
+- **Keywords:** touchdown,pool,football,picks,league,friends,anytime td,leaderboard,tracker
+- **Description:**
+
+  > TD Pool is a private weekly game for your friend group. Each week everyone
+  > picks one player to score a touchdown. Picks lock at kickoff and grade
+  > themselves live from the box score, and the leaderboard keeps the season
+  > standings.
+  >
+  > Post the tickets you placed, and TD Pool reads the slip for you. Your
+  > friends see every leg fill in live during the game.
+  >
+  > TD Pool never takes a bet and never holds or moves money. Leagues are
+  > invite-only.
+
+- **Privacy Policy URL:** `https://td-pool-five.vercel.app/privacy`
+- **App Privacy answers:** Data collected = *Contact Info → Email* and *User
+  Content → Photos* (bet slip screenshots) and *Other User Content*. All are
+  **linked to the user**, used for **App Functionality** only, and **not used
+  for tracking**.
+- **Age rating:** answer *Simulated Gambling: None*. Answer *Gambling &
+  Contests* honestly: the app has contests between friends but no real-money
+  gambling in the app. Expect a 17+ rating.
+- **App Review Information → Sign-in required:** yes. Create a demo account
+  on the live site (for example `appreview@…`) and put it in a small demo
+  league with a few picks and one ticket. Give Apple that email and password
+  in the review form. This is the most common reason first submissions bounce.
+- **Review notes:**
+
+  > TD Pool is a private pick'em game and bet tracker for friend groups. It
+  > takes no wagers and handles no money. Users record bets they already
+  > placed elsewhere. "Ride" links open the user's own sportsbook app.
+  > Account deletion: home screen → Delete account. Demo league:
+  > <slug>, already joined by the demo account.
 
 You'll also need screenshots (Xcode → Simulator → ⌘S on an iPhone 17 Pro Max
 and an iPhone SE-size device) and the privacy URL above.

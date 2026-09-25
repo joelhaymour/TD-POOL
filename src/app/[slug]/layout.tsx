@@ -2,6 +2,7 @@ import { LeagueShell } from "@/components/layout/league-shell";
 import { requireViewerMembership } from "@/lib/auth/league";
 import { countParlaysNeedingPicks } from "@/lib/props/load-group-home";
 import { getStore } from "@/lib/store";
+import { visibleLeague } from "@/lib/native/server";
 
 /**
  * The frame every league page sits in: name, week, section switcher and the
@@ -16,7 +17,8 @@ export default async function LeagueLayout({
   const { slug } = await params;
   const member = await requireViewerMembership(slug);
   const store = getStore();
-  const league = await store.getLeagueBySlug(slug);
+  const stored = await store.getLeagueBySlug(slug);
+  const league = stored ? await visibleLeague(stored) : null;
 
   const week = league?.active_week_id
     ? (await store.listWeeks()).find((w) => w.id === league.active_week_id)

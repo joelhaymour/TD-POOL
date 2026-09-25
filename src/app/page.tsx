@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { getStore } from "@/lib/store";
 import { accountDisplayName, requireUser } from "@/lib/auth/session";
-import { enabledSections } from "@/lib/league/sections";
+import { enabledSections, withoutSections } from "@/lib/league/sections";
+import { hiddenSections } from "@/lib/native/server";
 import { DeleteAccount } from "./delete-account";
 import { HomeClient } from "./home-client";
 import { signOut } from "./login/actions";
@@ -14,9 +15,12 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
   const { join } = await searchParams;
   const pendingJoinSlug = typeof join === "string" ? join : "";
 
-  const leagues = await getStore()
-    .listLeaguesForUser(user.id)
-    .catch(() => []);
+  const hidden = await hiddenSections();
+  const leagues = (
+    await getStore()
+      .listLeaguesForUser(user.id)
+      .catch(() => [])
+  ).map(({ league, member }) => ({ league: withoutSections(league, hidden), member }));
 
   return (
     <div className="field-atmosphere relative min-h-dvh">
@@ -75,7 +79,7 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
                       <span className="mt-1 block text-[10px] font-bold uppercase tracking-[0.12em] text-turf">
                         {enabledSections(league)
                           .map((s) => s.label)
-                          .join(" · ")}
+                          .join(" · ") || "Open on the website"}
                       </span>
                     </span>
                     <span aria-hidden className="text-lg text-ink-faint">
@@ -88,9 +92,9 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
           </section>
         ) : (
           <p className="mt-6 max-w-sm text-base leading-relaxed text-ink-muted">
-            One pick each week. Shared parlays off the board. Post the bets you
-            placed and ride your friends&apos;. Start a league or join one with a
-            code.
+            {hidden.length > 0
+              ? "One pick each week. Post the bets you placed and follow your friends'. Start a league or join one with a code."
+              : "One pick each week. Shared parlays off the board. Post the bets you placed and ride your friends'. Start a league or join one with a code."}
           </p>
         )}
 
@@ -98,6 +102,7 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
           accountName={accountName}
           hasLeagues={leagues.length > 0}
           pendingJoinSlug={pendingJoinSlug}
+          hiddenSections={hidden}
         />
       </main>
     </div>

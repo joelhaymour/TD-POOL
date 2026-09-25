@@ -7,8 +7,8 @@ import { PickModeField } from "@/components/league/pick-mode-field";
 import { SectionToggles } from "@/components/league/section-toggles";
 import { useToast } from "@/components/ui/toast";
 import { generateJoinPin, normalizeJoinSlug } from "@/lib/league/join";
-import { ALL_SECTIONS_ON } from "@/lib/league/sections";
-import type { LeagueSections, PickMode } from "@/lib/types";
+import { ALL_SECTIONS_ON, withoutSections } from "@/lib/league/sections";
+import type { LeagueSection, LeagueSections, PickMode } from "@/lib/types";
 
 type CreatedLeague = {
   slug: string;
@@ -26,11 +26,14 @@ export function HomeClient({
   accountName,
   hasLeagues,
   pendingJoinSlug,
+  hiddenSections = [],
 }: {
   accountName: string;
   hasLeagues: boolean;
   /** Non-empty when an invite link bounced the user here to join first. */
   pendingJoinSlug: string;
+  /** Sections this screen leaves out (group bets in the iOS app). */
+  hiddenSections?: LeagueSection[];
 }) {
   const router = useRouter();
   const { toast } = useToast();
@@ -45,7 +48,9 @@ export function HomeClient({
 
   const [name, setName] = useState("");
   const [displayName, setDisplayName] = useState(accountName);
-  const [sections, setSections] = useState<LeagueSections>(ALL_SECTIONS_ON);
+  const [sections, setSections] = useState<LeagueSections>(() =>
+    withoutSections({ sections: ALL_SECTIONS_ON }, hiddenSections).sections,
+  );
   const [pickMode, setPickMode] = useState<PickMode>("open");
   const [creating, setCreating] = useState(false);
 
@@ -250,7 +255,7 @@ export function HomeClient({
           </h2>
           <div>
             <span className={labelClass}>What&apos;s in this league</span>
-            <SectionToggles value={sections} onChange={setSections} />
+            <SectionToggles value={sections} onChange={setSections} hidden={hiddenSections} />
           </div>
           {sections.group_bets ? (
             <div>

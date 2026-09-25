@@ -14,7 +14,7 @@ import { Sheet } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/components/ui/toast";
 import { ALL_SECTIONS_ON } from "@/lib/league/sections";
-import type { League, LeagueSections, PickLockType, PickMode } from "@/lib/types";
+import type { League, LeagueSection, LeagueSections, PickLockType, PickMode } from "@/lib/types";
 
 const inputClass =
   "h-11 w-full rounded-xl border border-border-strong bg-field px-3 text-sm font-semibold text-ink outline-none focus:border-turf focus:ring-2 focus:ring-turf/20";
@@ -25,9 +25,12 @@ const labelClass =
 export function SettingsForm({
   slug,
   isAdmin,
+  hiddenSections = [],
 }: {
   slug: string;
   isAdmin: boolean;
+  /** Sections this screen leaves out (group bets in the iOS app); their saved value is kept. */
+  hiddenSections?: LeagueSection[];
 }) {
   const { toast } = useToast();
   const router = useRouter();
@@ -309,10 +312,15 @@ export function SettingsForm({
 
         <div>
           <span className={labelClass}>What&apos;s in this league</span>
-          <SectionToggles value={sections} onChange={setSections} disabled={!isAdmin} />
+          <SectionToggles
+            value={sections}
+            onChange={setSections}
+            disabled={!isAdmin}
+            hidden={hiddenSections}
+          />
         </div>
 
-        {sections.group_bets ? (
+        {sections.group_bets && !hiddenSections.includes("group_bets") ? (
           <div>
             <span className={labelClass}>Group bets</span>
             <PickModeField value={pickMode} onChange={setPickMode} disabled={!isAdmin} />

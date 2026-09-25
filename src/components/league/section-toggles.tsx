@@ -3,7 +3,7 @@
 import { Check } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import { SECTIONS } from "@/lib/league/sections";
-import type { LeagueSections } from "@/lib/types";
+import type { LeagueSection, LeagueSections } from "@/lib/types";
 
 /**
  * Which sections a league runs, as tappable cards. The last one on cannot be
@@ -13,15 +13,19 @@ export function SectionToggles({
   value,
   onChange,
   disabled,
+  hidden = [],
 }: {
   value: LeagueSections;
   onChange: (next: LeagueSections) => void;
   disabled?: boolean;
+  /** Sections this screen leaves out (group bets in the iOS app). */
+  hidden?: readonly LeagueSection[];
 }) {
-  const onCount = SECTIONS.filter((s) => value[s.key]).length;
+  const shown = SECTIONS.filter((s) => !hidden.includes(s.key));
+  const onCount = shown.filter((s) => value[s.key]).length;
   return (
     <div className="grid grid-cols-1 gap-2">
-      {SECTIONS.map((section) => {
+      {shown.map((section) => {
         const on = value[section.key];
         const lastOn = on && onCount === 1;
         return (

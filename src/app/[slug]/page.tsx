@@ -7,6 +7,8 @@ import {
   sectionCookieName,
 } from "@/lib/league/sections";
 import { getStore } from "@/lib/store";
+import { enabledSections } from "@/lib/league/sections";
+import { visibleLeague } from "@/lib/native/server";
 
 /**
  * `/<slug>` is the invite link and the home-screen icon, so it has to land
@@ -20,8 +22,11 @@ export default async function LeagueEntryPage({
 }: PageProps<"/[slug]">) {
   const { slug } = await params;
   await requireViewerMembership(slug);
-  const league = await getStore().getLeagueBySlug(slug);
-  if (!league) redirect("/");
+  const stored = await getStore().getLeagueBySlug(slug);
+  if (!stored) redirect("/");
+  const league = await visibleLeague(stored);
+  // A league that only runs sections the app hides has nothing to show here.
+  if (enabledSections(league).length === 0) redirect("/");
 
   const remembered = sectionByPath(
     (await cookies()).get(sectionCookieName(slug))?.value,

@@ -56,6 +56,17 @@ export function sectionEnabled(
   return Boolean(league.sections[key]);
 }
 
+/** A copy of the league with the given sections switched off (display only). */
+export function withoutSections<T extends Pick<League, "sections">>(
+  league: T,
+  hidden: readonly LeagueSection[],
+): T {
+  if (hidden.length === 0) return league;
+  const sections = { ...league.sections };
+  for (const key of hidden) sections[key] = false;
+  return { ...league, sections };
+}
+
 /** Where `/<slug>` lands: the first section that is on. */
 export function defaultSection(league: Pick<League, "sections">): SectionDef {
   return enabledSections(league)[0] ?? SECTIONS[0];

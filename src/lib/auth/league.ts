@@ -5,6 +5,8 @@ import type { League, LeagueMember, LeagueSection } from "@/lib/types";
 import { defaultSection } from "@/lib/league/sections";
 import { getStore } from "@/lib/store";
 import { requireUser } from "@/lib/auth/session";
+import { visibleLeague } from "@/lib/native/server";
+import { enabledSections } from "@/lib/league/sections";
 
 /**
  * The signed-in user's seat in a league. Cached per request so the layout can
@@ -45,8 +47,11 @@ export async function requireSectionAccess(
   const member = await requireViewerMembership(slug);
   const league = await getStore().getLeagueBySlug(slug);
   if (!league) notFound();
-  if (!league.sections[section]) {
-    redirect(`/${slug}/${defaultSection(league).path}`);
+  // Inside the iOS app some sections are hidden; treat them as switched off.
+  const visible = await visibleLeague(league);
+  if (!visible.sections[section]) {
+    if (enabledSections(visible).length === 0) redirect("/");
+    redirect(`/${slug}/${defaultSection(visible).path}`);
   }
   return { member, league };
 }
