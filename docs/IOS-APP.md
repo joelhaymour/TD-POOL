@@ -38,8 +38,9 @@ Apple account and works today.
 | `ios/App/App/Info.plist` | Portrait only, light UI (dark status-bar text), photo/camera usage strings, no-encryption flag. |
 | `ios/App/App/Assets.xcassets` | App icon + launch image, generated. |
 | `ios/App/CapApp-SPM` | Swift package pulling Capacitor and the keyboard plugin (no CocoaPods). |
-| `native/make-artwork.swift` | Draws the icon/splash/PWA PNGs from the shapes in `public/icon.svg`. |
+| `native/make-artwork.swift` | Draws every icon, the launch screen and the SVG logo files from one vector copy of the logo (`native/brand/logo-source.jpg`). |
 | `native/assets/` | 1024px icon and 2732px splash sources for `@capacitor/assets`. |
+| `public/brand/mark.svg`, `public/icon.svg` | The logo: the mark alone, and the rounded tile (browser tab icon). |
 | `native/www/` | The only bundled pages: a placeholder and the offline page. |
 | `src/app/privacy/page.tsx` | Public privacy notice — App Store Connect and TestFlight ask for its URL. |
 
