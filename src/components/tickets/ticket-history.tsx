@@ -59,7 +59,7 @@ export async function TicketHistory({
       </div>
 
       {settled.length > 0 ? (
-        <section className="grid grid-cols-2 gap-3 rounded-2xl bg-raised p-4 text-raised-fg shadow-card">
+        <section className="grid grid-cols-2 gap-3 rounded-2xl border border-border bg-raised p-4 text-raised-fg shadow-card">
           <div>
             <p className="text-[10px] font-bold uppercase tracking-[0.1em] text-ink-faint">
               League record

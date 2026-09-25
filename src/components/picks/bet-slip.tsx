@@ -92,7 +92,7 @@ export function BetSlip({
         className,
       )}
     >
-      <div className="border-b border-border bg-raised px-4 py-3">
+      <div className="border-b border-border bg-field px-4 py-3">
         <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-lime">
           Bet Slip
         </p>

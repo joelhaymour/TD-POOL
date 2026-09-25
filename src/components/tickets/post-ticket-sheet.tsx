@@ -197,7 +197,7 @@ export function PostTicketSheet({
     // alert instead of a bubble. Anywhere else this is null.
     const native = await readNativeClipboard().catch(() => null);
     if (native?.denied) {
-      setHint("iPhone blocked the paste. Tap Allow when it asks, or turn it on in Settings › TD Pool › Paste from Other Apps.");
+      setHint("iPhone blocked the paste. Tap Allow when it asks, or turn it on in Settings › Pool’d › Paste from Other Apps.");
       return;
     }
     const web = native

@@ -1,8 +1,6 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { ChevronLeft, Settings } from "lucide-react";
-import { cn } from "@/lib/utils/cn";
-import { Badge } from "@/components/ui/badge";
 
 export type LeagueHeaderProps = {
   leagueName: string;
@@ -10,9 +8,14 @@ export type LeagueHeaderProps = {
   settingsHref: string;
   subtitle?: string;
   className?: string;
+  /** Extra buttons beside settings (the notifications bell). */
+  actions?: ReactNode;
   /** Rendered under the name row — the section switcher. */
   children?: ReactNode;
 };
+
+const squareButton =
+  "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-border bg-chalk text-ink transition active:scale-95 hover:border-border-strong";
 
 export function LeagueHeader({
   leagueName,
@@ -20,38 +23,27 @@ export function LeagueHeader({
   settingsHref,
   subtitle,
   className,
+  actions,
   children,
 }: LeagueHeaderProps) {
   return (
     <div className={className}>
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          {/* The only way out of a league once you are in one, for anybody who
-              runs more than one pool. */}
-          <Link
-            href="/"
-            className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-[0.14em] text-turf hover:text-ink"
-          >
-            <ChevronLeft className="h-3 w-3" />
-            All leagues
-          </Link>
-          <h1 className="font-display truncate text-2xl font-extrabold uppercase leading-tight tracking-wide text-ink">
+      <div className="flex items-center gap-2.5">
+        {/* The way back to every league: a full-size button, not a caption. */}
+        <Link href="/" aria-label="All leagues" className={squareButton}>
+          <ChevronLeft className="h-5 w-5" strokeWidth={2.5} />
+        </Link>
+        <div className="min-w-0 flex-1">
+          <h1 className="truncate font-display text-xl font-extrabold uppercase leading-tight tracking-wide text-ink">
             {leagueName}
           </h1>
-          <div className="mt-1.5 flex flex-wrap items-center gap-2">
-            <Badge className={cn("bg-raised text-lime border-raised")}>
-              NFL Week {weekNumber}
-            </Badge>
-            {subtitle ? (
-              <span className="text-xs text-ink-muted">{subtitle}</span>
-            ) : null}
-          </div>
+          <p className="truncate text-xs text-ink-muted">
+            <span className="font-semibold text-turf">Week {weekNumber}</span>
+            {subtitle ? <> · {subtitle}</> : null}
+          </p>
         </div>
-        <Link
-          href={settingsHref}
-          aria-label="League settings"
-          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-border bg-chalk text-ink-muted transition-colors hover:text-ink"
-        >
+        {actions}
+        <Link href={settingsHref} aria-label="League settings" className={`${squareButton} text-ink-muted`}>
           <Settings className="h-5 w-5" />
         </Link>
       </div>

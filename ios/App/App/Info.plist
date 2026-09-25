@@ -7,7 +7,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>en</string>
 	<key>CFBundleDisplayName</key>
-	<string>TD Pool</string>
+	<string>Pool’d</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -32,9 +32,9 @@
 		<true/>
 	</dict>
 	<key>NSCameraUsageDescription</key>
-	<string>TD Pool can take a picture of a bet slip to post it.</string>
+	<string>Pool’d can take a picture of a bet slip to post it.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>TD Pool attaches the screenshot of a bet slip you choose from your photos.</string>
+	<string>Pool’d attaches the screenshot of a bet slip you choose from your photos.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

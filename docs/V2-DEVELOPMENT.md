@@ -248,6 +248,13 @@ cascade in the database.
   they actually used, and needs no state subdomain, no indexed-array format and
   no per-leg id matching. FanDuel ids are still captured on each leg, so
   prefill can come back from git history if it is ever wanted.
+- **The product is Pool’d** (renamed from TD Pool on 2026-09-25; the weekly
+  anytime-TD game inside a league keeps the name "TD Pool"). `APP_NAME` lives
+  in `src/lib/brand.ts`; the wordmark (`Wordmark` in
+  `src/components/brand/logo.tsx`) draws POOL’D with the ticket mark as the
+  apostrophe, from the path `native/make-artwork.swift` generates. The iOS
+  bundle id is `com.joelhaymour.poold`. The URL and the internal `TDPoolApp`
+  user-agent tag did not change.
 - **Daylight is the whole app** (since 2026-09-24; it replaced the dark
   "Night Ticket" look). `globals.css` holds one palette: a warm off-white
   field (`field`), solid white cards (`chalk`) with a hairline `border`,

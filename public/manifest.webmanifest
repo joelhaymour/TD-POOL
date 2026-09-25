@@ -1,7 +1,7 @@
 {
-  "name": "TD Pool",
-  "short_name": "TD Pool",
-  "description": "Weekly Anytime Touchdown Pool for your fantasy league",
+  "name": "Pool’d",
+  "short_name": "Pool’d",
+  "description": "Weekly TD picks and bet tracking for your group chat",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#f2f3ee",

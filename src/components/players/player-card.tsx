@@ -74,8 +74,8 @@ export function PlayerCard({
       )}
     >
       <div className="flex items-start gap-3">
-        <div className="flex h-11 w-11 shrink-0 flex-col items-center justify-center rounded-xl bg-raised text-lime">
-          <span className="text-[9px] font-bold uppercase leading-none tracking-wider text-lime/70">
+        <div className="flex h-11 w-11 shrink-0 flex-col items-center justify-center rounded-xl bg-field-deep text-turf">
+          <span className="text-[9px] font-bold uppercase leading-none tracking-wider text-ink-faint">
             Rank
           </span>
           <span className="font-display text-xl font-extrabold leading-none">
@@ -100,32 +100,26 @@ export function PlayerCard({
         </div>
       </div>
 
-      {/* The odds tile is only worth its space when a price exists. With no
-          props feed it read "Unavailable" on every card in the league. */}
-      <div
-        className={cn(
-          "mt-3 grid gap-2",
-          player.americanOdds != null ? "grid-cols-2" : "grid-cols-1",
-        )}
-      >
-        <div className="rounded-xl bg-field px-2.5 py-2">
-          <p className="text-[9px] font-bold uppercase tracking-wider text-ink-faint">
-            TD Chance
-          </p>
-          <p className="font-display text-xl font-extrabold text-ink">
+      {/* One row of numbers instead of two tiles and a star row: the list is
+          long, and every card is scanned for the same three things. */}
+      <div className="mt-2.5 flex items-end gap-5 border-t border-border pt-2.5">
+        <div>
+          <p className="text-[9px] font-bold uppercase tracking-wider text-ink-faint">TD chance</p>
+          <p className="font-display text-xl font-extrabold leading-tight text-ink">
             {pct(player.ourProbability)}
           </p>
         </div>
         {player.americanOdds != null ? (
-          <div className="rounded-xl bg-raised px-2.5 py-2">
-            <p className="text-[9px] font-bold uppercase tracking-wider text-raised-fg/55">
-              Odds
-            </p>
-            <p className="font-display text-xl font-extrabold text-lime">
+          <div>
+            <p className="text-[9px] font-bold uppercase tracking-wider text-ink-faint">Odds</p>
+            <p className="font-display text-xl font-extrabold leading-tight text-turf">
               {formatAmerican(player.americanOdds)}
             </p>
           </div>
         ) : null}
+        <div className="ml-auto pb-1">
+          <StarRating value={player.matchupStars} size="sm" label="Matchup" />
+        </div>
       </div>
 
       {player.limitedData ? (
@@ -133,12 +127,6 @@ export function PlayerCard({
           Limited data
         </p>
       ) : null}
-
-      {/* Goal-line rating drives TD Chance already, so a second star row here
-          was redundant. The underlying usage is on the analysis page. */}
-      <div className="mt-2.5 flex flex-wrap items-center gap-x-3 gap-y-1">
-        <StarRating value={player.matchupStars} size="sm" label="Matchup" />
-      </div>
 
       <div className="mt-3 grid grid-cols-2 gap-2">
         <Link

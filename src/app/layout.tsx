@@ -19,13 +19,13 @@ const barlow = Barlow_Condensed({
 });
 
 export const metadata: Metadata = {
-  title: "TD Pool",
-  description: "Weekly Anytime Touchdown Pool for your fantasy league",
-  applicationName: "TD Pool",
+  title: "Pool’d",
+  description: "Weekly TD picks and bet tracking for your group chat",
+  applicationName: "Pool’d",
   manifest: "/manifest.webmanifest",
   appleWebApp: {
     capable: true,
-    title: "TD Pool",
+    title: "Pool’d",
     statusBarStyle: "default",
   },
   icons: {
@@ -64,7 +64,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       >
         {STAGING && (
           <div className="sticky top-0 z-40 flex h-[var(--banner-h)] items-end justify-center bg-amber-200 px-4 pb-1.5 text-center text-[11px] font-semibold leading-tight text-amber-950">
-            TD Pool V2 · Test environment · Simulated odds · Picks do not affect your live league
+            Pool’d test site · Test environment · Simulated odds · Picks do not affect your live league
           </div>
         )}
         <ToastProvider>{children}</ToastProvider>

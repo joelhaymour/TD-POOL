@@ -1,4 +1,4 @@
-# TD Pool on iPhone
+# Pool’d on iPhone
 
 The iOS app is a **native shell around the live site**. An Xcode project in
 `ios/` wraps a WKWebView that loads `https://td-pool-five.vercel.app`, so every
@@ -31,7 +31,7 @@ Apple account and works today.
 
 | Path | What it is |
 | --- | --- |
-| `capacitor.config.ts` | App id `com.joelhaymour.tdpool`, name, which site the shell loads (`server.url`). |
+| `capacitor.config.ts` | App id `com.joelhaymour.poold`, name, which site the shell loads (`server.url`). |
 | `ios/App/App.xcodeproj` | The Xcode project. Open it, pick your team, run. |
 | `ios/App/App/MainViewController.swift` | Registers the plugin, turns on swipe-back, injects `TD_POOL_SITE`. |
 | `ios/App/App/TDPoolClipboardPlugin.swift` | Native pasteboard read (picture + text). Web side: `src/lib/native/clipboard.ts`. |
@@ -96,7 +96,7 @@ them. That's fine for you, not for the league — for friends you need step 2.
    a day, sometimes longer if they verify identity.
 2. In Xcode change the Team to the new membership team (same screen as above).
 3. <https://appstoreconnect.apple.com> → My Apps → **+** → New App: platform
-   iOS, name **TD Pool**, bundle id `com.joelhaymour.tdpool`, SKU `tdpool`.
+   iOS, name **Pool’d**, bundle id `com.joelhaymour.poold`, SKU `poold`.
 4. Xcode: device menu → *Any iOS Device (arm64)* → **Product → Archive** →
    **Distribute App → TestFlight & App Store → Upload**. Keep the defaults.
 5. App Store Connect → TestFlight tab → the build appears after processing
@@ -131,21 +131,21 @@ The App Store adds full App Review. Two guidelines matter for this app:
 
 ### App Store listing (copy/paste)
 
-- **Name:** TD Pool
+- **Name:** Pool’d (check it is free in App Store Connect; fall back to "Pool’d: TD Picks" if not)
 - **Subtitle:** Weekly TD picks with friends
 - **Category:** Sports. **Price:** Free, no in-app purchases.
 - **Keywords:** touchdown,pool,football,picks,league,friends,anytime td,leaderboard,tracker
 - **Description:**
 
-  > TD Pool is a private weekly game for your friend group. Each week everyone
+  > Pool’d is a private weekly game for your friend group. Each week everyone
   > picks one player to score a touchdown. Picks lock at kickoff and grade
   > themselves live from the box score, and the leaderboard keeps the season
   > standings.
   >
-  > Post the tickets you placed, and TD Pool reads the slip for you. Your
+  > Post the tickets you placed, and Pool’d reads the slip for you. Your
   > friends see every leg fill in live during the game.
   >
-  > TD Pool never takes a bet and never holds or moves money. Leagues are
+  > Pool’d never takes a bet and never holds or moves money. Leagues are
   > invite-only.
 
 - **Privacy Policy URL:** `https://td-pool-five.vercel.app/privacy`
@@ -162,7 +162,7 @@ The App Store adds full App Review. Two guidelines matter for this app:
   in the review form. This is the most common reason first submissions bounce.
 - **Review notes:**
 
-  > TD Pool is a private pick'em game and bet tracker for friend groups. It
+  > Pool’d is a private pick'em game and bet tracker for friend groups. It
   > takes no wagers and handles no money. Users record bets they already
   > placed elsewhere. "Ride" links open the user's own sportsbook app.
   > Account deletion: home screen → Delete account. Demo league:
@@ -178,7 +178,7 @@ and an iPhone SE-size device) and the privacy URL above.
   launches. Sign-up confirmation emails open in Safari — that's fine, the
   account is confirmed there and the person then signs in inside the app.
 - **Pasting a ticket**: tapping the big box calls the native plugin. iOS asks
-  *"TD Pool would like to paste from bet365"* → Allow. (Settings → TD Pool →
+  *"Pool’d would like to paste from bet365"* → Allow. (Settings → Pool’d →
   *Paste from Other Apps* → Allow stops the question.) A refusal reads as an
   empty pasteboard and the sheet offers the photo picker.
 - **Links** to any host other than the site leave the app (`target="_blank"`

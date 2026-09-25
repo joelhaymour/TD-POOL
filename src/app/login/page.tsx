@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Wordmark } from "@/components/brand/logo";
 import { LoginForm } from "./login-form";
 
 export default async function LoginPage({ searchParams }: PageProps<"/login">) {
@@ -15,13 +16,11 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
         }}
       />
       <main className="relative mx-auto flex min-h-dvh w-full max-w-lg flex-col justify-center px-5 pb-[max(3rem,calc(env(safe-area-inset-bottom)+1.5rem))] pt-[max(3rem,calc(env(safe-area-inset-top)+1.5rem))]">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/brand/mark.svg" alt="" width={56} height={49} className="mb-5 h-12 w-auto" />
         <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-turf">
-          Weekly anytime TD
+          Weekly TD picks · every bet, followed live
         </p>
-        <h1 className="mt-2 font-display text-6xl font-extrabold uppercase leading-[0.9] tracking-wide text-ink sm:text-7xl">
-          TD POOL
+        <h1 className="mt-3">
+          <Wordmark className="text-7xl text-ink" />
         </h1>
         <p className="mt-4 max-w-sm text-base leading-relaxed text-ink-muted">
           Sign in to jump back into your leagues. One account, however many

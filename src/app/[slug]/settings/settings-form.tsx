@@ -91,6 +91,25 @@ export function SettingsForm({
     };
   }, [slug]);
 
+  /**
+   * The phone's own share sheet (Messages, WhatsApp…) with the link and, for
+   * an admin who has revealed it, the PIN. Falls back to copying.
+   */
+  async function shareInvite() {
+    const text = joinPin
+      ? `Join ${leagueName || "our league"} on Pool’d. League code ${slug}, PIN ${joinPin}.`
+      : `Join ${leagueName || "our league"} on Pool’d. League code ${slug}.`;
+    if (typeof navigator.share === "function") {
+      try {
+        await navigator.share({ title: "Pool’d invite", text, url: inviteUrl });
+        return;
+      } catch (err) {
+        if (err instanceof DOMException && err.name === "AbortError") return;
+      }
+    }
+    await copyText("Invite", `${text} ${inviteUrl}`);
+  }
+
   async function copyText(label: string, value: string) {
     try {
       await navigator.clipboard.writeText(value);
@@ -223,6 +242,9 @@ export function SettingsForm({
           Share the link, league code, and join PIN in your group chat. Friends
           use Join on the home page.
         </p>
+        <Button type="button" fullWidth onClick={() => void shareInvite()}>
+          Share invite
+        </Button>
         <label className="block">
           <span className={labelClass}>League link</span>
           <div className="flex gap-2">

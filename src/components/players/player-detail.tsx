@@ -323,7 +323,7 @@ export function PlayerDetail({
             a generated one is worse than none. The odds box appears only when a
             sportsbook actually returned a quote. */}
         <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3">
-          <div className="rounded-xl bg-raised px-3 py-2.5 text-raised-fg">
+          <div className="rounded-xl bg-field-deep px-3 py-2.5 text-ink">
             <p className="text-[10px] font-bold uppercase tracking-wider text-raised-fg/55">
               TD Pool Rank
             </p>
@@ -435,7 +435,7 @@ export function PlayerDetail({
               </li>
             ))}
             {player.consensusOdds != null ? (
-              <li className="flex items-center justify-between rounded-xl bg-raised px-3 py-2 text-sm">
+              <li className="flex items-center justify-between rounded-xl bg-field-deep px-3 py-2 text-sm">
                 <span className="font-medium text-raised-fg/70">Consensus</span>
                 <span className="font-display text-lg font-bold text-lime">
                   {formatAmerican(player.consensusOdds)}

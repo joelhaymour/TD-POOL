@@ -215,7 +215,7 @@ export function TicketFeed({
           <button
             type="button"
             onClick={() => setPosting(true)}
-            className="mt-4 inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-raised px-5 font-display text-sm font-extrabold uppercase tracking-wider text-lime"
+            className="mt-4 inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-lime px-5 font-display text-sm font-extrabold uppercase tracking-wider text-accent-fg transition active:scale-[0.98]"
           >
             <Plus className="h-4 w-4" /> Post a ticket
           </button>

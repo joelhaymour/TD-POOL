@@ -40,7 +40,7 @@ export function SectionSwitcher({
   return (
     <nav
       aria-label="League sections"
-      className="mt-3 grid gap-1 rounded-xl border border-border bg-chalk p-1"
+      className="mt-2.5 grid gap-1 rounded-xl border border-border bg-chalk p-1"
       style={{ gridTemplateColumns: `repeat(${sections.length}, minmax(0, 1fr))` }}
     >
       {sections.map((section) => {
@@ -52,7 +52,7 @@ export function SectionSwitcher({
             onClick={() => remember(section.path)}
             aria-current={active ? "page" : undefined}
             className={cn(
-              "flex h-9 items-center justify-center rounded-lg font-display text-xs font-bold uppercase tracking-wider transition",
+              "flex h-8 items-center justify-center rounded-lg font-display text-xs font-bold uppercase tracking-wider transition",
               active
                 ? "bg-lime text-accent-fg shadow-sm"
                 : "text-ink-muted hover:text-ink",

@@ -1,7 +1,7 @@
 import type { CapacitorConfig } from "@capacitor/cli";
 
 /**
- * The iOS app is a native shell around the live site: the web view loads TD
+ * The iOS app (Pool’d) is a native shell around the live site: the web view loads TD
  * Pool straight from Vercel, so every deploy reaches the app with no App Store
  * release. `npx cap sync ios` bakes the address below into the Xcode project;
  * point a build at staging with
@@ -11,8 +11,8 @@ export const PRODUCTION_SITE = "https://td-pool-five.vercel.app";
 const serverUrl = process.env.CAP_SERVER_URL?.trim() || PRODUCTION_SITE;
 
 const config: CapacitorConfig = {
-  appId: "com.joelhaymour.tdpool",
-  appName: "TD Pool",
+  appId: "com.joelhaymour.poold",
+  appName: "Pool’d",
   // Only the offline fallback lives here; the app itself is the site.
   webDir: "native/www",
   backgroundColor: "#f2f3ee",
