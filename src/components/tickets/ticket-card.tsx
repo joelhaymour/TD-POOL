@@ -6,6 +6,7 @@ import { LegProgress, legProgressLabel } from "@/components/betting/leg-progress
 import { LegRow } from "@/components/betting/leg-row";
 import { RideBet } from "@/components/betting/ride-bet";
 import { BookBadge } from "@/components/tickets/book-badge";
+import { PhotoViewer } from "@/components/ui/photo-viewer";
 import { Sheet } from "@/components/ui/sheet";
 import { MemberChip } from "@/components/ui/result-mark";
 import { gameStarted, slipEstimate, slipPhase } from "@/lib/props/slip";
@@ -240,21 +241,13 @@ export function TicketCard({
         </div>
       ) : null}
 
-      <Sheet
+      <PhotoViewer
         open={picture}
-        onClose={() => setPicture(false)}
+        src={ticket.screenshot_url ?? null}
+        alt={`${posterName}'s bet slip`}
         title={`${posterName}'s slip`}
-        description="As posted, straight from the book"
-      >
-        {ticket.screenshot_url ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={ticket.screenshot_url}
-            alt={`${posterName}'s bet slip`}
-            className="mx-auto max-h-[70vh] rounded-xl object-contain"
-          />
-        ) : null}
-      </Sheet>
+        onClose={() => setPicture(false)}
+      />
 
       <Sheet
         open={confirmDelete}

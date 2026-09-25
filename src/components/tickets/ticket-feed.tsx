@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Plus } from "lucide-react";
 import { useToast } from "@/components/ui/toast";
@@ -20,8 +21,8 @@ type Feed = { tickets: ParlayWithLegs[]; games: NflGame[] };
 
 /**
  * Every ticket the league is following: what's being played now on top,
- * then what's coming, then what settled this week. Older settled tickets
- * live in History.
+ * then what's coming. A ticket leaves the feed for History as soon as every
+ * game on it is over.
  */
 export function TicketFeed({
   slug,
@@ -72,20 +73,19 @@ export function TicketFeed({
       );
     const live: ParlayWithLegs[] = [];
     const upcoming: ParlayWithLegs[] = [];
-    const settled: ParlayWithLegs[] = [];
     for (const t of feed.tickets) {
       const phase = slipPhase(t.parlay, t.legs, gamesById);
-      if (phase === "settled") settled.push(t);
-      else if (phase === "live" || phase === "busted") live.push(t);
+      // Settled between refreshes: it is in History now.
+      if (phase === "settled") continue;
+      if (phase === "live" || phase === "busted") live.push(t);
       else if (t.legs.some((l) => gameStarted(gamesById.get(l.game_id)))) live.push(t);
       else upcoming.push(t);
     }
     upcoming.sort((a, b) => firstKick(a) - firstKick(b));
-    settled.sort(
-      (a, b) => Date.parse(b.parlay.settled_at!) - Date.parse(a.parlay.settled_at!),
-    );
-    return { live, upcoming, settled };
+    return { live, upcoming };
   }, [feed.tickets, gamesById]);
+
+  const inPlay = groups.live.length + groups.upcoming.length;
 
   async function ride(ticketId: string, riding: boolean) {
     const r = await apiJson(`/api/leagues/${slug}/tickets/${ticketId}/ride`, {
@@ -185,9 +185,16 @@ export function TicketFeed({
             Tickets
           </h2>
           <p className="mt-1 text-sm text-ink-muted">
-            {feed.tickets.length === 0
+            {inPlay === 0
               ? "Bets the league placed, followed live."
-              : `${feed.tickets.length} posted · settled ones move to History`}
+              : `${inPlay} in play`}
+            {" · "}
+            <Link
+              href={`/${slug}/tickets/history`}
+              className="font-semibold text-turf underline-offset-2 hover:underline"
+            >
+              finished ones are in History
+            </Link>
           </p>
         </div>
         <button
@@ -199,7 +206,7 @@ export function TicketFeed({
         </button>
       </div>
 
-      {feed.tickets.length === 0 ? (
+      {inPlay === 0 ? (
         <section className="rounded-2xl border border-dashed border-border-strong bg-chalk p-6 text-center">
           <p className="text-sm text-ink-muted">
             Placed a bet? Post the slip and the league follows every leg as the
@@ -217,7 +224,6 @@ export function TicketFeed({
         <>
           {renderGroup("Live", groups.live)}
           {renderGroup("Upcoming", groups.upcoming)}
-          {renderGroup("Settled this week", groups.settled)}
         </>
       )}
 

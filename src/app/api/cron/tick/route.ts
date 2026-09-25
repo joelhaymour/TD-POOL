@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getStore } from "@/lib/store";
 import { gameStarted } from "@/lib/props/slip";
-import { settleLeagueParlays } from "@/lib/services/settle-parlays";
+import { gameDone, settleLeagueParlays } from "@/lib/services/settle-parlays";
 import { syncNflWeek } from "@/lib/services/sync-nfl-week";
 import type { League } from "@/lib/types";
 
@@ -45,21 +45,22 @@ export async function GET(request: Request) {
   const working: League[] = [];
   const weekIds = new Set<string>();
   for (const league of leagues) {
-    const slips = await store.listParlaysForLeague(league.id);
-    const pending = slips
+    const legs = (await store.listParlaysForLeague(league.id))
       .filter((s) => !s.parlay.settled_at)
-      .flatMap((s) => s.legs.filter((l) => l.result === "pending"));
-    if (pending.length === 0) continue;
+      .flatMap((s) => s.legs);
+    if (legs.length === 0) continue;
 
-    const games = await store.listGamesByIds([
-      ...new Set(pending.map((l) => l.game_id)),
-    ]);
-    // A leg whose game has not kicked off yet has nothing to report.
-    const live = games.filter((g) => gameStarted(g) && g.status !== "canceled");
-    if (live.length === 0) continue;
+    // Every open slip's games, including legs already called: the slip still
+    // needs its games to finish before it moves to History.
+    const games = await store.listGamesByIds([...new Set(legs.map((l) => l.game_id))]);
+    // A slip whose games have not kicked off yet has nothing to report.
+    const started = games.filter((g) => gameStarted(g) || gameDone(g));
+    if (started.length === 0) continue;
 
     working.push(league);
-    for (const game of live) weekIds.add(game.week_id);
+    for (const game of started) {
+      if (!gameDone(game)) weekIds.add(game.week_id);
+    }
   }
 
   if (working.length === 0) {

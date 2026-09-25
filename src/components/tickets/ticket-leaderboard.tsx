@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { ChevronLeft, ChevronRight } from "lucide-react";
+import { gameStarted } from "@/lib/props/slip";
 import { getStore } from "@/lib/store";
 import { cn } from "@/lib/utils/cn";
 import { formatAmerican, formatMoney } from "@/lib/utils/odds";
@@ -17,11 +19,14 @@ export async function TicketLeaderboard({
   league,
   viewerMemberId,
   range,
+  weekNumber,
 }: {
   slug: string;
   league: League;
   viewerMemberId: string;
   range: TicketRange;
+  /** A week picked with the arrows; otherwise the latest week played. */
+  weekNumber?: number;
 }) {
   const store = getStore();
   const [tickets, members, weeks] = await Promise.all([
@@ -29,9 +34,36 @@ export async function TicketLeaderboard({
     store.listMembers(league.id),
     store.listWeeks(),
   ]);
-  const week = weeks.find((w) => w.id === league.active_week_id);
+
+  // The league's active week moves on as soon as a week's games are over,
+  // which is exactly when its tickets settle. So "this week" means the most
+  // recent week whose tickets have kicked off, not the active week.
+  const active = weeks.find((w) => w.id === league.active_week_id);
+  const season = active?.season;
+  const games = await store.listGamesByIds([
+    ...new Set(tickets.flatMap((t) => t.legs.map((l) => l.game_id))),
+  ]);
+  const gamesById = new Map(games.map((g) => [g.id, g]));
+  const ticketWeeks = weeks
+    .filter((w) => w.season === season && tickets.some((t) => t.parlay.week_id === w.id))
+    .sort((a, b) => a.week - b.week);
+  const playedWeeks = ticketWeeks.filter((w) =>
+    tickets.some(
+      (t) =>
+        t.parlay.week_id === w.id &&
+        t.legs.some((l) => gameStarted(gamesById.get(l.game_id))),
+    ),
+  );
+  const week =
+    (weekNumber != null ? ticketWeeks.find((w) => w.week === weekNumber) : undefined) ??
+    playedWeeks.at(-1) ??
+    active;
+  const at = week ? ticketWeeks.findIndex((w) => w.id === week.id) : -1;
+  const prevWeek = at > 0 ? ticketWeeks[at - 1] : undefined;
+  const nextWeek = at >= 0 && at < ticketWeeks.length - 1 ? ticketWeeks[at + 1] : undefined;
+
   const standings = ticketStandings(tickets, members, {
-    weekId: range === "week" ? (league.active_week_id ?? null) : null,
+    weekId: range === "week" ? (week?.id ?? null) : null,
   });
   const anyPosted = standings.some((s) => s.posted > 0);
   const anySettled = standings.some((s) => s.won + s.lost > 0);
@@ -50,10 +82,34 @@ export async function TicketLeaderboard({
         <h2 className="font-display text-xl font-extrabold uppercase tracking-wide text-ink">
           Leaderboard
         </h2>
-        <p className="mt-1 text-sm text-ink-muted">
-          Tickets cashed ·{" "}
-          {range === "week" ? `Week ${week?.week ?? "—"}` : "season to date"}
-        </p>
+        <div className="mt-1 flex items-center gap-2 text-sm text-ink-muted">
+          <span>Tickets cashed ·</span>
+          {range === "week" ? (
+            <span className="flex items-center gap-1">
+              {prevWeek ? (
+                <Link
+                  href={`/${slug}/tickets/board?week=${prevWeek.week}`}
+                  aria-label={`Week ${prevWeek.week}`}
+                  className="rounded-md p-1 text-ink-faint transition hover:text-ink"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </Link>
+              ) : null}
+              <span className="font-semibold text-ink">Week {week?.week ?? "—"}</span>
+              {nextWeek ? (
+                <Link
+                  href={`/${slug}/tickets/board?week=${nextWeek.week}`}
+                  aria-label={`Week ${nextWeek.week}`}
+                  className="rounded-md p-1 text-ink-faint transition hover:text-ink"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Link>
+              ) : null}
+            </span>
+          ) : (
+            <span>season to date</span>
+          )}
+        </div>
       </div>
 
       <div className="grid grid-cols-2 gap-1 rounded-xl border border-border bg-chalk p-1">

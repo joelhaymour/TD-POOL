@@ -41,7 +41,7 @@ export async function GET(
 
     const { tickets, games } = await loadTickets(getStore(), access.league);
     return NextResponse.json({
-      tickets: feedTickets(tickets, access.league.active_week_id),
+      tickets: feedTickets(tickets),
       games,
       weekId: access.league.active_week_id,
     });

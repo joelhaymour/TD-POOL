@@ -26,7 +26,7 @@ export default async function TicketsPage({
       slug={slug}
       league={league}
       members={members.filter((m) => m.active)}
-      initialTickets={feedTickets(tickets, league.active_week_id)}
+      initialTickets={feedTickets(tickets)}
       initialGames={games}
       viewer={{ memberId: member.id, isAdmin: member.role === "admin" }}
     />

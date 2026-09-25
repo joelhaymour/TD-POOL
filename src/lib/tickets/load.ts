@@ -35,14 +35,12 @@ export async function loadTickets(
   };
 }
 
-/** What the feed shows: anything unsettled, plus what settled this week. */
-export function feedTickets(
-  tickets: ParlayWithLegs[],
-  activeWeekId: string | null,
-): ParlayWithLegs[] {
-  return tickets.filter(
-    (t) => !t.parlay.settled_at || t.parlay.week_id === activeWeekId,
-  );
+/**
+ * What the feed shows: tickets still being played. A ticket moves to History
+ * the moment every game on it is over (see settleLeagueParlays).
+ */
+export function feedTickets(tickets: ParlayWithLegs[]): ParlayWithLegs[] {
+  return tickets.filter((t) => !t.parlay.settled_at);
 }
 
 /**

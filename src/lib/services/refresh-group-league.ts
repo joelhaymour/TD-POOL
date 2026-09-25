@@ -53,7 +53,7 @@ export async function refreshGroupLeague(slug: string): Promise<void> {
 /**
  * Scores sync for the active week only, but the league moves on at the last
  * kickoff — while Monday night is still being played. Keep any earlier week
- * with a pending leg on an unfinished game syncing, or that leg never grades.
+ * with an open slip on an unfinished game syncing, or that slip never settles.
  */
 async function syncOpenLegWeeks(
   store: Store,
@@ -63,13 +63,9 @@ async function syncOpenLegWeeks(
   const slips = (await store.listParlaysForLeague(league.id)).filter(
     (s) => !s.parlay.settled_at,
   );
-  const gameIds = [
-    ...new Set(
-      slips.flatMap((s) =>
-        s.legs.filter((l) => l.result === "pending").map((l) => l.game_id),
-      ),
-    ),
-  ];
+  // All legs, not only open ones: a leg called early still needs its game
+  // marked final before the slip can move to History.
+  const gameIds = [...new Set(slips.flatMap((s) => s.legs.map((l) => l.game_id)))];
   if (gameIds.length === 0) return;
 
   const games = await store.listGamesByIds(gameIds);

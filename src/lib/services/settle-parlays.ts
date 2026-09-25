@@ -4,6 +4,12 @@ import { fetchEspnSummary } from "@/lib/providers/espn/espn-nfl-provider";
 import { parseEspnBoxScore, type GameBoxScore } from "@/lib/props/box-score";
 import { gradeLeg, gradeLegLive } from "@/lib/props/grade";
 import { settleSlip, slipStake } from "@/lib/props/slip";
+import type { NflGame } from "@/lib/types";
+
+/** A game that will produce no more stats: over, or called off. */
+export function gameDone(game: Pick<NflGame, "status"> | undefined): boolean {
+  return game?.status === "final" || game?.status === "canceled";
+}
 
 export type SettleSummary = { legsGraded: number; slipsSettled: number };
 
@@ -49,16 +55,21 @@ export async function settleLeagueParlays(
   const pending = slips.flatMap((s) =>
     s.legs.filter((l) => l.result === "pending"),
   );
+  // Every leg's game, not just the open ones: a slip settles only once all
+  // of its games are over, including games whose legs were called early.
   const games = await store.listGamesByIds([
-    ...new Set(pending.map((l) => l.game_id)),
+    ...new Set(slips.flatMap((s) => s.legs.map((l) => l.game_id))),
   ]);
   const gamesById = new Map(games.map((g) => [g.id, g]));
 
+  // Box scores only for games that still have a leg to grade.
+  const openGameIds = new Set(pending.map((l) => l.game_id));
   const boxes = new Map<string, GameBoxScore>();
   await Promise.all(
     games
       .filter(
         (g) =>
+          openGameIds.has(g.id) &&
           (g.status === "final" || g.status === "in_progress") &&
           g.external_game_id,
       )
@@ -110,13 +121,14 @@ export async function settleLeagueParlays(
       slipStake(parlay, league),
       parlay.kind === "ticket" ? parlay.book_payout : null,
     );
-    // A slip whose legs all cleared early is decided, but it stays on Home
-    // until its games actually end — there is still something to watch.
-    const allFinal = current.every(
-      (l) => gamesById.get(l.game_id)?.status === "final",
-    );
+    // A slip whose legs all cleared early is decided, but it stays in the
+    // feed until its games actually end — there is still something to watch.
+    // Once every game is over it moves to History; a busted slip goes even
+    // if a leg could not be graded (it lost either way).
+    const allDone = current.length > 0 && current.every((l) => gameDone(gamesById.get(l.game_id)));
+    const decided = outcome.settled || outcome.result === "lost";
     const settledAt =
-      outcome.settled && allFinal ? (parlay.settled_at ?? gradedAt) : null;
+      decided && allDone ? (parlay.settled_at ?? gradedAt) : null;
     if (
       outcome.result === parlay.result &&
       outcome.payout === parlay.payout &&
