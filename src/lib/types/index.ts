@@ -102,6 +102,8 @@ export interface LeagueMember {
   role: MemberRole;
   active: boolean;
   created_at: string;
+  /** Set when the member pinned this league to the top of their home screen. */
+  pinned_at?: string | null;
 }
 
 export interface NflWeek {
@@ -492,6 +494,17 @@ export interface ParlayWithLegs {
   rides: ParlayRide[];
   /** Signed, short-lived link to the screenshot; set on ticket payloads only. */
   screenshot_url?: string | null;
+  /** Thumbs up/down, as the viewer sees them; set on ticket payloads only. */
+  reactions?: ReactionSummary;
+  /** How many members follow it, and whether the viewer does. */
+  follow?: { count: number; mine: boolean };
+}
+
+/** Thumbs on one ticket or pick: the counts, and the viewer's own vote. */
+export interface ReactionSummary {
+  up: number;
+  down: number;
+  mine: -1 | 0 | 1;
 }
 
 export interface SelectPickInput {

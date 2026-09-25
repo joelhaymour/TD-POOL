@@ -9,13 +9,7 @@ import { PostTicketSheet } from "@/components/tickets/post-ticket-sheet";
 import { TicketCard } from "@/components/tickets/ticket-card";
 import { apiError, apiJson } from "@/lib/api/client";
 import { gameStarted, slipPhase } from "@/lib/props/slip";
-import type {
-  League,
-  LeagueMember,
-  LegResult,
-  NflGame,
-  ParlayWithLegs,
-} from "@/lib/types";
+import type { League, LeagueMember, LegResult, NflGame, ParlayWithLegs, ReactionSummary } from "@/lib/types";
 
 type Feed = { tickets: ParlayWithLegs[]; games: NflGame[] };
 
@@ -86,6 +80,31 @@ export function TicketFeed({
   }, [feed.tickets, gamesById]);
 
   const inPlay = groups.live.length + groups.upcoming.length;
+
+  async function react(ticketId: string, value: -1 | 0 | 1): Promise<ReactionSummary | null> {
+    const r = await apiJson<{ reactions: ReactionSummary }>(`/api/leagues/${slug}/reactions`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ target: "ticket", targetId: ticketId, value }),
+    });
+    if (!r.ok) {
+      toast({ title: "Couldn't save that", description: apiError(r), tone: "error" });
+      return null;
+    }
+    return r.data.reactions;
+  }
+
+  async function follow(ticketId: string, following: boolean) {
+    const r = await apiJson(`/api/leagues/${slug}/tickets/${ticketId}/follow`, {
+      method: following ? "PUT" : "DELETE",
+    });
+    if (!r.ok) {
+      toast({ title: "Couldn't update", description: apiError(r), tone: "error" });
+      return;
+    }
+    if (following) toast({ title: "Following", description: "You'll get this ticket's updates.", tone: "success" });
+    await refresh();
+  }
 
   async function ride(ticketId: string, riding: boolean) {
     const r = await apiJson(`/api/leagues/${slug}/tickets/${ticketId}/ride`, {
@@ -171,6 +190,8 @@ export function TicketFeed({
               onAddShare={(url, note) => addShare(t.parlay.id, url, note)}
               onRemoveShare={(shareId) => removeShare(t.parlay.id, shareId)}
               onGrade={(legId, result) => grade(t.parlay.id, legId, result)}
+              onReact={(value) => react(t.parlay.id, value)}
+              onFollow={(following) => follow(t.parlay.id, following)}
             />
           ))}
         </ul>

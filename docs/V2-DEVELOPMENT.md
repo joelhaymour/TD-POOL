@@ -417,6 +417,40 @@ Everything about building it, signing, TestFlight and App Review lives in
 - Form fields are 16px on touch screens (`globals.css`), because iOS zooms the
   page into anything smaller and leaves it zoomed.
 
+## Social and notifications (2026-09-25)
+
+Migration `20260925120000_social_and_notifications.sql` (+ `…120100` index fix).
+
+- **Pins:** `league_members.pinned_at`; the home list puts pinned leagues on
+  top (newest pin first). `PUT /api/leagues/<slug>/pin`.
+- **Thumbs up/down:** `reactions`, one per member per ticket (`parlay_id`) or
+  TD pick (`pick_id`), cascading with its target — a changed pick is a new
+  row, so its thumbs reset. `PUT /api/leagues/<slug>/reactions`,
+  `GET …?picks=`. Ticket payloads carry `reactions` and `follow`.
+- **Follow:** `parlay_follows`; the Follow button shows for anyone who is
+  neither the poster nor riding (they get updates anyway).
+- **Notifications:** `src/lib/notify/`. `events.ts` says what happened and to
+  whom; `send.ts` (`deliver`) writes the inbox (`notifications`, one row per
+  person, `dedupe_key` so the same event never lands twice), respects
+  `notification_prefs`, then `push.ts` pushes the new rows to every device in
+  `push_subscriptions` (Web Push with VAPID; APNs for the iPhone app).
+  Nothing in `deliver` throws. Triggers:
+  - ticket posted → everyone else in the league (`tickets` POST route);
+  - ride → the poster (`ride` PUT);
+  - leg hit / won / lost → poster, riders, followers, from the grading pass
+    (`ticketMoment` in `settle-parlays.ts`, one message per hit count);
+  - Ping → members with no TD pick, at most once per 3 hours
+    (`POST /api/leagues/<slug>/pool/ping`);
+  - all picks in → the league (`/api/picks`);
+  - someone joins → the league (`join` route).
+- **Inbox:** `/notifications` (bell in the league header and on home), with
+  per-kind switches and "Turn on notifications" for this device.
+- **Push setup:** without keys the inbox still works and nothing is pushed.
+  Web Push needs `NEXT_PUBLIC_VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`,
+  `VAPID_SUBJECT` (`npx web-push generate-vapid-keys`). The iPhone app needs
+  `APNS_KEY_ID`, `APNS_TEAM_ID`, `APNS_PRIVATE_KEY` (the .p8 text) from the
+  Apple Developer account; see IOS-APP.md.
+
 ## Releasing later
 
 Feature work stays on `v2` or branches based on it. Review and test code and

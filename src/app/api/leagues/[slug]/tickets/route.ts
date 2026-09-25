@@ -1,4 +1,5 @@
 import { after, NextResponse } from "next/server";
+import { notifyTicketPosted } from "@/lib/notify/events";
 import { getStore } from "@/lib/store";
 import { storeErrorResponse } from "@/lib/api/store-error";
 import { requireApiMembership } from "@/lib/auth/api";
@@ -39,7 +40,7 @@ export async function GET(
     // Scores and grading ride along with the feed's poll.
     after(() => refreshGroupLeague(slug));
 
-    const { tickets, games } = await loadTickets(getStore(), access.league);
+    const { tickets, games } = await loadTickets(getStore(), access.league, access.member.id);
     return NextResponse.json({
       tickets: feedTickets(tickets),
       games,
@@ -221,6 +222,10 @@ export async function POST(
     after(() => refreshGroupLeague(slug));
 
     const ticket = await store.getParlay(parlay.id);
+    if (ticket) {
+      const { league, member } = access;
+      after(() => notifyTicketPosted(league, ticket, member));
+    }
     return NextResponse.json({ ticket }, { status: 201 });
   } catch (err) {
     return storeErrorResponse(err);

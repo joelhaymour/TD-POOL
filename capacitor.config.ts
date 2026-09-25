@@ -26,6 +26,10 @@ const config: CapacitorConfig = {
     cleartext: serverUrl.startsWith("http:"),
     errorPath: "error.html",
   },
+  plugins: {
+    // Show a notification even while the app is open.
+    PushNotifications: { presentationOptions: ["badge", "sound", "alert"] },
+  },
   ios: {
     contentInset: "never",
     allowsLinkPreview: false,

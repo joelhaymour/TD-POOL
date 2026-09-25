@@ -1,8 +1,9 @@
-import { NextResponse } from "next/server";
+import { after, NextResponse } from "next/server";
+import { maybeAllPicksIn } from "@/lib/notify/events";
 import { getStore, type Store } from "@/lib/store";
 import { storeErrorResponse } from "@/lib/api/store-error";
 import { requireApiUser } from "@/lib/auth/api";
-import type { SelectPickInput } from "@/lib/types";
+import type { League, SelectPickInput } from "@/lib/types";
 
 type PickBody = {
   leagueSlug?: string;
@@ -20,6 +21,7 @@ async function resolvePickInput(
   | {
       ok: true;
       store: Store;
+      league: League;
       input: SelectPickInput;
       override: boolean;
     }
@@ -100,6 +102,7 @@ async function resolvePickInput(
   return {
     ok: true,
     store,
+    league,
     override: Boolean(body.override),
     input: {
       league_id: league.id,
@@ -121,6 +124,8 @@ async function applyPick(request: Request) {
   if (!resolved.ok) return resolved.response;
 
   const { store, input, override } = resolved;
+  // Once every member has a pick in, the league hears the slip is set.
+  after(() => maybeAllPicksIn(resolved.league, input.week_id).catch(() => {}));
   if (override) {
     return NextResponse.json(await store.overridePick(input));
   }

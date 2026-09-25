@@ -1,10 +1,11 @@
 import type { Store } from "@/lib/store/types";
-import type { League, ParlayLeg } from "@/lib/types";
+import type { League, ParlayLeg, ParlayResult } from "@/lib/types";
 import { fetchEspnSummary } from "@/lib/providers/espn/espn-nfl-provider";
 import { parseEspnBoxScore, type GameBoxScore } from "@/lib/props/box-score";
 import { gradeLeg, gradeLegLive } from "@/lib/props/grade";
 import { settleSlip, slipStake } from "@/lib/props/slip";
 import type { NflGame } from "@/lib/types";
+import { notifyTicketProgress } from "@/lib/notify/events";
 
 /** A game that will produce no more stats: over, or called off. */
 export function gameDone(game: Pick<NflGame, "status"> | undefined): boolean {
@@ -32,6 +33,25 @@ async function boxScoreFor(
   const box = summary ? parseEspnBoxScore(summary) : null;
   boxCache.set(externalGameId, { at: Date.now(), box });
   return box;
+}
+
+/**
+ * What a grading pass just did to a posted ticket, worth telling its poster,
+ * riders and followers about: decided (won or lost) beats a leg hitting, and
+ * a single's only leg hitting is simply "won".
+ */
+export function ticketMoment(
+  previousResult: ParlayResult,
+  before: Pick<ParlayLeg, "id" | "result">[],
+  after: Pick<ParlayLeg, "id" | "result">[],
+  outcome: { result: ParlayResult; payout: number | null; settled: boolean },
+): { kind: "hit" } | { kind: "won"; payout: number | null } | { kind: "lost" } | null {
+  if (previousResult !== "pending") return null;
+  if (outcome.result === "won" && outcome.settled) return { kind: "won", payout: outcome.payout };
+  if (outcome.result === "lost") return { kind: "lost" };
+  const nowWon = new Set(after.filter((l) => l.result === "won").map((l) => l.id));
+  const newHit = before.some((l) => l.result === "pending" && nowWon.has(l.id));
+  return after.length > 1 && newHit ? { kind: "hit" } : null;
 }
 
 /**
@@ -114,13 +134,18 @@ export async function settleLeagueParlays(
   }
 
   let slipsSettled = 0;
-  for (const { parlay, legs } of slips) {
+  const moments: Array<Parameters<typeof notifyTicketProgress>> = [];
+  for (const { parlay, legs, rides } of slips) {
     const current = legs.map((l) => ({ ...l, ...grades.get(l.id) }));
     const outcome = settleSlip(
       current,
       slipStake(parlay, league),
       parlay.kind === "ticket" ? parlay.book_payout : null,
     );
+    if (parlay.kind === "ticket") {
+      const moment = ticketMoment(parlay.result, legs, current, outcome);
+      if (moment) moments.push([league, { parlay, legs: current, rides }, moment]);
+    }
     // A slip whose legs all cleared early is decided, but it stays in the
     // feed until its games actually end — there is still something to watch.
     // Once every game is over it moves to History; a busted slip goes even
@@ -142,6 +167,14 @@ export async function settleLeagueParlays(
       settled_at: settledAt,
     });
     if (settledAt) slipsSettled += 1;
+  }
+
+  if (moments.length > 0) {
+    await Promise.all(
+      moments.map((args) =>
+        notifyTicketProgress(...args).catch((err) => console.error("ticket notify failed", err)),
+      ),
+    );
   }
 
   return { legsGraded: grades.size, slipsSettled };

@@ -268,6 +268,7 @@ function mapMember(row: DbMember): LeagueMember {
     role: (row.role as LeagueMember["role"]) ?? "member",
     active: Boolean(row.active ?? true),
     created_at: String(row.created_at),
+    pinned_at: row.pinned_at ? String(row.pinned_at) : null,
   };
 }
 
@@ -620,6 +621,12 @@ export class SupabaseStore implements Store {
         .from("leagues")
         .update({ member_count_setting: members.length, updated_at: nowIso() })
         .eq("id", leagueId);
+    }
+
+    // Their inbox, devices and notification settings are keyed by account.
+    for (const table of ["notifications", "push_subscriptions", "notification_prefs"]) {
+      const { error } = await this.client.from(table).delete().eq("user_id", userId);
+      if (error) console.error(`deleteAccount: ${table} cleanup failed`, error.message);
     }
   }
 

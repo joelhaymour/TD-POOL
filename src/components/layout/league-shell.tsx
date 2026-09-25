@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { AppShell } from "@/components/layout/app-shell";
 import { LeagueHeader } from "@/components/layout/league-header";
+import { NotificationBell } from "@/components/notify/bell";
 import { LeagueNav } from "@/components/layout/bottom-nav";
 import { SectionSwitcher } from "@/components/layout/section-switcher";
 import { leagueSectionNavs } from "@/components/layout/nav-items";
@@ -38,6 +39,7 @@ export function LeagueShell({
           weekNumber={weekNumber || 1}
           subtitle={viewerName}
           settingsHref={`${basePath}/settings`}
+          actions={<NotificationBell />}
         >
           <SectionSwitcher
             slug={slug}

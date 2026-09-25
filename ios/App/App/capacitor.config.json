@@ -1,6 +1,6 @@
 {
-	"appId": "com.joelhaymour.tdpool",
-	"appName": "TD Pool",
+	"appId": "com.joelhaymour.poold",
+	"appName": "Pool’d",
 	"webDir": "native/www",
 	"backgroundColor": "#f2f3ee",
 	"zoomEnabled": false,
@@ -10,12 +10,22 @@
 		"cleartext": false,
 		"errorPath": "error.html"
 	},
+	"plugins": {
+		"PushNotifications": {
+			"presentationOptions": [
+				"badge",
+				"sound",
+				"alert"
+			]
+		}
+	},
 	"ios": {
 		"contentInset": "never",
 		"allowsLinkPreview": false,
 		"preferredContentMode": "mobile"
 	},
 	"packageClassList": [
-		"KeyboardPlugin"
+		"KeyboardPlugin",
+		"PushNotificationsPlugin"
 	]
 }

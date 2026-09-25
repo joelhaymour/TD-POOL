@@ -1,4 +1,5 @@
-import { NextResponse } from "next/server";
+import { after, NextResponse } from "next/server";
+import { notifyRide } from "@/lib/notify/events";
 import { getStore } from "@/lib/store";
 import { storeErrorResponse } from "@/lib/api/store-error";
 import { requireApiMembership } from "@/lib/auth/api";
@@ -33,6 +34,10 @@ async function setRide(slug: string, ticketId: string, riding: boolean) {
     },
     riding,
   );
+  if (riding) {
+    const { league, member } = access;
+    after(() => notifyRide(league, found, member));
+  }
   return NextResponse.json({ riding });
 }
 

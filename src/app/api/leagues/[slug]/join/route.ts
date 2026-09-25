@@ -1,4 +1,5 @@
-import { NextResponse } from "next/server";
+import { after, NextResponse } from "next/server";
+import { notifyJoined } from "@/lib/notify/events";
 import { getStore } from "@/lib/store";
 import { storeErrorResponse } from "@/lib/api/store-error";
 import { requireApiUser } from "@/lib/auth/api";
@@ -27,6 +28,8 @@ export async function POST(
       join_pin: body.joinPin ?? "",
       user_id: auth.user.id,
     });
+
+    after(() => notifyJoined(result.league, result.member));
 
     return NextResponse.json(
       {

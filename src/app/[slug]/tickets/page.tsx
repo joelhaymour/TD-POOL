@@ -16,7 +16,7 @@ export default async function TicketsPage({
 
   const store = getStore();
   const [{ tickets, games }, members] = await Promise.all([
-    loadTickets(store, league),
+    loadTickets(store, league, member.id),
     store.listMembers(league.id),
   ]);
   after(() => refreshGroupLeague(slug));

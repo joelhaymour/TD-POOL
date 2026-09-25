@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronDown, Image as ImageIcon, Trash2, Users } from "lucide-react";
+import { Bell, ChevronDown, Image as ImageIcon, Trash2, Users } from "lucide-react";
+import { ReactionButtons } from "@/components/social/reaction-buttons";
 import { LegProgress, legProgressLabel } from "@/components/betting/leg-progress";
 import { LegRow } from "@/components/betting/leg-row";
 import { RideBet } from "@/components/betting/ride-bet";
@@ -18,6 +19,7 @@ import type {
   LegResult,
   NflGame,
   ParlayWithLegs,
+  ReactionSummary,
 } from "@/lib/types";
 
 /**
@@ -38,6 +40,8 @@ export function TicketCard({
   onAddShare,
   onRemoveShare,
   onGrade,
+  onReact,
+  onFollow,
 }: {
   ticket: ParlayWithLegs;
   gamesById: Map<string, NflGame>;
@@ -50,6 +54,8 @@ export function TicketCard({
   onAddShare: (url: string, note: string) => Promise<boolean>;
   onRemoveShare: (shareId: string) => Promise<void>;
   onGrade: (legId: string, result: LegResult | "auto") => Promise<void>;
+  onReact: (value: -1 | 0 | 1) => Promise<ReactionSummary | null>;
+  onFollow: (following: boolean) => Promise<void>;
 }) {
   const { parlay, legs, shares, rides } = ticket;
   const [open, setOpen] = useState(defaultOpen);
@@ -76,6 +82,18 @@ export function TicketCard({
       ? parlay.payout
       : (parlay.book_payout ?? estimate.payout);
   const showMoney = stake != null;
+
+  const reactions = ticket.reactions ?? { up: 0, down: 0, mine: 0 as const };
+  const following = ticket.follow?.mine ?? false;
+
+  async function toggleFollow() {
+    setBusy(true);
+    try {
+      await onFollow(!following);
+    } finally {
+      setBusy(false);
+    }
+  }
 
   async function toggleRide() {
     setBusy(true);
@@ -141,6 +159,7 @@ export function TicketCard({
               legs.length === 1 ? "Single" : `${legs.length}-leg parlay`,
               legProgressLabel(legs),
               rides.length > 0 ? `${rides.length} riding` : null,
+              reactions.up > 0 ? `${reactions.up} up` : null,
             ]
               .filter(Boolean)
               .join(" · ")}
@@ -198,10 +217,29 @@ export function TicketCard({
                 {riding ? "Riding" : "I'm riding"}
               </button>
             ) : null}
+            {/* Riders and the poster get updates anyway; following is for the rest. */}
+            {!mine && !riding && phase !== "settled" ? (
+              <button
+                type="button"
+                disabled={busy}
+                aria-pressed={following}
+                className={cn(
+                  "flex h-9 items-center gap-1.5 rounded-lg px-2.5 text-[11px] font-bold uppercase tracking-wide transition disabled:opacity-50",
+                  following
+                    ? "border border-lime bg-lime/10 text-turf"
+                    : "border border-border-strong text-ink-muted hover:text-ink",
+                )}
+                onClick={() => void toggleFollow()}
+              >
+                <Bell className="h-3.5 w-3.5" aria-hidden />
+                {following ? "Following" : "Follow"}
+              </button>
+            ) : null}
+            <ReactionButtons summary={reactions} onVote={onReact} disabled={mine} className="ml-auto" />
             {mine || viewer.isAdmin ? (
               <button
                 type="button"
-                className="ml-auto flex h-9 items-center rounded-lg px-2 text-ink-faint transition hover:text-danger"
+                className="flex h-9 items-center rounded-lg px-2 text-ink-faint transition hover:text-danger"
                 onClick={() => setConfirmDelete(true)}
                 aria-label="Delete ticket"
               >

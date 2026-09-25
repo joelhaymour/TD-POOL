@@ -112,6 +112,35 @@ in Xcode (target App → General → Build) and archive/upload again. The web
 app updates independently — you only re-upload when the shell itself changes
 or the 90 days are up.
 
+### Push notifications (after the developer account is active)
+
+The app, the server and the inbox are ready; only Apple's key is missing.
+
+1. <https://developer.apple.com/account/resources/authkeys/list> → **+** →
+   name it "Pool’d push", tick **Apple Push Notifications service (APNs)** →
+   Continue → Register → **Download** the `.p8` file (Apple lets you download
+   it once). Note the **Key ID** on that page and your **Team ID** (top right
+   of the developer site, or Membership details).
+2. Vercel → each project (td-pool and td-pool-v2) → Settings → Environment
+   Variables → add `APNS_KEY_ID`, `APNS_TEAM_ID`, and `APNS_PRIVATE_KEY` (open
+   the .p8 in TextEdit and paste the whole text, BEGIN/END lines included).
+   Redeploy.
+3. In Xcode, target App → Signing & Capabilities: the Push Notifications
+   capability is already in `App.entitlements`; with your team selected Xcode
+   turns it on for the App ID by itself. If it shows a warning, click
+   **+ Capability → Push Notifications** once.
+4. On the phone: Pool’d → bell → Settings → **Turn on notifications** → Allow.
+
+For browsers and Pool’d added to an iPhone home screen, generate Web Push
+keys once on the Mac and add all three to both Vercel projects:
+
+```bash
+npx web-push generate-vapid-keys
+```
+
+`NEXT_PUBLIC_VAPID_PUBLIC_KEY` = the public key, `VAPID_PRIVATE_KEY` = the
+private key, `VAPID_SUBJECT` = `mailto:` + your email. Redeploy.
+
 ### 3. App Store (optional)
 
 The App Store adds full App Review. Two guidelines matter for this app:

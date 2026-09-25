@@ -104,6 +104,7 @@ export function DashboardClient({
     return dashboard.members.map((m) => ({
       memberId: m.member.id,
       memberName: m.member.display_name,
+      pickId: m.pick?.id ?? null,
       playerId: m.player?.id ?? null,
       playerName: m.player?.name ?? null,
       playerHref: m.player ? `/${slug}/players/${m.player.id}` : null,
@@ -196,6 +197,7 @@ export function DashboardClient({
       />
 
       <MemberPickStatus
+        slug={slug}
         members={memberRows}
         defaultOpen
         highlightMemberId={viewer.memberId}

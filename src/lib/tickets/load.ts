@@ -1,5 +1,7 @@
 import type { Store } from "@/lib/store/types";
 import { signTicketImages } from "@/lib/tickets/storage";
+import { loadFollows } from "@/lib/social/follows";
+import { EMPTY_REACTIONS, loadReactions } from "@/lib/social/reactions";
 import type { League, NflGame, ParlayWithLegs } from "@/lib/types";
 
 export type TicketSet = { tickets: ParlayWithLegs[]; games: NflGame[] };
@@ -12,6 +14,7 @@ export type TicketSet = { tickets: ParlayWithLegs[]; games: NflGame[] };
 export async function loadTickets(
   store: Store,
   league: Pick<League, "id">,
+  viewerMemberId: string | null = null,
 ): Promise<TicketSet> {
   const tickets = await store.listParlaysForLeague(league.id, "ticket");
   const games = await store.listGamesByIds([
@@ -19,17 +22,24 @@ export async function loadTickets(
   ]);
   games.sort((a, b) => Date.parse(a.kickoff_at) - Date.parse(b.kickoff_at));
 
-  const signed = await signTicketImages(
-    tickets
-      .map((t) => t.parlay.screenshot_path)
-      .filter((p): p is string => Boolean(p)),
-  );
+  const ids = tickets.map((t) => t.parlay.id);
+  const [signed, reactions, follows] = await Promise.all([
+    signTicketImages(
+      tickets
+        .map((t) => t.parlay.screenshot_path)
+        .filter((p): p is string => Boolean(p)),
+    ),
+    loadReactions("ticket", ids, viewerMemberId),
+    loadFollows(ids, viewerMemberId),
+  ]);
   return {
     tickets: tickets.map((t) => ({
       ...t,
       screenshot_url: t.parlay.screenshot_path
         ? (signed.get(t.parlay.screenshot_path) ?? null)
         : null,
+      reactions: reactions.get(t.parlay.id) ?? EMPTY_REACTIONS,
+      follow: follows.get(t.parlay.id) ?? { count: 0, mine: false },
     })),
     games,
   };
