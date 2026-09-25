@@ -16,16 +16,24 @@ a web change. What the shell adds on top of Safari:
 - an offline page (`native/www/error.html`) with a retry when the site can't
   be reached.
 
-**Group bets are not in the app.** The site checks for the app's user agent
-(`TDPoolApp`) and hides the Group Bets section everywhere inside it: the
-league header, bottom bars, create-league and settings toggles, and the
-`/<slug>/group` routes (they redirect to the league's first other section).
-The website is unchanged, and a league's saved settings are never altered.
-The switch is `APP_HIDDEN_SECTIONS` in `src/lib/native/server.ts`.
+**Group bets are retired** (2026-09-25), in the app and on the website:
+the section is hidden everywhere — league header, bottom bars, create-league
+and settings toggles, and the `/<slug>/group` routes (they redirect to the
+league's first other section). A league's saved switch and its old group
+bets stay in the database. The switch is `RETIRED_SECTIONS` in
+`src/lib/native/server.ts`.
 
 The same web changes also make the site a better **home-screen app**: on any
 iPhone, open the site in Safari → Share → *Add to Home Screen*. That needs no
 Apple account and works today.
+
+**Share from a sportsbook.** The app ships a Share Extension (`PooldShare`),
+so **Pool’d appears in the iPhone share sheet**. In bet365 (or any app) tap
+Share → Pool’d: the extension saves the slip picture and the link into the
+App Group `group.com.joelhaymour.poold` (`ios/App/Shared/ShareInbox.swift`)
+and opens `poold://share`; the app loads `/share`, where you tick one or more
+leagues, the slip is read automatically, and one button posts it to each.
+The same screen is "Post a ticket" on the home page (paste instead of share).
 
 ## Layout
 
@@ -34,6 +42,9 @@ Apple account and works today.
 | `capacitor.config.ts` | App id `com.joelhaymour.poold`, name, which site the shell loads (`server.url`). |
 | `ios/App/App.xcodeproj` | The Xcode project. Open it, pick your team, run. |
 | `ios/App/App/MainViewController.swift` | Registers the plugin, turns on swipe-back, injects `TD_POOL_SITE`. |
+| `ios/App/PooldShare/` | The share extension (its own target, bundle id `com.joelhaymour.poold.share`). |
+| `ios/App/Shared/ShareInbox.swift` | The hand-off between the extension and the app (App Group folder). |
+| `ios/App/App/PooldShareInboxPlugin.swift` | Lets `/share` collect what the extension left. Web side: `src/lib/native/share-inbox.ts`. |
 | `ios/App/App/TDPoolClipboardPlugin.swift` | Native pasteboard read (picture + text). Web side: `src/lib/native/clipboard.ts`. |
 | `ios/App/App/Info.plist` | Portrait only, light UI (dark status-bar text), photo/camera usage strings, no-encryption flag. |
 | `ios/App/App/Assets.xcassets` | App icon + launch image, generated. |
@@ -79,7 +90,10 @@ Everything Apple-facing is tied to your Apple ID, so these are yours.
    Without a paid membership Xcode calls this a *Personal Team*.
 2. `npm run ios:open`. In the project navigator click **App** (blue icon) →
    target **App** → **Signing & Capabilities** → tick *Automatically manage
-   signing* → Team: your Personal Team. Xcode registers the bundle id.
+   signing* → Team: your team. Do the same for the second target,
+   **PooldShare**. Xcode registers both bundle ids and the App Group
+   `group.com.joelhaymour.poold` (if the App Groups box shows it unticked
+   or red, tick it on both targets).
    If it says the id is taken, change `appId` in `capacitor.config.ts`, run
    `npm run ios:sync`, and set the same value in *Bundle Identifier* here.
 3. Plug in your iPhone (or enable Wi-Fi debugging), pick it in the device

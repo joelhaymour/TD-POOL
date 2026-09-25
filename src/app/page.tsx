@@ -1,3 +1,5 @@
+import Link from "next/link";
+import { Plus } from "lucide-react";
 import { getStore } from "@/lib/store";
 import { accountDisplayName, requireUser } from "@/lib/auth/session";
 import { enabledSections, withoutSections } from "@/lib/league/sections";
@@ -45,6 +47,15 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
           </div>
         </header>
 
+        {leagues.some((l) => l.sections.includes("Tickets")) ? (
+          <Link
+            href="/share"
+            className="mt-5 flex h-12 items-center justify-center gap-2 rounded-xl bg-lime font-display text-sm font-extrabold uppercase tracking-wider text-accent-fg shadow-card transition active:scale-[0.98]"
+          >
+            <Plus className="h-4 w-4" aria-hidden /> Post a ticket
+          </Link>
+        ) : null}
+
         {leagues.length > 0 ? (
           <LeagueList leagues={leagues} />
         ) : (
@@ -53,9 +64,8 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
               Welcome, {accountName.split(" ")[0]}
             </h1>
             <p className="mt-2 max-w-sm text-base leading-relaxed text-ink-muted">
-              {hidden.length > 0
-                ? "One TD pick each week, and every bet your group places, followed live. Start a league or join one with a code."
-                : "One TD pick each week, shared parlays off the board, and every bet your group places, followed live. Start a league or join one with a code."}
+              One TD pick each week, and every bet your group places, followed
+              live. Start a league or join one with a code.
             </p>
           </section>
         )}

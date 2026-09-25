@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		2F48D3F34F26D5A101192827 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 917E817191CF99DE997A567A /* Foundation.framework */; };
 		2FAD9763203C412B000D30F8 /* config.xml in Resources */ = {isa = PBXBuildFile; fileRef = 2FAD9762203C412B000D30F8 /* config.xml */; };
 		4D22ABE92AF431CB00220026 /* CapApp-SPM in Frameworks */ = {isa = PBXBuildFile; productRef = 4D22ABE82AF431CB00220026 /* CapApp-SPM */; };
 		50379B232058CBB4000EE86E /* capacitor.config.json in Resources */ = {isa = PBXBuildFile; fileRef = 50379B222058CBB4000EE86E /* capacitor.config.json */; };
@@ -15,12 +16,42 @@
 		504EC30F1FED79650016851F /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 504EC30E1FED79650016851F /* Assets.xcassets */; };
 		504EC3121FED79650016851F /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 504EC3101FED79650016851F /* LaunchScreen.storyboard */; };
 		50B271D11FEDC1A000F3C39B /* public in Resources */ = {isa = PBXBuildFile; fileRef = 50B271D01FEDC1A000F3C39B /* public */; };
-		9582B6832FE993A70072D4E8 /* SceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9582B6822FE993A50072D4E8 /* SceneDelegate.swift */; };
-		7D0000000000000000000A04 /* TDPoolClipboardPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7D0000000000000000000A03 /* TDPoolClipboardPlugin.swift */; };
+		70D8DF3C75E690DF7936F4D5 /* ShareViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5D7D3544EAA35DBF2BC4E1A7 /* ShareViewController.swift */; };
 		7D0000000000000000000A02 /* MainViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7D0000000000000000000A01 /* MainViewController.swift */; };
+		7D0000000000000000000A04 /* TDPoolClipboardPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7D0000000000000000000A03 /* TDPoolClipboardPlugin.swift */; };
+		82A4E6D1DC29E98A8833C0F8 /* PooldShare.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 04E3E527021FBB64CDC49934 /* PooldShare.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		8B6FD36A07B62D93F7A00914 /* ShareInbox.swift in Sources */ = {isa = PBXBuildFile; fileRef = ECDE6D6C054F9F15B9B3C141 /* ShareInbox.swift */; };
+		8DE5BF50B7A1E43360A55746 /* PooldShareInboxPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5D3CF85414D3CE542897DEBD /* PooldShareInboxPlugin.swift */; };
+		9582B6832FE993A70072D4E8 /* SceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9582B6822FE993A50072D4E8 /* SceneDelegate.swift */; };
+		DEEB592974606C7304AAD407 /* ShareInbox.swift in Sources */ = {isa = PBXBuildFile; fileRef = ECDE6D6C054F9F15B9B3C141 /* ShareInbox.swift */; };
 /* End PBXBuildFile section */
 
+/* Begin PBXContainerItemProxy section */
+		559A28DC264D680D7887BD7A /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 504EC2FC1FED79650016851F /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = AB777152E93A4782E7E605EE;
+			remoteInfo = PooldShare;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		596E71FD4D8A3F760639A391 /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				82A4E6D1DC29E98A8833C0F8 /* PooldShare.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
 /* Begin PBXFileReference section */
+		04E3E527021FBB64CDC49934 /* PooldShare.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = PooldShare.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		2FAD9762203C412B000D30F8 /* config.xml */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = config.xml; sourceTree = "<group>"; };
 		50379B222058CBB4000EE86E /* capacitor.config.json */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.json; path = capacitor.config.json; sourceTree = "<group>"; };
 		504EC3041FED79650016851F /* App.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = App.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -30,11 +61,17 @@
 		504EC3111FED79650016851F /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/LaunchScreen.storyboard; sourceTree = "<group>"; };
 		504EC3131FED79650016851F /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		50B271D01FEDC1A000F3C39B /* public */ = {isa = PBXFileReference; lastKnownFileType = folder; path = public; sourceTree = "<group>"; };
-		9582B6822FE993A50072D4E8 /* SceneDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SceneDelegate.swift; sourceTree = "<group>"; };
+		5D3CF85414D3CE542897DEBD /* PooldShareInboxPlugin.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PooldShareInboxPlugin.swift; sourceTree = "<group>"; };
+		5D7D3544EAA35DBF2BC4E1A7 /* ShareViewController.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ShareViewController.swift; sourceTree = "<group>"; };
+		77AA5B89E095A9A2F6E26961 /* PooldShare.entitlements */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.entitlements; path = PooldShare.entitlements; sourceTree = "<group>"; };
+		7D0000000000000000000A01 /* MainViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainViewController.swift; sourceTree = "<group>"; };
 		7D0000000000000000000A03 /* TDPoolClipboardPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TDPoolClipboardPlugin.swift; sourceTree = "<group>"; };
 		7D0000000000000000000A05 /* App.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = App.entitlements; sourceTree = "<group>"; };
-		7D0000000000000000000A01 /* MainViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainViewController.swift; sourceTree = "<group>"; };
+		917E817191CF99DE997A567A /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.0.sdk/System/Library/Frameworks/Foundation.framework; sourceTree = DEVELOPER_DIR; };
+		9582B6822FE993A50072D4E8 /* SceneDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SceneDelegate.swift; sourceTree = "<group>"; };
 		958DCC722DB07C7200EA8C5F /* debug.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; name = debug.xcconfig; path = ../debug.xcconfig; sourceTree = SOURCE_ROOT; };
+		ECDE6D6C054F9F15B9B3C141 /* ShareInbox.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ShareInbox.swift; sourceTree = "<group>"; };
+		ED9ADC08515FAF65651CDFB0 /* Info.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -43,6 +80,14 @@
 			buildActionMask = 2147483647;
 			files = (
 				4D22ABE92AF431CB00220026 /* CapApp-SPM in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		8A1127FDA94676F79369229A /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				2F48D3F34F26D5A101192827 /* Foundation.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -55,6 +100,9 @@
 				958DCC722DB07C7200EA8C5F /* debug.xcconfig */,
 				504EC3061FED79650016851F /* App */,
 				504EC3051FED79650016851F /* Products */,
+				FD310E2B0F8A77CACCAD56EE /* Shared */,
+				568B8705BCE6AE130CCD36A8 /* Frameworks */,
+				EBE3B8AEF8F0FBE30D845923 /* PooldShare */,
 			);
 			sourceTree = "<group>";
 		};
@@ -62,6 +110,7 @@
 			isa = PBXGroup;
 			children = (
 				504EC3041FED79650016851F /* App.app */,
+				04E3E527021FBB64CDC49934 /* PooldShare.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -81,8 +130,45 @@
 				504EC3131FED79650016851F /* Info.plist */,
 				2FAD9762203C412B000D30F8 /* config.xml */,
 				50B271D01FEDC1A000F3C39B /* public */,
+				5D3CF85414D3CE542897DEBD /* PooldShareInboxPlugin.swift */,
 			);
 			path = App;
+			sourceTree = "<group>";
+		};
+		568B8705BCE6AE130CCD36A8 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				7715878028BB68222ACEBFD1 /* iOS */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		7715878028BB68222ACEBFD1 /* iOS */ = {
+			isa = PBXGroup;
+			children = (
+				917E817191CF99DE997A567A /* Foundation.framework */,
+			);
+			name = iOS;
+			sourceTree = "<group>";
+		};
+		EBE3B8AEF8F0FBE30D845923 /* PooldShare */ = {
+			isa = PBXGroup;
+			children = (
+				5D7D3544EAA35DBF2BC4E1A7 /* ShareViewController.swift */,
+				ED9ADC08515FAF65651CDFB0 /* Info.plist */,
+				77AA5B89E095A9A2F6E26961 /* PooldShare.entitlements */,
+			);
+			name = PooldShare;
+			path = PooldShare;
+			sourceTree = "<group>";
+		};
+		FD310E2B0F8A77CACCAD56EE /* Shared */ = {
+			isa = PBXGroup;
+			children = (
+				ECDE6D6C054F9F15B9B3C141 /* ShareInbox.swift */,
+			);
+			name = Shared;
+			path = Shared;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -95,10 +181,12 @@
 				504EC3001FED79650016851F /* Sources */,
 				504EC3011FED79650016851F /* Frameworks */,
 				504EC3021FED79650016851F /* Resources */,
+				596E71FD4D8A3F760639A391 /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				E5E362E499E415CAA7F382DE /* PBXTargetDependency */,
 			);
 			name = App;
 			packageProductDependencies = (
@@ -107,6 +195,23 @@
 			productName = App;
 			productReference = 504EC3041FED79650016851F /* App.app */;
 			productType = "com.apple.product-type.application";
+		};
+		AB777152E93A4782E7E605EE /* PooldShare */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = AEE6E311076ECCA3886D822D /* Build configuration list for PBXNativeTarget "PooldShare" */;
+			buildPhases = (
+				4BEE2FC18CD7ACFB8D28B916 /* Sources */,
+				8A1127FDA94676F79369229A /* Frameworks */,
+				C8BEA06B7C10EE1EDB62ACCF /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = PooldShare;
+			productName = PooldShare;
+			productReference = 04E3E527021FBB64CDC49934 /* PooldShare.appex */;
+			productType = "com.apple.product-type.app-extension";
 		};
 /* End PBXNativeTarget section */
 
@@ -141,6 +246,7 @@
 			projectRoot = "";
 			targets = (
 				504EC3031FED79650016851F /* App */,
+				AB777152E93A4782E7E605EE /* PooldShare */,
 			);
 		};
 /* End PBXProject section */
@@ -159,9 +265,25 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		C8BEA06B7C10EE1EDB62ACCF /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
+		4BEE2FC18CD7ACFB8D28B916 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				70D8DF3C75E690DF7936F4D5 /* ShareViewController.swift in Sources */,
+				DEEB592974606C7304AAD407 /* ShareInbox.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		504EC3001FED79650016851F /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -170,10 +292,21 @@
 				9582B6832FE993A70072D4E8 /* SceneDelegate.swift in Sources */,
 				7D0000000000000000000A04 /* TDPoolClipboardPlugin.swift in Sources */,
 				7D0000000000000000000A02 /* MainViewController.swift in Sources */,
+				8B6FD36A07B62D93F7A00914 /* ShareInbox.swift in Sources */,
+				8DE5BF50B7A1E43360A55746 /* PooldShareInboxPlugin.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		E5E362E499E415CAA7F382DE /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = PooldShare;
+			target = AB777152E93A4782E7E605EE /* PooldShare */;
+			targetProxy = 559A28DC264D680D7887BD7A /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin PBXVariantGroup section */
 		504EC30B1FED79650016851F /* Main.storyboard */ = {
@@ -309,6 +442,7 @@
 			baseConfigurationReference = 958DCC722DB07C7200EA8C5F /* debug.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = App/App.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				INFOPLIST_FILE = App/Info.plist;
@@ -320,7 +454,6 @@
 				MARKETING_VERSION = 1.0;
 				OTHER_SWIFT_FLAGS = "$(inherited) \"-D\" \"COCOAPODS\" \"-DDEBUG\"";
 				PRODUCT_BUNDLE_IDENTIFIER = com.joelhaymour.poold;
-				CODE_SIGN_ENTITLEMENTS = App/App.entitlements;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
 				SWIFT_VERSION = 5.0;
@@ -332,6 +465,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = App/App.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				INFOPLIST_FILE = App/Info.plist;
@@ -342,13 +476,67 @@
 				);
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.joelhaymour.poold;
-				CODE_SIGN_ENTITLEMENTS = App/App.entitlements;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "";
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = 1;
 			};
 			name = Release;
+		};
+		54D9821038490577E8975A5C /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CLANG_ENABLE_OBJC_WEAK = NO;
+				CODE_SIGN_ENTITLEMENTS = PooldShare/PooldShare.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = PooldShare/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.joelhaymour.poold.share;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		E3ADC887BC261B095F501AD8 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CLANG_ENABLE_OBJC_WEAK = NO;
+				CODE_SIGN_ENTITLEMENTS = PooldShare/PooldShare.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = PooldShare/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.joelhaymour.poold.share;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Debug;
 		};
 /* End XCBuildConfiguration section */
 
@@ -367,6 +555,15 @@
 			buildConfigurations = (
 				504EC3171FED79650016851F /* Debug */,
 				504EC3181FED79650016851F /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		AEE6E311076ECCA3886D822D /* Build configuration list for PBXNativeTarget "PooldShare" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				54D9821038490577E8975A5C /* Release */,
+				E3ADC887BC261B095F501AD8 /* Debug */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

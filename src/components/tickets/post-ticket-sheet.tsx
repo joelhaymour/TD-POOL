@@ -7,11 +7,12 @@ import {
   useState,
   type FormEvent,
 } from "react";
-import { ClipboardPaste, ImagePlus, Plus, ScanLine } from "lucide-react";
+import { ClipboardPaste, ImagePlus, ScanLine } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet } from "@/components/ui/sheet";
 import { BookBadge } from "@/components/tickets/book-badge";
-import { LegEditor, blankLeg } from "@/components/tickets/leg-editor";
+import { blankLeg } from "@/components/tickets/leg-editor";
+import { TicketFields, ticketPayload } from "@/components/tickets/ticket-fields";
 import { apiError, apiForm, apiJson } from "@/lib/api/client";
 import { readNativeClipboard } from "@/lib/native/clipboard";
 import { parseShareLink, SHARE_BOOKS } from "@/lib/props/sportsbooks";
@@ -363,30 +364,9 @@ export function PostTicketSheet({
     if (stage !== "review") return;
     setStage("posting");
     setError(null);
-    const num = (s: string) => {
-      const n = Number.parseFloat(s.replace(/[^0-9.+-]/g, ""));
-      return Number.isFinite(n) ? n : null;
-    };
     // No name to type: the server titles it from its legs, and the card
     // leads with the poster anyway.
-    const payload = {
-      sportsbook: book,
-      stake: num(stake),
-      book_odds: (() => {
-        const n = num(odds);
-        return n != null && n !== 0 ? Math.round(n) : null;
-      })(),
-      book_payout: num(payout),
-      share_url: shareText.trim() || undefined,
-      legs: legs.map((l) => ({
-        game_id: l.game_id,
-        market_key: l.market_key,
-        player_name: l.player_name,
-        outcome_label: l.outcome_label,
-        line: l.line,
-        american_odds: l.american_odds,
-      })),
-    };
+    const payload = ticketPayload(book, { stake, odds, payout, shareText }, legs);
     const form = new FormData();
     form.append("payload", JSON.stringify(payload));
     if (picture) form.append("image", picture.blob, "ticket.jpg");
@@ -600,75 +580,21 @@ export function PostTicketSheet({
             </div>
           </div>
 
-          <div>
-            <span className={labelClass}>Legs</span>
-            <ul className="space-y-2">
-              {legs.map((leg) => (
-                <LegEditor
-                  key={leg.key}
-                  leg={leg}
-                  games={games}
-                  onChange={updateLeg}
-                  onRemove={() => setLegs((cur) => cur.filter((l) => l.key !== leg.key))}
-                />
-              ))}
-            </ul>
-            <button
-              type="button"
-              className="mt-2 flex h-10 w-full items-center justify-center gap-1.5 rounded-xl border border-dashed border-border-strong text-xs font-bold uppercase tracking-wide text-ink-muted transition hover:text-ink"
-              onClick={() => setLegs((cur) => [...cur, blankLeg(`leg-${++legSeq.current}`)])}
-            >
-              <Plus className="h-4 w-4" /> Add a leg
-            </button>
-          </div>
-
-          <div className="grid grid-cols-3 gap-2">
-            {/* Word placeholders only: a number here reads as a value
-                the app filled in, and an empty box must look empty. */}
-            <label className="block">
-              <span className={labelClass}>Stake ({currency})</span>
-              <input
-                className={inputClass}
-                inputMode="decimal"
-                value={stake}
-                placeholder="Wager"
-                onChange={(e) => setStake(e.target.value)}
-              />
-            </label>
-            <label className="block">
-              <span className={labelClass}>Odds</span>
-              <input
-                className={inputClass}
-                inputMode="numeric"
-                value={odds}
-                placeholder="American"
-                onChange={(e) => setOdds(e.target.value)}
-              />
-            </label>
-            <label className="block">
-              <span className={labelClass}>To win</span>
-              <input
-                className={inputClass}
-                inputMode="decimal"
-                value={payout}
-                placeholder="Return"
-                onChange={(e) => setPayout(e.target.value)}
-              />
-            </label>
-          </div>
-
-          <label className="block">
-            <span className={labelClass}>Share link</span>
-            <input
-              type="text"
-              inputMode="url"
-              autoComplete="off"
-              className={inputClass}
-              value={shareText}
-              placeholder="https://…"
-              onChange={(e) => setShareText(e.target.value)}
-            />
-          </label>
+          <TicketFields
+            legs={legs}
+            onLegChange={updateLeg}
+            onLegRemove={(key) => setLegs((cur) => cur.filter((l) => l.key !== key))}
+            onAddLeg={() => setLegs((cur) => [...cur, blankLeg(`leg-${++legSeq.current}`)])}
+            games={games}
+            money={{ stake, odds, payout, shareText }}
+            onMoney={(patch) => {
+              if (patch.stake !== undefined) setStake(patch.stake);
+              if (patch.odds !== undefined) setOdds(patch.odds);
+              if (patch.payout !== undefined) setPayout(patch.payout);
+              if (patch.shareText !== undefined) setShareText(patch.shareText);
+            }}
+            currency={currency}
+          />
 
           {error ? <p className="text-sm text-danger">{error}</p> : null}
 

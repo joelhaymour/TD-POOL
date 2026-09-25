@@ -13,17 +13,18 @@ export const isNativeApp = cache(async (): Promise<boolean> => {
 });
 
 /**
- * Sections the iOS app never shows. Group bets stay on the website (a live
- * league uses them) but are left out of the App Store build.
+ * Sections Pool’d no longer offers anywhere (2026-09-25: group bets retired).
+ * A league's saved switch is left alone, so the data is still there if it
+ * ever comes back; it is just never shown, offered or routed to.
  */
-export const APP_HIDDEN_SECTIONS: LeagueSection[] = ["group_bets"];
+export const RETIRED_SECTIONS: LeagueSection[] = ["group_bets"];
 
-/** The sections to hide for this request: none on the web. */
+/** The sections hidden for every visitor, in the app and on the web. */
 export async function hiddenSections(): Promise<LeagueSection[]> {
-  return (await isNativeApp()) ? APP_HIDDEN_SECTIONS : [];
+  return RETIRED_SECTIONS;
 }
 
-/** The league as this request should see it (group bets off inside the app). */
+/** The league as people see it (retired sections switched off). */
 export async function visibleLeague<T extends Pick<League, "sections">>(league: T): Promise<T> {
   return withoutSections(league, await hiddenSections());
 }
