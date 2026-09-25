@@ -122,7 +122,7 @@ The App Store adds full App Review. Two guidelines matter for this app:
   or **Unlisted App Distribution**
   (<https://developer.apple.com/support/unlisted-app-distribution/>, an App
   Store link that isn't searchable, no 90-day expiry) are the fallbacks.
-- **5.3 Gambling** — TD Pool never takes a wager or moves money; say exactly
+- **5.3 Gambling** — Pool’d never takes a wager or moves money; say exactly
   that in *App Review Information → Notes*: "Bet tracker for a private
   friends league. No wagering, no money handled. 'Ride' links open the user's
   own licensed sportsbook app." Rate the app 17+ and answer *Gambling and
