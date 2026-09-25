@@ -26,7 +26,7 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     title: "TD Pool",
-    statusBarStyle: "black-translucent",
+    statusBarStyle: "default",
   },
   icons: {
     icon: [{ url: "/icon.svg", type: "image/svg+xml" }],
@@ -35,8 +35,8 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#0a0e0b",
-  colorScheme: "dark",
+  themeColor: "#f2f3ee",
+  colorScheme: "light",
   // Draw under the notch and home bar; the shell pads with env(safe-area-inset-*).
   viewportFit: "cover",
 };

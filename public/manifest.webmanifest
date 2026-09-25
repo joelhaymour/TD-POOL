@@ -4,8 +4,8 @@
   "description": "Weekly Anytime Touchdown Pool for your fantasy league",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#0a0e0b",
-  "theme_color": "#0a0e0b",
+  "background_color": "#f2f3ee",
+  "theme_color": "#f2f3ee",
   "icons": [
     {
       "src": "/icon.svg",

@@ -45,7 +45,7 @@ export function LegProgress({
                 leg.result === "lost" && "bg-danger",
                 (leg.result === "push" || leg.result === "void") &&
                   (tone === "dark" ? "bg-raised-fg/35" : "bg-ink/30"),
-                leg.result === "pending" && (live ? "bg-turf animate-pulse" : empty),
+                leg.result === "pending" && (live ? "bg-lime/35 animate-pulse" : empty),
               )}
               aria-hidden
             />

@@ -27,5 +27,5 @@ export function ticketPhaseLabel(
   }
   if (phase === "busted") return { label: "Busted", className: "bg-danger text-white" };
   if (phase === "live") return { label: "Live", className: "bg-lime text-accent-fg" };
-  return { label: "Upcoming", className: "bg-raised text-raised-fg" };
+  return { label: "Upcoming", className: "border border-border text-ink-muted" };
 }

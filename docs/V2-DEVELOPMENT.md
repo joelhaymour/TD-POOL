@@ -248,14 +248,18 @@ cascade in the database.
   they actually used, and needs no state subdomain, no indexed-array format and
   no per-leg id matching. FanDuel ids are still captured on each leg, so
   prefill can come back from git history if it is ever wanted.
-- **Night Ticket is the whole app** — TD pool, league list and login included.
-  `globals.css` holds one palette: a near-black field with translucent white
-  surfaces. `bg-chalk` (the card surface everywhere) is blurred centrally in
-  `globals.css`, so every card is frosted glass and new ones inherit it.
-  Three tokens carry the exceptions: `raised` / `raised-fg` for surfaces that
-  stay a solid slab (slip hero, sheets, toasts) and `accent-fg` for text on a
-  lime or turf fill — `ink` is white now, so `bg-lime text-ink` would be
-  invisible. Check any new accent fill against `accent-fg`.
+- **Daylight is the whole app** (since 2026-09-24; it replaced the dark
+  "Night Ticket" look). `globals.css` holds one palette: a warm off-white
+  field (`field`), solid white cards (`chalk`) with a hairline `border`,
+  near-black `ink`, and one green accent (`lime` and `turf` are both
+  `#11803c`; the token names are historical). `raised` / `raised-fg` are the
+  white slabs over the field (sheets, slip hero, toasts); `accent-fg` is the
+  text on a green fill (white). Because `lime` and `turf` are the same green,
+  "live, still in play" is drawn as a pale pulsing `bg-lime/35`, never solid,
+  so it never reads as a hit. There is no frosted glass: `backdrop-filter` on
+  a card traps any `position: fixed` child, which is how the slip photo once
+  got stuck inside a ticket card. `Sheet` and `PhotoViewer` render into
+  `<body>` for the same reason.
 - **No emoji in the UI.** Graded marks are drawn (`ui/result-mark.tsx`:
   `ResultMark`, plus `MemberChip` for initials). Emoji render differently on
   every device and pull the app toward looking like a chat message.

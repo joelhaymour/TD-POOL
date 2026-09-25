@@ -15,7 +15,7 @@ const config: CapacitorConfig = {
   appName: "TD Pool",
   // Only the offline fallback lives here; the app itself is the site.
   webDir: "native/www",
-  backgroundColor: "#0a0e0b",
+  backgroundColor: "#f2f3ee",
   zoomEnabled: false,
   // Lets the site tell the shell apart from Safari (`navigator.userAgent`).
   appendUserAgent: "TDPoolApp",

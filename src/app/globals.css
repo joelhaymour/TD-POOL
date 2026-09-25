@@ -1,32 +1,33 @@
 @import "tailwindcss";
 
 /**
- * Night Ticket — the whole app. Surfaces are translucent white over a near
- * black field, so cards read as frosted glass against the field lines
- * behind them rather than as flat panels.
+ * Daylight — the whole app. A warm off-white field, solid white cards with a
+ * hairline border, near-black ink and one green accent. Picked from the
+ * colour options on 2026-09-24 (Night Ticket, the old dark look, was option 1).
  */
 :root {
-  --field: #0a0e0b;
-  --field-deep: rgba(255, 255, 255, 0.07);
-  --ink: #ffffff;
-  --ink-muted: rgba(255, 255, 255, 0.66);
-  --ink-faint: rgba(255, 255, 255, 0.46);
-  --turf: #a9e85f;
-  --turf-deep: #c7f94b;
-  --chalk: rgba(255, 255, 255, 0.055);
-  --lime: #c7f94b;
-  --danger: #e2553f;
-  --warning: #e0a53a;
-  --border: rgba(255, 255, 255, 0.1);
-  --border-strong: rgba(255, 255, 255, 0.2);
-  /* The one surface that stays a solid slab: slip hero, primary buttons. */
-  --raised: #17231b;
-  --raised-fg: #ffffff;
-  /* Text on a lime or turf fill — those are light, so it has to be dark. */
-  --accent-fg: #0a1a0f;
-  --scrim: rgba(0, 0, 0, 0.62);
-  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.4), 0 10px 30px rgba(0, 0, 0, 0.35);
-  color-scheme: dark;
+  --field: #f2f3ee;
+  /* Inset fills: pills, tracks, quiet chips. */
+  --field-deep: #e7eae2;
+  --ink: #12170f;
+  --ink-muted: #545b53;
+  --ink-faint: #7d847c;
+  --turf: #11803c;
+  --turf-deep: #0d6a31;
+  --chalk: #ffffff;
+  --lime: #11803c;
+  --danger: #cf3b2a;
+  --warning: #a8620b;
+  --border: #dfe2da;
+  --border-strong: #cdd2c7;
+  /* Sheets, the slip hero and toasts: white slabs over the field. */
+  --raised: #ffffff;
+  --raised-fg: #12170f;
+  /* Text on a green fill. */
+  --accent-fg: #ffffff;
+  --scrim: rgba(18, 23, 15, 0.45);
+  --shadow-card: 0 1px 2px rgba(18, 23, 15, 0.05), 0 6px 18px rgba(18, 23, 15, 0.06);
+  color-scheme: light;
 }
 
 @theme inline {
@@ -95,22 +96,12 @@ body {
   font-family: var(--font-barlow), ui-sans-serif, sans-serif;
 }
 
-/* Field lines, drawn in light on dark. */
+/* The page background. Daylight is a flat field; the class stays so screens
+   keep one hook for it. */
 .field-atmosphere {
   background-color: var(--field);
-  background-image:
-    linear-gradient(
-      165deg,
-      rgba(199, 249, 75, 0.06) 0%,
-      transparent 45%,
-      rgba(31, 138, 76, 0.12) 100%
-    ),
-    linear-gradient(rgba(255, 255, 255, 0.026) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.026) 1px, transparent 1px);
-  background-size: auto, 28px 28px, 28px 28px;
 }
 
-/* The same field lines, drawn in light on dark. */
 @keyframes sheet-up {
   from {
     transform: translateY(100%);
@@ -154,13 +145,3 @@ body {
   animation: toast-in 0.25s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-/**
- * Frosted glass. `bg-chalk` is the card surface everywhere in the app, so
- * blurring it here gives every card the same treatment without touching a
- * component — including ones added later.
- */
-[class~="bg-chalk"],
-[class*="bg-chalk/"] {
-  backdrop-filter: blur(20px) saturate(140%);
-  -webkit-backdrop-filter: blur(20px) saturate(140%);
-}

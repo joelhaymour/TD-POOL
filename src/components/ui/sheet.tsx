@@ -3,8 +3,10 @@
 import {
   useEffect,
   useId,
+  useSyncExternalStore,
   type ReactNode,
 } from "react";
+import { createPortal } from "react-dom";
 import { X } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import { Button } from "@/components/ui/button";
@@ -30,6 +32,13 @@ export function Sheet({
   showHeader = true,
 }: SheetProps) {
   const titleId = useId();
+  // Rendered into <body>: a sheet opened from inside a card must not be
+  // positioned or clipped by that card. <body> exists only after hydration.
+  const mounted = useSyncExternalStore(
+    noop,
+    () => true,
+    () => false,
+  );
 
   useEffect(() => {
     if (!open) return;
@@ -45,9 +54,9 @@ export function Sheet({
     };
   }, [open, onClose]);
 
-  if (!open) return null;
+  if (!open || !mounted) return null;
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center">
       <button
         type="button"
@@ -99,6 +108,9 @@ export function Sheet({
           {children}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
+
+const noop = () => () => {};

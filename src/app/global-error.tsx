@@ -6,7 +6,7 @@
  */
 export default function GlobalError({ reset }: { error: Error & { digest?: string }; reset: () => void }) {
   return (
-    <html lang="en" style={{ colorScheme: "dark" }}>
+    <html lang="en" style={{ colorScheme: "light" }}>
       <body
         style={{
           margin: 0,
@@ -15,8 +15,8 @@ export default function GlobalError({ reset }: { error: Error & { digest?: strin
           alignItems: "center",
           justifyContent: "center",
           padding: "max(3rem, env(safe-area-inset-top)) 1.25rem max(3rem, env(safe-area-inset-bottom))",
-          background: "#0a0e0b",
-          color: "#fff",
+          background: "#f2f3ee",
+          color: "#12170f",
           fontFamily: "-apple-system, system-ui, sans-serif",
           textAlign: "center",
         }}
@@ -25,7 +25,7 @@ export default function GlobalError({ reset }: { error: Error & { digest?: strin
           <h1 style={{ fontSize: 28, letterSpacing: "0.04em", textTransform: "uppercase", margin: "0 0 8px" }}>
             TD Pool
           </h1>
-          <p style={{ color: "rgba(255,255,255,0.66)", margin: "0 0 20px", lineHeight: 1.5 }}>
+          <p style={{ color: "#545b53", margin: "0 0 20px", lineHeight: 1.5 }}>
             Something went wrong loading the app.
           </p>
           <button
@@ -34,8 +34,8 @@ export default function GlobalError({ reset }: { error: Error & { digest?: strin
             style={{
               border: 0,
               borderRadius: 12,
-              background: "#c7f94b",
-              color: "#0a1a0f",
+              background: "#11803c",
+              color: "#ffffff",
               fontWeight: 800,
               fontSize: 14,
               letterSpacing: "0.06em",

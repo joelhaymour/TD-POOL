@@ -8,7 +8,7 @@ import CoreText
 let green = CGColor(red: 0x1f/255, green: 0x8a/255, blue: 0x4c/255, alpha: 1)
 let lime = CGColor(red: 0xb8/255, green: 0xf2/255, blue: 0x4a/255, alpha: 1)
 let ink = CGColor(red: 0x0d/255, green: 0x1f/255, blue: 0x14/255, alpha: 1)
-let field = CGColor(red: 0x0a/255, green: 0x0e/255, blue: 0x0b/255, alpha: 1)
+let field = CGColor(red: 0xf2/255, green: 0xf3/255, blue: 0xee/255, alpha: 1)
 
 /// Opaque by default: App Store and home-screen icons must not carry an alpha
 /// channel. Only the rounded web icons ask for one.
@@ -70,7 +70,7 @@ write(icon(1024), "\(a)/icon-only.png")
 let bg = context(1024); bg.setFillColor(green); bg.fill(CGRect(x: 0, y: 0, width: 1024, height: 1024)); write(bg, "\(a)/icon-background.png")
 let fg = context(1024, alpha: true); drawMark(fg, canvas: 1024, unit: 1024 * 0.8); write(fg, "\(a)/icon-foreground.png")
 
-// Launch screen: the mark alone on the app's dark field, both light and dark variants identical.
+// Launch screen: the mark alone on the app's Daylight field, both light and dark variants identical.
 for name in ["splash", "splash-dark"] {
   let ctx = context(2732)
   ctx.setFillColor(field)

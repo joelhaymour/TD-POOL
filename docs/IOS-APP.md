@@ -35,7 +35,7 @@ Apple account and works today.
 | `ios/App/App.xcodeproj` | The Xcode project. Open it, pick your team, run. |
 | `ios/App/App/MainViewController.swift` | Registers the plugin, turns on swipe-back, injects `TD_POOL_SITE`. |
 | `ios/App/App/TDPoolClipboardPlugin.swift` | Native pasteboard read (picture + text). Web side: `src/lib/native/clipboard.ts`. |
-| `ios/App/App/Info.plist` | Portrait only, dark UI, photo/camera usage strings, no-encryption flag. |
+| `ios/App/App/Info.plist` | Portrait only, light UI (dark status-bar text), photo/camera usage strings, no-encryption flag. |
 | `ios/App/App/Assets.xcassets` | App icon + launch image, generated. |
 | `ios/App/CapApp-SPM` | Swift package pulling Capacitor and the keyboard plugin (no CocoaPods). |
 | `native/make-artwork.swift` | Draws the icon/splash/PWA PNGs from the shapes in `public/icon.svg`. |

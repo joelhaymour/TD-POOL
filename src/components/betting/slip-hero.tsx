@@ -95,7 +95,7 @@ export function SlipHero({
         className="pointer-events-none absolute inset-0 opacity-40"
         style={{
           backgroundImage:
-            "radial-gradient(ellipse at 90% -10%, rgba(184,242,74,0.35), transparent 55%), radial-gradient(ellipse at 0% 100%, rgba(31,138,76,0.45), transparent 50%)",
+            "radial-gradient(ellipse at 90% -10%, rgba(17,128,60,0.12), transparent 55%), radial-gradient(ellipse at 0% 100%, rgba(17,128,60,0.07), transparent 50%)",
         }}
       />
       <div className="relative">
