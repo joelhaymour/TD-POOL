@@ -1,90 +1,93 @@
 # TD Pool
 
-Mobile-first weekly **Anytime Touchdown Pool** for private fantasy leagues.
+TD Pool is a mobile-first football pool app for private groups built around weekly Anytime Touchdown picks.
 
-**Working on V2:** use the isolated setup in [V2 development](docs/V2-DEVELOPMENT.md).
-The deployment and demo instructions below describe the original bootstrap;
-do not use them with production credentials during testing.
+It started as a simple pool manager and grew into a full-stack sports product with live game data, touchdown grading, odds, player research, league history, realtime data, push-notification support, and an iOS wrapper.
 
-## Quick start
+## Highlights
+
+- Create and manage private touchdown pools
+- Weekly player picks with duplicate-prevention logic
+- Live NFL game and scoring updates
+- Automatic touchdown grading
+- Anytime-touchdown odds integration
+- Player research and historical performance views
+- Leaderboards and multi-week history
+- Supabase-backed data and realtime updates
+- Progressive Web App support
+- Capacitor-based iOS integration
+- Push notification support
+- Local/mock provider fallbacks for development
+
+## Stack
+
+- Next.js
+- React
+- TypeScript
+- Supabase / Postgres
+- Supabase Realtime
+- Zustand
+- ESPN data provider
+- The Odds API
+- Vercel
+- Capacitor
+- iOS
+- Web Push
+
+## Architecture
+
+The app separates external sports data behind provider interfaces so production feeds can be swapped without changing the core pool logic.
+
+It supports:
+
+- hosted Supabase persistence
+- local development storage
+- live and mock data providers
+- realtime league updates
+- server-side grading and result synchronization
+- isolated V2 development and database migration tooling
+
+## Core product areas
+
+### Pool management
+League creation, weekly picks, duplicate prevention, admin controls, and mobile-first entry flows.
+
+### Live results
+Game status synchronization, touchdown detection, grading, weekly results, and league history.
+
+### Odds
+Anytime-touchdown pricing with bookmaker and consensus views.
+
+### Research
+Player history, recent touchdown performance, opponent context, and an internal scoring model.
+
+### Native/mobile
+PWA behavior plus Capacitor tooling for an iOS build.
+
+## Local development
 
 ```bash
 npm install
 cp .env.example .env.local
-# Fill NEXT_PUBLIC_SUPABASE_URL + NEXT_PUBLIC_SUPABASE_ANON_KEY
-# Set USE_SUPABASE=true for hosted DB (recommended)
 npm run dev -- --hostname 127.0.0.1
 ```
 
-Open [http://127.0.0.1:3000/joels-league](http://127.0.0.1:3000/joels-league).
+The repository contains environment-variable placeholders only. Production API keys and database credentials are not committed.
 
-### Demo league
-
-| | |
-|---|---|
-| URL | `/joels-league` |
-| Admin PIN | `1234` |
-| Join PIN | `0000` |
-
-Seed Supabase (when `USE_SUPABASE=true`):
+Useful checks:
 
 ```bash
-curl -X POST http://127.0.0.1:3000/api/seed-supabase
+npm run typecheck
+npm run lint
+npm run test:environment
 ```
 
-Local JSON fallback (`USE_SUPABASE=false`):
+V2 development notes live in [docs/V2-DEVELOPMENT.md](docs/V2-DEVELOPMENT.md).
 
-```bash
-npm run seed
-```
+## Note
 
-## What’s built
+Odds and projections are informational. This project is a private-pool management and sports-data application, not a sportsbook.
 
-### Phase 1 — Core ✅
-League create, picks, duplicate prevention, bet slip, money modes, admin, mobile UI
+---
 
-### Phase 2 — NFL results ✅
-Auto game/status sync, TD grading, weekly results, history  
-Provider: **ESPN** (`NFL_PROVIDER=espn`) with mock fallback
-
-### Phase 3 — Odds ✅
-Anytime TD odds sync, consensus + books  
-Provider: **The Odds API** when `ODDS_API_KEY` is set, else mock
-
-### Phase 4 — Research ✅ (mock + history)
-Player detail research, History (last 5 + vs opponent), TD Pool score model  
-Live red-zone/injury/weather feeds can swap in behind existing provider interfaces
-
-### Phase 5 — Polish ✅
-PWA (manifest + service worker), leaderboard, multi-week history API, Realtime hook
-
-### Backend ✅
-- Supabase Postgres schema + RLS + Realtime publication
-- `SupabaseStore` when `USE_SUPABASE=true`
-- Local file store fallback
-
-## Env
-
-```bash
-NEXT_PUBLIC_SUPABASE_URL=
-NEXT_PUBLIC_SUPABASE_ANON_KEY=
-SUPABASE_SERVICE_ROLE_KEY=   # optional; anon works with MVP write policies
-USE_SUPABASE=true
-PROVIDER_MODE=auto
-NFL_PROVIDER=espn
-ODDS_API_KEY=                # optional
-ODDS_API_BOOKMAKERS=fanduel,draftkings,betmgm,williamhill_us,fanatics
-```
-
-## Deploy (Vercel)
-
-```bash
-npx vercel login
-npx vercel --prod
-```
-
-Add the same env vars in the Vercel project settings.
-
-## Legal
-
-Odds and projections are informational estimates and may differ from sportsbook pricing. Gambling involves risk.
+Built by [Joel Haymour](https://github.com/joelhaymour).
