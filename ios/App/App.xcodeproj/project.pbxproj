@@ -158,7 +158,6 @@
 				ED9ADC08515FAF65651CDFB0 /* Info.plist */,
 				77AA5B89E095A9A2F6E26961 /* PooldShare.entitlements */,
 			);
-			name = PooldShare;
 			path = PooldShare;
 			sourceTree = "<group>";
 		};
@@ -167,7 +166,6 @@
 			children = (
 				ECDE6D6C054F9F15B9B3C141 /* ShareInbox.swift */,
 			);
-			name = Shared;
 			path = Shared;
 			sourceTree = "<group>";
 		};
@@ -445,6 +443,7 @@
 				CODE_SIGN_ENTITLEMENTS = App/App.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = CAA5L944T6;
 				INFOPLIST_FILE = App/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -468,6 +467,7 @@
 				CODE_SIGN_ENTITLEMENTS = App/App.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = CAA5L944T6;
 				INFOPLIST_FILE = App/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -491,6 +491,7 @@
 				CODE_SIGN_ENTITLEMENTS = PooldShare/PooldShare.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = CAA5L944T6;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = PooldShare/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
@@ -519,6 +520,7 @@
 				CODE_SIGN_ENTITLEMENTS = PooldShare/PooldShare.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = CAA5L944T6;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = PooldShare/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
