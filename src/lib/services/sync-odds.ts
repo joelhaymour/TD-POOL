@@ -30,6 +30,15 @@ export type OddsSyncSummary = {
  * by NFL week so two leagues do not pay for the same slate.
  */
 export const ODDS_SYNC_TTL_MS = 40 * 60 * 60_000;
+
+/**
+ * The scheduled morning pull's own window. Shorter than the page-load TTL so
+ * back-to-back game days (Sunday then Monday, Wednesday then Thursday) each
+ * get their pull, while a double trigger on the same day still can't pay
+ * twice. Page loads keep the 40 h window, so opening a league never adds
+ * pulls on its own.
+ */
+export const SCHEDULED_ODDS_SLOT_MS = 20 * 60 * 60_000;
 const inFlightOddsSync = new Map<string, Promise<OddsSyncSummary | null>>();
 
 /**

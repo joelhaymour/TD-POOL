@@ -165,6 +165,13 @@ export class TheOddsApiProvider implements OddsProvider {
     );
   }
 
+  /** One of the games we were handed (this week's), by team names. */
+  private isOurGame(homeFull: string, awayFull: string): boolean {
+    const home = teamFullToAbbr(homeFull);
+    const away = teamFullToAbbr(awayFull);
+    return this.games.some((g) => g.home_team === home && g.away_team === away);
+  }
+
   private resolveGameId(homeFull: string, awayFull: string): string | null {
     const home = teamFullToAbbr(homeFull);
     const away = teamFullToAbbr(awayFull);
@@ -220,7 +227,11 @@ export class TheOddsApiProvider implements OddsProvider {
     const horizonMs = 7 * 24 * 60 * 60_000;
     const upcoming = events.filter((e) => {
       const t = Date.parse(e.commence_time);
-      return Number.isFinite(t) && t >= now - 6 * 60 * 60_000 && t <= now + horizonMs;
+      if (!Number.isFinite(t) || t < now - 6 * 60 * 60_000 || t > now + horizonMs) return false;
+      // Each event's odds call is billed, and only this week's games are kept
+      // (resolveGameId below). A Sunday or Monday pull would otherwise pay for
+      // next week's games inside the 7-day window and throw them away.
+      return this.games.length === 0 || this.isOurGame(e.home_team, e.away_team);
     });
 
     if (this.quotaRemaining != null && this.quotaRemaining <= 0) {

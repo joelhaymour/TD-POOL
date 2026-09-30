@@ -4,7 +4,7 @@ import { ensureNflWeekMaterialized } from "@/lib/services/ensure-nfl-week";
 import {
   syncWeekOdds,
   weekOddsSlotStatus,
-  ODDS_SYNC_TTL_MS,
+  SCHEDULED_ODDS_SLOT_MS,
 } from "@/lib/services/sync-odds";
 import { resolvePoolWeek } from "@/lib/nfl/calendar";
 import { settleLeagueParlays } from "@/lib/services/settle-parlays";
@@ -13,8 +13,13 @@ import { syncNflWeek } from "@/lib/services/sync-nfl-week";
 /** Full board rebuild — the slowest job in the app. */
 export const maxDuration = 300;
 
-/** Thursday, Sunday and Monday — the days NFL games are actually played. */
-const ODDS_SYNC_WEEKDAYS = new Set([4, 0, 1]);
+/**
+ * Wednesday (most anytime-TD props are posted by then, while people are
+ * making picks) plus Thursday, Sunday and Monday, the game days. A pull only
+ * fetches games that haven't started, so Monday costs about one credit.
+ * Roughly 50–65 credits a week, well inside the 500/month quota.
+ */
+const ODDS_SYNC_WEEKDAYS = new Set([3, 4, 0, 1]);
 
 /**
  * Whether to spend credits refreshing odds today, judged in US Eastern time so
@@ -58,7 +63,7 @@ export async function GET(request: Request) {
   const weekKey = `odds:week:${season}:${week}`;
   const claimed =
     isOddsSyncDay(new Date()) &&
-    (await store.claimSyncSlot(weekKey, ODDS_SYNC_TTL_MS).catch(() => false));
+    (await store.claimSyncSlot(weekKey, SCHEDULED_ODDS_SLOT_MS).catch(() => false));
 
   const odds = claimed
     ? await syncWeekOdds(store, { season, week, weekId: nflWeek.id })

@@ -1,19 +1,16 @@
 # Next release: Pool’d 1.1 (after 1.0 is approved)
 
-Everything below is on `v2` (test site td-pool-v2.vercel.app) and **not** on
-`main`. Hold it until Apple approves 1.0, then ship the website and build 2
-together so the app and the site match.
+Night mode is built and on the test site (td-pool-v2.vercel.app); its code
+is on `main` too but switched off there. It needs iPhone build 2, so hold it
+until Apple approves 1.0, then turn it on and ship build 2 together.
 
-## Website (goes live the moment v2 is pushed to main)
+## Website
 
 - **Night mode + Appearance setting** — account sheet (tap your initials) →
   Appearance: Automatic · Light · Dark. Cookie `poold-theme` → `<html data-theme>`.
-- **Post a ticket inside a league reads on paste** — no "Read the ticket" tap.
-- **Link-only shares** — "Your link didn't include a picture" card: go back
-  with iOS's ◀ back button, screenshot, share the screenshot to Pool’d; the
-  link (and the league) is kept 30 min and filled in when the picture arrives
-  (`src/lib/tickets/pending-share.ts`). Paste screenshot / From photos as backups.
-- **Onboarding** — real app-icon glyphs; logo stays dark on its cream tile.
+  The code is already on main but switched off there by `APPEARANCE_READY`
+  in `src/lib/theme.ts` (on for the test site). **To release: delete
+  `APPEARANCE_READY` and its three checks** (layout viewport + theme, account menu).
 
 ## iPhone app — build 2 (needs a new upload + review)
 
@@ -33,4 +30,5 @@ together so the app and the site match.
 
 Already live on main while 1.0 is in review (no need to re-ship): ticket
 reader fixes (slip matchup + this week's player→game data), member-picks
-player link.
+player link, posting fixes (read on paste, link-only screenshot steps),
+onboarding icons, odds pulls Wed/Thu/Sun/Mon for this week's games only.
