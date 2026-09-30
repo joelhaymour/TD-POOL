@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Check, ClipboardPaste, Loader2, X } from "lucide-react";
+import { Check, ClipboardPaste, ImagePlus, Loader2, X } from "lucide-react";
 import { glassButton } from "@/components/layout/league-header";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
@@ -151,7 +151,13 @@ export function ShareFlow({ leagues }: { leagues: ShareLeague[] }) {
     };
   }, [leagues, start]);
 
+  /**
+   * Paste the bet (picture and link together). With a link already here and
+   * no picture yet, this is "add the screenshot": the link is kept and the
+   * picture is read.
+   */
   async function pasteInstead() {
+    const addingPicture = phase === "review" && !picture;
     let shared: SharedTicket | null = null;
     const native = await readNativeClipboard().catch(() => null);
     if (native) {
@@ -172,12 +178,26 @@ export function ShareFlow({ leagues }: { leagues: ShareLeague[] }) {
         return;
       }
     }
+    if (addingPicture) {
+      if (!shared.image) {
+        toast({
+          title: "No screenshot on the clipboard",
+          description: "Take a screenshot of the bet, tap it, then Copy — or choose it from your photos.",
+        });
+        return;
+      }
+      const link = parseShareLink(shared.text);
+      void start({ image: shared.image, text: link.ok ? link.url : money.shareText });
+      return;
+    }
     if (!shared.image && !shared.text.trim()) {
       toast({ title: "Nothing to paste", description: "Copy the bet from your sportsbook first." });
       return;
     }
     void start(shared);
   }
+
+  const photoInput = useRef<HTMLInputElement>(null);
 
   function toggle(slug: string) {
     setSelected((cur) => {
@@ -264,7 +284,44 @@ export function ShareFlow({ leagues }: { leagues: ShareLeague[] }) {
                 <img src={picture.url} alt="Your bet slip" className="h-20 w-14 shrink-0 rounded-md object-cover" />
               ) : null}
               <div className="min-w-0 flex-1">
-                {phase === "reading" ? (
+                {phase === "review" && !picture ? (
+                  // A link-only share (Stake, some bet365 shares): add the
+                  // screenshot and the legs are read for you; the link stays.
+                  <div>
+                    <p className="text-[15px] font-semibold text-ink">Add a screenshot of the bet</p>
+                    <p className="mt-1 text-[13px] leading-snug text-ink-muted">
+                      This link came without a picture. Screenshot the bet in your book, then copy it and tap{" "}
+                      <span className="font-semibold text-ink">Paste screenshot</span>, or share the screenshot to
+                      Pool’d. The legs are read for you and the link stays.
+                    </p>
+                    <div className="mt-3 grid grid-cols-2 gap-2">
+                      <Button type="button" size="sm" onClick={() => void pasteInstead()}>
+                        <ClipboardPaste className="h-3.5 w-3.5" /> Paste screenshot
+                      </Button>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="secondary"
+                        className="bg-ink/[0.06] shadow-none hover:bg-ink/10"
+                        onClick={() => photoInput.current?.click()}
+                      >
+                        <ImagePlus className="h-3.5 w-3.5" /> From photos
+                      </Button>
+                    </div>
+                    <input
+                      ref={photoInput}
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        e.target.value = "";
+                        if (file) void start({ image: file, text: money.shareText });
+                      }}
+                    />
+                    <p className="mt-2 text-[11px] text-ink-faint">Or fill in the legs below by hand.</p>
+                  </div>
+                ) : phase === "reading" ? (
                   <p className="flex items-center gap-2 text-sm font-semibold text-ink">
                     <Loader2 className="h-4 w-4 animate-spin text-ink-muted" aria-hidden /> Reading your ticket…
                   </p>

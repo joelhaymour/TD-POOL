@@ -2,7 +2,7 @@
 
 import { useRef, useState, useSyncExternalStore, type CSSProperties, type ReactNode } from "react";
 import { createPortal } from "react-dom";
-import { Bell, BellRing, Check, Flame, TicketCheck, Trophy, UserPlus, Users } from "lucide-react";
+import { Bell, BellRing, Check, Flame, Mail, MessageCircle, NotebookPen, TicketCheck, Trophy, UserPlus, Users } from "lucide-react";
 import { LogoMark } from "@/components/brand/logo";
 import { Button } from "@/components/ui/button";
 import { tap } from "@/lib/native/haptics";
@@ -20,6 +20,9 @@ function readSeen(): boolean {
 }
 
 const noopSubscribe = () => () => {};
+
+/** The logo on its cream tile is always the brand's dark ink, in either theme. */
+const BRAND_INK = "text-[#272624]";
 
 /** Delay helper for the demo pieces. */
 const at = (seconds: number): CSSProperties => ({ animationDelay: `${seconds}s` });
@@ -213,7 +216,7 @@ function WelcomeDemo() {
   return (
     <div className="flex flex-col items-center">
       <span className="ob-pop flex h-28 w-28 items-center justify-center rounded-[2rem] bg-[#fbf8f2] shadow-[var(--glass-shadow)]">
-        <LogoMark className="h-16 w-16 text-ink" />
+        <LogoMark className={`h-16 w-16 ${BRAND_INK}`} />
       </span>
       <div className="mt-6 flex gap-2">
         {[
@@ -284,16 +287,16 @@ function PostDemo() {
     <Phone>
       <p className="px-1 text-[11px] font-medium text-ink-muted">Share from your sportsbook</p>
       <div className="relative mt-2 flex gap-3 rounded-2xl bg-chalk p-3 shadow-card">
-        {[
-          ["Messages", "bg-[#34c759]", ""],
-          ["Mail", "bg-[#1e88e5]", ""],
-          ["Pool’d", "bg-[#fbf8f2]", "logo"],
-          ["Notes", "bg-[#ffd60a]", ""],
-        ].map(([label, color, kind]) => (
+        {(
+          [
+            ["Messages", "bg-gradient-to-b from-[#5bf675] to-[#0cbd2a]", <MessageCircle key="m" className="h-6 w-6 fill-white text-white" />],
+            ["Mail", "bg-gradient-to-b from-[#1e9bff] to-[#1668f0]", <Mail key="e" className="h-6 w-6 text-white" strokeWidth={2.2} />],
+            ["Pool’d", "bg-[#fbf8f2] ring-1 ring-black/5", <LogoMark key="p" className={`h-7 w-7 ${BRAND_INK}`} />],
+            ["Notes", "bg-gradient-to-b from-[#fff3a8] via-white to-white", <NotebookPen key="n" className="h-5 w-5 text-[#e8b400]" strokeWidth={2.2} />],
+          ] as const
+        ).map(([label, tile, glyph]) => (
           <span key={label} className="flex w-12 flex-col items-center gap-1">
-            <span className={`flex h-11 w-11 items-center justify-center rounded-[0.8rem] shadow-sm ${color}`}>
-              {kind === "logo" ? <LogoMark className="h-7 w-7 text-ink" /> : null}
-            </span>
+            <span className={`flex h-11 w-11 items-center justify-center rounded-[0.8rem] shadow-sm ${tile}`}>{glyph}</span>
             <span className="text-[10px] text-ink-muted">{label}</span>
           </span>
         ))}
@@ -327,7 +330,7 @@ function RideDemo() {
         style={at(2.6)}
       >
         <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[0.6rem] bg-[#fbf8f2]">
-          <LogoMark className="h-5 w-5 text-ink" />
+          <LogoMark className={`h-5 w-5 ${BRAND_INK}`} />
         </span>
         <span className="min-w-0 text-[11px] leading-snug text-ink">
           <b>Mike just hit 3 of 4.</b> 1 more for $775

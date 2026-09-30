@@ -285,6 +285,21 @@ export function PostTicketSheet({
     }
   }
 
+  // A pasted or chosen picture is read straight away — the button below is
+  // only for a retry. Once per picture; a stale read is dropped by session.
+  const readFor = useRef<string | null>(null);
+  const readLatest = useRef(readTicket);
+  useEffect(() => {
+    readLatest.current = readTicket;
+  });
+  useEffect(() => {
+    if (!open || !picture || stage !== "pick" || readerOff) return;
+    if (readFor.current === picture.url) return;
+    readFor.current = picture.url;
+    // After this render, so a link pasted alongside is in shareText too.
+    window.setTimeout(() => void readLatest.current(), 0);
+  }, [open, picture, stage, readerOff]);
+
   async function readTicket() {
     if (!picture) return;
     const s = session.current;
