@@ -173,7 +173,7 @@ export function ParlayBoard({
           return (
             <li
               key={parlay.id}
-              className="overflow-hidden rounded-2xl border border-border bg-chalk shadow-card"
+              className="overflow-hidden rounded-[1.4rem] bg-chalk shadow-card"
             >
               <button
                 type="button"
@@ -318,7 +318,7 @@ export function ParlayBoard({
                   {phase === "building" ? (
                     <Link
                       href={`/${slug}/group?slip=${parlay.id}`}
-                      className="mt-3 flex h-11 items-center justify-center gap-2 rounded-xl border border-border-strong font-display text-sm font-bold uppercase tracking-wide text-ink transition hover:border-turf"
+                      className="mt-3 flex h-11 items-center justify-center gap-2 rounded-full bg-ink/[0.06] font-display text-sm font-bold uppercase tracking-wide text-ink transition hover:border-turf"
                     >
                       <Plus className="h-4 w-4" /> Add picks
                     </Link>

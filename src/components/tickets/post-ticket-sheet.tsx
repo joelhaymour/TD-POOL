@@ -23,7 +23,7 @@ import { cn } from "@/lib/utils/cn";
 import type { Currency, NflGame } from "@/lib/types";
 
 const inputClass =
-  "h-11 w-full rounded-xl border border-border-strong bg-field px-3 text-sm font-semibold text-ink outline-none focus:border-turf focus:ring-2 focus:ring-turf/20";
+  "h-11 w-full rounded-xl border border-transparent bg-ink/[0.05] px-3 focus:bg-white text-sm font-semibold text-ink outline-none focus:border-turf focus:ring-2 focus:ring-turf/20";
 const labelClass =
   "mb-1.5 block text-[10px] font-bold uppercase tracking-[0.1em] text-ink-faint";
 
@@ -541,7 +541,7 @@ export function PostTicketSheet({
             </>
           )}
 
-          <div className="rounded-xl border border-border bg-field p-3">
+          <div className="rounded-2xl bg-ink/[0.04] p-3">
             <p className="text-[11px] font-bold uppercase tracking-wide text-ink-faint">
               Where to find it
             </p>

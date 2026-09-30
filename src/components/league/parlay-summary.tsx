@@ -156,7 +156,7 @@ export function ParlaySummary({
         )}
 
         {oddsLabel ? (
-          <p className="mt-3 text-[10px] font-medium uppercase tracking-wider text-raised-fg/45">
+          <p suppressHydrationWarning className="mt-3 text-[10px] font-medium uppercase tracking-wider text-raised-fg/45">
             {oddsLabel}
           </p>
         ) : null}

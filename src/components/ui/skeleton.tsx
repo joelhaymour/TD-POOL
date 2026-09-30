@@ -20,7 +20,7 @@ export function PlayerCardSkeleton({ className }: SkeletonProps) {
   return (
     <div
       className={cn(
-        "rounded-2xl border border-border bg-chalk p-3 shadow-card",
+        "rounded-[1.4rem] bg-chalk shadow-card p-3",
         className,
       )}
     >

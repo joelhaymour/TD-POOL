@@ -449,7 +449,7 @@ export function GroupBettingClient({
         <div className="flex items-center gap-2">
           <button
             type="button"
-            className="flex min-w-0 flex-1 items-center gap-2 rounded-xl border border-border bg-chalk px-3 py-2.5 text-left shadow-card"
+            className="flex min-w-0 flex-1 items-center gap-2 rounded-2xl bg-chalk px-3 py-2.5 text-left shadow-card"
             onClick={() => setSheet("switch")}
             aria-label="Switch parlay"
           >
@@ -555,7 +555,7 @@ export function GroupBettingClient({
       )}
 
       {selected ? (
-        <section className="overflow-hidden rounded-2xl border border-border bg-chalk shadow-card">
+        <section className="overflow-hidden rounded-[1.4rem] bg-chalk shadow-card">
           <button
             type="button"
             className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left"
@@ -644,7 +644,7 @@ export function GroupBettingClient({
         </section>
       ) : null}
 
-      <section className="overflow-hidden rounded-2xl border border-border bg-chalk shadow-card">
+      <section className="overflow-hidden rounded-[1.4rem] bg-chalk shadow-card">
         <div className="flex items-center justify-between gap-3 px-4 py-3">
           <div>
             <h2 className="font-display text-base font-bold uppercase tracking-wide text-ink">
@@ -780,7 +780,7 @@ export function GroupBettingClient({
             maxLength={60}
             onChange={(e) => setNameDraft(e.target.value)}
             placeholder={`Week ${week.week} parlay`}
-            className="h-11 w-full rounded-xl border border-border-strong bg-field px-3 text-sm font-semibold text-ink outline-none focus:border-turf focus:ring-2 focus:ring-turf/20"
+            className="h-11 w-full rounded-xl border border-transparent bg-ink/[0.05] px-3 focus:bg-white text-sm font-semibold text-ink outline-none focus:border-turf focus:ring-2 focus:ring-turf/20"
           />
           <Button type="submit" fullWidth disabled={!nameDraft.trim()}>
             Save name
@@ -856,7 +856,7 @@ export function GroupBettingClient({
             value={stakeDraft ?? ""}
             onChange={(e) => setStakeDraft(e.target.value)}
             placeholder={String(calculateWeeklyStake(league))}
-            className="h-11 w-full rounded-xl border border-border-strong bg-field px-3 text-sm font-semibold text-ink outline-none focus:border-turf focus:ring-2 focus:ring-turf/20"
+            className="h-11 w-full rounded-xl border border-transparent bg-ink/[0.05] px-3 focus:bg-white text-sm font-semibold text-ink outline-none focus:border-turf focus:ring-2 focus:ring-turf/20"
           />
           <Button type="submit" fullWidth>
             Save stake

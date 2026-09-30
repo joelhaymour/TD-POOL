@@ -100,7 +100,7 @@ export function PlayerRow({
         <Link
           href={player.analysisHref}
           className={cn(
-            "inline-flex h-8 flex-1 items-center justify-center rounded-lg border border-border-strong bg-chalk text-[11px] font-semibold tracking-wide text-ink transition",
+            "inline-flex h-8 flex-1 items-center justify-center rounded-full bg-ink/[0.06] text-[11px] font-semibold tracking-wide text-ink transition",
             "hover:bg-field-deep focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-turf",
           )}
         >

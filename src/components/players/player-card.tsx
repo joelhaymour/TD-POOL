@@ -68,7 +68,7 @@ export function PlayerCard({
   return (
     <article
       className={cn(
-        "rounded-2xl border border-border bg-chalk p-3 shadow-card",
+        "rounded-[1.4rem] bg-chalk shadow-card p-3",
         taken && "opacity-90",
         className,
       )}
@@ -132,7 +132,7 @@ export function PlayerCard({
         <Link
           href={player.analysisHref}
           className={cn(
-            "inline-flex h-9 items-center justify-center rounded-lg border border-border-strong bg-chalk px-3 text-xs font-semibold tracking-wide text-ink transition",
+            "inline-flex h-9 items-center justify-center rounded-full bg-ink/[0.06] px-3 text-xs font-semibold tracking-wide text-ink transition",
             "hover:bg-field-deep focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-turf",
           )}
         >

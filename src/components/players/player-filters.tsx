@@ -27,7 +27,7 @@ export type PlayerFiltersProps = {
 const positions: PlayerPositionFilter[] = ["ALL", "RB", "WR", "TE", "QB"];
 
 const inputClass =
-  "h-10 w-full rounded-xl border border-border-strong bg-chalk px-3 text-sm text-ink outline-none transition focus:border-turf focus:ring-2 focus:ring-turf/20";
+  "h-10 w-full rounded-xl border border-transparent bg-ink/[0.05] px-3 text-sm text-ink outline-none focus:bg-white transition focus:border-turf focus:ring-2 focus:ring-turf/20";
 
 export function PlayerFilters({
   value,
@@ -57,10 +57,10 @@ export function PlayerFilters({
               type="button"
               onClick={() => onChange({ ...value, position: pos })}
               className={cn(
-                "shrink-0 rounded-lg px-3 py-1.5 text-xs font-bold uppercase tracking-wider transition",
+                "pressable shrink-0 rounded-full px-3.5 py-1.5 text-xs font-bold uppercase tracking-wider",
                 active
                   ? "bg-lime text-accent-fg"
-                  : "bg-chalk text-ink-muted border border-border hover:border-border-strong",
+                  : "bg-chalk text-ink-muted shadow-card",
               )}
             >
               {pos === "ALL" ? "All" : pos}
@@ -70,7 +70,7 @@ export function PlayerFilters({
       </div>
 
       <div className="flex items-center gap-2">
-        <label className="flex flex-1 items-center gap-2 rounded-xl border border-border bg-chalk px-3 py-2 text-xs font-semibold text-ink">
+        <label className="flex flex-1 items-center gap-2 rounded-full bg-ink/[0.05] px-3 py-2 text-xs font-semibold text-ink">
           <input
             type="checkbox"
             className="accent-turf"

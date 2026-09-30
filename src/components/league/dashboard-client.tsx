@@ -8,11 +8,11 @@ import { PlayerList } from "@/components/players/player-list";
 import type { PlayerFiltersValue } from "@/components/players/player-filters";
 import { GameBoard, type GameGroup } from "@/components/games/game-board";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Segmented } from "@/components/ui/segmented";
 import { useToast } from "@/components/ui/toast";
 import { useLeagueRealtime } from "@/hooks/use-league-realtime";
 import { toPlayerCard } from "@/lib/api/mappers";
 import type { LeagueDashboard } from "@/lib/types";
-import { cn } from "@/lib/utils/cn";
 
 export function DashboardClient({
   slug,
@@ -204,34 +204,16 @@ export function DashboardClient({
       />
 
       <div>
-        <div
-          role="tablist"
-          aria-label="Board view"
-          className="mb-3 grid grid-cols-2 gap-1.5 rounded-xl bg-field p-1"
-        >
-          {(
-            [
-              ["players", "Player board"],
-              ["games", "Game board"],
-            ] as const
-          ).map(([key, label]) => (
-            <button
-              key={key}
-              role="tab"
-              type="button"
-              aria-selected={board === key}
-              onClick={() => setBoard(key)}
-              className={cn(
-                "rounded-lg px-3 py-2 font-display text-sm font-bold uppercase tracking-wide transition",
-                board === key
-                  ? "bg-lime text-accent-fg shadow-card"
-                  : "text-ink-muted hover:text-ink",
-              )}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
+        <Segmented
+          label="Board view"
+          className="mb-3"
+          value={board}
+          onChange={setBoard}
+          options={[
+            { value: "players", label: "Player board" },
+            { value: "games", label: "Game board" },
+          ]}
+        />
 
         {board === "players" ? (
           <PlayerList

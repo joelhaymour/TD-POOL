@@ -8,7 +8,7 @@ export default async function AdminPage({ params }: PageProps<"/[slug]">) {
 
   if (member.role !== "admin") {
     return (
-      <div className="space-y-3 rounded-2xl border border-border bg-chalk p-6 text-center shadow-card">
+      <div className="space-y-3 rounded-[1.4rem] bg-chalk shadow-card p-6 text-center">
         <h2 className="font-display text-lg font-bold uppercase tracking-wide text-ink">
           Admins only
         </h2>

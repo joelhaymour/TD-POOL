@@ -25,14 +25,14 @@ export function AccountMenu({ name, email }: { name: string; email: string }) {
         <div className="space-y-2 pb-2">
           <Link
             href="/privacy"
-            className="flex h-12 items-center gap-3 rounded-xl border border-border bg-chalk px-4 text-sm font-semibold text-ink"
+            className="flex h-12 items-center gap-3 rounded-2xl bg-ink/[0.04] px-4 text-sm font-semibold text-ink"
           >
             <Shield className="h-4 w-4 text-ink-muted" aria-hidden /> Privacy
           </Link>
           <form action={signOut}>
             <button
               type="submit"
-              className="flex h-12 w-full items-center gap-3 rounded-xl border border-border bg-chalk px-4 text-left text-sm font-semibold text-ink"
+              className="flex h-12 w-full items-center gap-3 rounded-2xl bg-ink/[0.04] px-4 text-left text-sm font-semibold text-ink"
             >
               <LogOut className="h-4 w-4 text-ink-muted" aria-hidden /> Sign out
             </button>

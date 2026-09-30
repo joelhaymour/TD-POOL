@@ -5,6 +5,7 @@ import { getStore } from "@/lib/store";
 import { cn } from "@/lib/utils/cn";
 import { formatAmerican, formatMoney } from "@/lib/utils/odds";
 import { MemberChip } from "@/components/ui/result-mark";
+import { Segmented } from "@/components/ui/segmented";
 import { ticketStandings, type TicketStanding } from "@/lib/tickets/standings";
 import type { League } from "@/lib/types";
 
@@ -112,25 +113,14 @@ export async function TicketLeaderboard({
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-1 rounded-xl border border-border bg-chalk p-1">
-        {(
-          [
-            ["week", "This week"],
-            ["season", "Season"],
-          ] as const
-        ).map(([value, label]) => (
-          <Link
-            key={value}
-            href={`/${slug}/tickets/board${value === "season" ? "?range=season" : ""}`}
-            className={cn(
-              "flex h-9 items-center justify-center rounded-lg font-display text-xs font-bold uppercase tracking-wider transition",
-              range === value ? "bg-lime text-accent-fg" : "text-ink-muted hover:text-ink",
-            )}
-          >
-            {label}
-          </Link>
-        ))}
-      </div>
+      <Segmented
+        label="Board range"
+        value={range}
+        options={[
+          { value: "week", label: "This week", href: `/${slug}/tickets/board` },
+          { value: "season", label: "Season", href: `/${slug}/tickets/board?range=season` },
+        ]}
+      />
 
       {anySettled && first ? (
         <div className="grid grid-cols-3 items-end gap-2">
@@ -201,7 +191,7 @@ export async function TicketLeaderboard({
       </ul>
 
       {mostRidden ? (
-        <div className="rounded-2xl border border-border bg-chalk p-4">
+        <div className="rounded-[1.4rem] bg-chalk shadow-card p-4">
           <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-ink-faint">
             Most ridden
           </p>

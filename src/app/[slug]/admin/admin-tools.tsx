@@ -8,7 +8,7 @@ import type { LeagueDashboard } from "@/lib/types";
 import type { SyncNflWeekSummary } from "@/lib/services/sync-nfl-week";
 
 const inputClass =
-  "h-11 w-full rounded-xl border border-border-strong bg-field px-3 text-sm font-semibold text-ink outline-none focus:border-turf focus:ring-2 focus:ring-turf/20";
+  "h-11 w-full rounded-xl border border-transparent bg-ink/[0.05] px-3 focus:bg-white text-sm font-semibold text-ink outline-none focus:border-turf focus:ring-2 focus:ring-turf/20";
 
 const labelClass =
   "mb-1.5 block text-[10px] font-bold uppercase tracking-[0.1em] text-ink-faint";
@@ -271,7 +271,7 @@ export function AdminTools({
         </p>
       </div>
 
-      <section className="space-y-3 rounded-2xl border border-border bg-chalk p-4 shadow-card">
+      <section className="space-y-3 rounded-[1.4rem] bg-chalk shadow-card p-4">
         <h3 className="font-display text-base font-bold uppercase tracking-wide text-ink">
           Results
         </h3>
@@ -297,7 +297,7 @@ export function AdminTools({
         ) : null}
       </section>
 
-      <section className="space-y-3 rounded-2xl border border-border bg-chalk p-4 shadow-card">
+      <section className="space-y-3 rounded-[1.4rem] bg-chalk shadow-card p-4">
         <h3 className="font-display text-base font-bold uppercase tracking-wide text-ink">
           Odds
         </h3>
@@ -333,7 +333,7 @@ export function AdminTools({
         ) : null}
       </section>
 
-      <section className="space-y-3 rounded-2xl border border-border bg-chalk p-4 shadow-card">
+      <section className="space-y-3 rounded-[1.4rem] bg-chalk shadow-card p-4">
         <h3 className="font-display text-base font-bold uppercase tracking-wide text-ink">
           Override pick
         </h3>
@@ -376,7 +376,7 @@ export function AdminTools({
         </Button>
       </section>
 
-      <section className="rounded-2xl border border-border bg-chalk p-4 shadow-card">
+      <section className="rounded-[1.4rem] bg-chalk shadow-card p-4">
         <h3 className="font-display text-base font-bold uppercase tracking-wide text-ink">
           Members
         </h3>

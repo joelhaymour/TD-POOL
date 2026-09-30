@@ -231,12 +231,12 @@ export function RideBet({
                 }
               }}
               placeholder="https://..."
-              className="min-w-0 flex-1 rounded-xl border border-border bg-field px-3 py-2.5 text-sm text-ink outline-none focus:border-turf"
+              className="min-w-0 flex-1 rounded-xl border border-transparent bg-ink/[0.05] px-3 py-2.5 focus:bg-white text-sm text-ink outline-none focus:border-turf"
             />
             <button
               type="button"
               onClick={() => void pasteFromClipboard()}
-              className="flex shrink-0 items-center gap-1.5 rounded-xl border border-border-strong px-3 text-xs font-bold uppercase tracking-wide text-ink-muted transition hover:text-ink"
+              className="flex shrink-0 items-center gap-1.5 rounded-full bg-ink/[0.06] px-3 text-xs font-bold uppercase tracking-wide text-ink-muted transition hover:text-ink"
             >
               <ClipboardPaste className="h-4 w-4" aria-hidden />
               Paste
@@ -249,7 +249,7 @@ export function RideBet({
             maxLength={140}
             onChange={(e) => setNote(e.target.value)}
             placeholder="Note (optional) — e.g. $20 to win $340"
-            className="w-full rounded-xl border border-border bg-field px-3 py-2.5 text-sm text-ink outline-none focus:border-turf"
+            className="w-full rounded-xl border border-transparent bg-ink/[0.05] px-3 py-2.5 focus:bg-white text-sm text-ink outline-none focus:border-turf"
           />
           <button
             type="submit"
@@ -258,7 +258,7 @@ export function RideBet({
           >
             {busy ? "Saving…" : "Save link"}
           </button>
-          <div className="rounded-xl border border-border bg-field p-3">
+          <div className="rounded-2xl bg-ink/[0.04] p-3">
             <p className="text-[11px] font-bold uppercase tracking-wide text-ink-faint">
               Where to find it
             </p>

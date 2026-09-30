@@ -246,7 +246,7 @@ export function ShareFlow({ leagues }: { leagues: ShareLeague[] }) {
             <Loader2 className="h-6 w-6 animate-spin" aria-label="Loading" />
           </div>
         ) : phase === "empty" ? (
-          <section className="mt-6 space-y-4 rounded-2xl border border-border bg-chalk p-5 text-center shadow-card">
+          <section className="mt-6 space-y-4 rounded-[1.4rem] bg-chalk shadow-card p-5 text-center">
             <p className="text-sm text-ink-muted">
               In your sportsbook, open the bet, tap <span className="font-semibold text-ink">Share</span> and pick{" "}
               <span className="font-semibold text-ink">Pool’d</span>. Or copy it there and paste it here.
@@ -258,7 +258,7 @@ export function ShareFlow({ leagues }: { leagues: ShareLeague[] }) {
         ) : (
           <div className="mt-5 space-y-5">
             {/* The slip and what the read made of it */}
-            <section className="flex items-center gap-3 rounded-2xl border border-border bg-chalk p-3 shadow-card">
+            <section className="flex items-center gap-3 rounded-[1.4rem] bg-chalk shadow-card p-3">
               {picture ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={picture.url} alt="Your bet slip" className="h-20 w-14 shrink-0 rounded-md object-cover" />
@@ -291,7 +291,7 @@ export function ShareFlow({ leagues }: { leagues: ShareLeague[] }) {
               <h2 className="mb-2 font-display text-sm font-bold uppercase tracking-[0.12em] text-ink-muted">
                 Post to
               </h2>
-              <ul className="divide-y divide-border overflow-hidden rounded-2xl border border-border bg-chalk shadow-card">
+              <ul className="divide-y divide-border overflow-hidden rounded-[1.4rem] bg-chalk shadow-card">
                 {leagues.map((l) => {
                   const on = selected.includes(l.slug);
                   return (

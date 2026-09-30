@@ -157,7 +157,7 @@ export async function GroupLeaderboard({
       </ul>
 
       {bestLeg?.hit ? (
-        <div className="rounded-2xl border border-border bg-chalk p-4">
+        <div className="rounded-[1.4rem] bg-chalk shadow-card p-4">
           <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-ink-faint">
             Leg of the season
           </p>

@@ -88,7 +88,7 @@ export function BetSlip({
   return (
     <section
       className={cn(
-        "overflow-hidden rounded-2xl border border-border bg-chalk shadow-card",
+        "overflow-hidden rounded-[1.4rem] bg-chalk shadow-card",
         className,
       )}
     >
@@ -110,7 +110,7 @@ export function BetSlip({
           {legs.map((leg) => (
             <li
               key={leg.id}
-              className="flex items-center gap-2.5 rounded-xl border border-border bg-chalk px-3 py-2.5"
+              className="flex items-center gap-2.5 rounded-2xl bg-ink/[0.04] px-3 py-2.5"
             >
               <MemberChip name={leg.memberName} />
               <div className="min-w-0 flex-1">

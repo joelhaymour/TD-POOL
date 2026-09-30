@@ -65,14 +65,14 @@ export function ReactionButtons({
               void vote(dir);
             }}
             className={cn(
-              "flex items-center gap-1 rounded-lg border font-bold tabular-nums transition active:scale-95 disabled:cursor-default disabled:active:scale-100",
+              "pressable flex items-center gap-1 rounded-full font-bold tabular-nums disabled:cursor-default disabled:active:scale-100",
               pad,
               on
                 ? dir === 1
-                  ? "border-lime bg-lime text-accent-fg"
-                  : "border-danger bg-danger text-white"
-                : "border-border-strong text-ink-muted",
-              disabled && !on && "border-transparent",
+                  ? "bg-lime text-accent-fg"
+                  : "bg-danger text-white"
+                : "bg-ink/[0.06] text-ink-muted",
+              disabled && !on && "bg-transparent",
             )}
           >
             <Icon className={icon} aria-hidden />

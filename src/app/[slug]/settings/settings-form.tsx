@@ -17,7 +17,7 @@ import { ALL_SECTIONS_ON } from "@/lib/league/sections";
 import type { League, LeagueSection, LeagueSections, PickLockType, PickMode } from "@/lib/types";
 
 const inputClass =
-  "h-11 w-full rounded-xl border border-border-strong bg-field px-3 text-sm font-semibold text-ink outline-none focus:border-turf focus:ring-2 focus:ring-turf/20";
+  "h-11 w-full rounded-xl border border-transparent bg-ink/[0.05] px-3 focus:bg-white text-sm font-semibold text-ink outline-none focus:border-turf focus:ring-2 focus:ring-turf/20";
 
 const labelClass =
   "mb-1.5 block text-[10px] font-bold uppercase tracking-[0.1em] text-ink-faint";
@@ -234,7 +234,7 @@ export function SettingsForm({
         </p>
       </div>
 
-      <section className="space-y-3 rounded-2xl border border-border bg-chalk p-4 shadow-card">
+      <section className="space-y-3 rounded-[1.4rem] bg-chalk shadow-card p-4">
         <h3 className="font-display text-base font-bold uppercase tracking-wide text-ink">
           Invite friends
         </h3>
@@ -351,7 +351,7 @@ export function SettingsForm({
 
         <MoneySettingsForm value={money} onChange={setMoney} />
 
-        <label className="flex items-center gap-3 rounded-xl border border-border bg-chalk px-4 py-3">
+        <label className="flex items-center gap-3 rounded-2xl bg-ink/[0.04] px-4 py-3">
           <input
             type="checkbox"
             className="accent-turf"
@@ -385,7 +385,7 @@ export function SettingsForm({
 
           <Link
             href={`/${slug}/admin`}
-            className="block rounded-xl border border-border bg-field px-4 py-3 text-center text-sm font-bold text-turf hover:bg-field-deep"
+            className="block rounded-2xl bg-ink/[0.04] px-4 py-3 text-center text-sm font-bold text-turf hover:bg-field-deep"
           >
             Open admin tools →
           </Link>

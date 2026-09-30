@@ -105,7 +105,7 @@ export function TicketCard({
   }
 
   return (
-    <li className="overflow-hidden rounded-2xl border border-border bg-chalk shadow-card">
+    <li className="overflow-hidden rounded-[1.4rem] bg-chalk shadow-card">
       <button
         type="button"
         className="w-full px-3.5 py-3 text-left"
@@ -195,7 +195,7 @@ export function TicketCard({
             {ticket.screenshot_url ? (
               <button
                 type="button"
-                className="flex h-9 items-center gap-1.5 rounded-lg border border-border-strong px-2.5 text-[11px] font-bold uppercase tracking-wide text-ink-muted transition hover:text-ink"
+                className="pressable flex h-9 items-center gap-1.5 rounded-full bg-ink/[0.06] px-3 text-[11px] font-bold uppercase tracking-wide text-ink-muted hover:text-ink"
                 onClick={() => setPicture(true)}
               >
                 <ImageIcon className="h-3.5 w-3.5" aria-hidden /> The slip
@@ -206,10 +206,10 @@ export function TicketCard({
                 type="button"
                 disabled={busy}
                 className={cn(
-                  "flex h-9 items-center gap-1.5 rounded-lg px-2.5 text-[11px] font-bold uppercase tracking-wide transition disabled:opacity-50",
+                  "pressable flex h-9 items-center gap-1.5 rounded-full px-3 text-[11px] font-bold uppercase tracking-wide disabled:opacity-50",
                   riding
                     ? "bg-lime text-accent-fg"
-                    : "border border-border-strong text-ink-muted hover:text-ink",
+                    : "bg-ink/[0.06] text-ink-muted hover:text-ink",
                 )}
                 onClick={() => void toggleRide()}
               >
@@ -224,10 +224,10 @@ export function TicketCard({
                 disabled={busy}
                 aria-pressed={following}
                 className={cn(
-                  "flex h-9 items-center gap-1.5 rounded-lg px-2.5 text-[11px] font-bold uppercase tracking-wide transition disabled:opacity-50",
+                  "pressable flex h-9 items-center gap-1.5 rounded-full px-3 text-[11px] font-bold uppercase tracking-wide disabled:opacity-50",
                   following
                     ? "border border-lime bg-lime/10 text-turf"
-                    : "border border-border-strong text-ink-muted hover:text-ink",
+                    : "bg-ink/[0.06] text-ink-muted hover:text-ink",
                 )}
                 onClick={() => void toggleFollow()}
               >
@@ -239,7 +239,7 @@ export function TicketCard({
             {mine || viewer.isAdmin ? (
               <button
                 type="button"
-                className="flex h-9 items-center rounded-lg px-2 text-ink-faint transition hover:text-danger"
+                className="flex h-9 items-center rounded-full px-2 text-ink-faint transition hover:text-danger"
                 onClick={() => setConfirmDelete(true)}
                 aria-label="Delete ticket"
               >

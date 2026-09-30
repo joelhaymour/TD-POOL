@@ -24,7 +24,7 @@ export default function ErrorPage({ reset }: { error: Error & { digest?: string 
           </button>
           <Link
             href="/"
-            className="inline-flex h-12 items-center rounded-xl border border-border-strong px-5 font-display text-sm font-extrabold uppercase tracking-wider text-ink transition active:scale-[0.98]"
+            className="inline-flex h-12 items-center rounded-full bg-ink/[0.06] px-5 font-display text-sm font-extrabold uppercase tracking-wider text-ink transition active:scale-[0.98]"
           >
             Your leagues
           </Link>

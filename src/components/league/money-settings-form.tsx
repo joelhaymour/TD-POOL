@@ -48,7 +48,7 @@ function Field({
 }
 
 const inputClass =
-  "h-11 w-full rounded-xl border border-border-strong bg-field px-3 text-sm font-semibold text-ink outline-none transition focus:border-turf focus:ring-2 focus:ring-turf/20";
+  "h-11 w-full rounded-xl border border-transparent bg-ink/[0.05] px-3 focus:bg-white text-sm font-semibold text-ink outline-none transition focus:border-turf focus:ring-2 focus:ring-turf/20";
 
 export function MoneySettingsForm({
   value,
@@ -116,7 +116,7 @@ export function MoneySettingsForm({
       ) : null}
 
       {value.betting_mode !== "none" ? (
-        <div className="rounded-xl border border-border bg-field px-4 py-3">
+        <div className="rounded-2xl bg-ink/[0.04] px-4 py-3">
           <p className="text-[10px] font-bold uppercase tracking-[0.1em] text-ink-faint">
             Weekly stake
           </p>

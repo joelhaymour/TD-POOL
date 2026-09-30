@@ -51,7 +51,7 @@ export function WeeklyResults({
   return (
     <section
       className={cn(
-        "rounded-2xl border border-border bg-chalk p-4 shadow-card",
+        "rounded-[1.4rem] bg-chalk shadow-card p-4",
         className,
       )}
     >

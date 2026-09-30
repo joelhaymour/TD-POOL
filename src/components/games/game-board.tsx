@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { CalendarDays, ChevronLeft, ChevronRight } from "lucide-react";
 import { EmptyState } from "@/components/ui/empty-state";
+import { Segmented } from "@/components/ui/segmented";
 import { PlayerRow, PlayerRowHeader } from "@/components/players/player-row";
 import type { PlayerCardData } from "@/components/players/player-card";
 import { teamNickname } from "@/lib/nfl/teams";
@@ -171,49 +172,29 @@ export function GameBoard({
           </p>
         </div>
 
-        <div
-          role="tablist"
-          aria-label="Team"
-          className="grid grid-cols-2 gap-1.5"
-        >
-          {(["away", "home"] as const).map((key) => {
-            const abbr = teams[key];
-            const active = side === key;
-            const count = players.filter((p) => p.team === abbr).length;
-            return (
-              <button
-                key={key}
-                role="tab"
-                type="button"
-                aria-selected={active}
-                onClick={() => setSide(key)}
-                className={cn(
-                  "rounded-xl px-3 py-2 text-sm font-bold uppercase tracking-wide transition",
-                  active
-                    ? "bg-lime text-accent-fg"
-                    : "border border-border bg-chalk text-ink-muted hover:border-border-strong",
-                )}
-              >
-                {teamNickname(abbr)}
-                <span
-                  className={cn(
-                    "ml-1.5 text-[11px] font-semibold",
-                    active ? "text-lime/60" : "text-ink-faint",
-                  )}
-                >
-                  {count}
+        <Segmented
+          label="Team"
+          value={side}
+          onChange={setSide}
+          options={(["away", "home"] as const).map((key) => ({
+            value: key,
+            label: (
+              <>
+                {teamNickname(teams[key])}
+                <span className="ml-1.5 text-[11px] font-semibold text-ink-faint">
+                  {players.filter((p) => p.team === teams[key]).length}
                 </span>
-              </button>
-            );
-          })}
-        </div>
+              </>
+            ),
+          }))}
+        />
 
         {roster.length === 0 ? (
-          <p className="rounded-2xl border border-border bg-chalk px-4 py-8 text-center text-sm text-ink-muted">
+          <p className="rounded-[1.4rem] bg-chalk shadow-card px-4 py-8 text-center text-sm text-ink-muted">
             No ranked players for {teamNickname(activeTeam)} this week.
           </p>
         ) : (
-          <div className="overflow-hidden rounded-2xl border border-border bg-chalk shadow-card">
+          <div className="overflow-hidden rounded-[1.4rem] bg-chalk shadow-card">
             <PlayerRowHeader />
             <ul className="divide-y divide-border">
               {roster.map((player) => (
@@ -253,8 +234,8 @@ export function GameBoard({
                     type="button"
                     onClick={() => openGame(game.id)}
                     className={cn(
-                      "flex w-full items-center gap-3 rounded-2xl border border-border bg-chalk px-4 py-3 text-left shadow-card transition",
-                      "hover:border-border-strong hover:bg-field focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-turf",
+                      "flex w-full items-center gap-3 rounded-[1.4rem] bg-chalk px-4 py-3 text-left shadow-card pressable",
+                      "hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-turf",
                     )}
                   >
                     <div className="min-w-0 flex-1">

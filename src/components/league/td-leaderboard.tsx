@@ -86,7 +86,7 @@ export function TdLeaderboard({ viewerMemberId }: { viewerMemberId?: string }) {
       </div>
 
       {data.standings.length === 0 ? (
-        <p className="rounded-2xl border border-border bg-chalk px-4 py-8 text-center text-sm text-ink-muted">
+        <p className="rounded-[1.4rem] bg-chalk shadow-card px-4 py-8 text-center text-sm text-ink-muted">
           No members yet.
         </p>
       ) : (
@@ -142,7 +142,7 @@ export function TdLeaderboard({ viewerMemberId }: { viewerMemberId?: string }) {
           </ul>
 
           {best?.avgOdds != null ? (
-            <div className="rounded-2xl border border-border bg-chalk p-4">
+            <div className="rounded-[1.4rem] bg-chalk shadow-card p-4">
               <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-ink-faint">
                 Longest average odds
               </p>

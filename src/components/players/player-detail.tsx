@@ -70,7 +70,7 @@ function Section({
   children: React.ReactNode;
 }) {
   return (
-    <section className="rounded-2xl border border-border bg-chalk p-4 shadow-card">
+    <section className="rounded-[1.4rem] bg-chalk shadow-card p-4">
       <h2 className="font-display text-base font-bold uppercase tracking-[0.1em] text-ink">
         {title}
       </h2>
@@ -300,7 +300,7 @@ export function PlayerDetail({
 
   return (
     <div className={cn("space-y-3 pb-6", className)}>
-      <header className="rounded-2xl border border-border bg-chalk p-4 shadow-card">
+      <header className="rounded-[1.4rem] bg-chalk shadow-card p-4">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-turf">

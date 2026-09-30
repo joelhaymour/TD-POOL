@@ -2,12 +2,13 @@
 
 import { useActionState, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Segmented } from "@/components/ui/segmented";
 import { signIn, signUp, type AuthState } from "./actions";
 
 const emptyAuthState: AuthState = { error: null, notice: null };
 
 const inputClass =
-  "h-11 w-full rounded-xl border border-border-strong bg-field px-3 text-sm font-semibold text-ink outline-none focus:border-turf focus:ring-2 focus:ring-turf/20";
+  "h-11 w-full rounded-xl border border-transparent bg-ink/[0.05] px-3 focus:bg-white text-sm font-semibold text-ink outline-none focus:border-turf focus:ring-2 focus:ring-turf/20";
 
 const labelClass =
   "mb-1.5 block text-[10px] font-bold uppercase tracking-[0.1em] text-ink-faint";
@@ -23,7 +24,7 @@ function AuthForm({ mode, next }: { mode: Mode; next: string }) {
   return (
     <form
       action={formAction}
-      className="mt-4 space-y-3 rounded-2xl border border-border bg-chalk/90 p-4 shadow-card backdrop-blur-sm"
+      className="mt-4 space-y-3 rounded-[1.4rem] bg-white/80 p-4 shadow-card backdrop-blur-xl"
     >
       <input type="hidden" name="next" value={next} />
 
@@ -96,22 +97,16 @@ export function LoginForm({ next }: { next: string }) {
 
   return (
     <>
-      <div className="mt-8 grid grid-cols-2 gap-2 rounded-xl border border-border bg-chalk/70 p-1">
-        {(["signin", "signup"] as const).map((value) => (
-          <button
-            key={value}
-            type="button"
-            className={`h-10 rounded-lg font-display text-xs font-bold uppercase tracking-wider transition ${
-              mode === value
-                ? "bg-lime text-accent-fg"
-                : "text-ink-muted hover:text-ink"
-            }`}
-            onClick={() => setMode(value)}
-          >
-            {value === "signin" ? "Sign in" : "Sign up"}
-          </button>
-        ))}
-      </div>
+      <Segmented
+        label="Sign in or sign up"
+        className="mt-8"
+        value={mode}
+        onChange={setMode}
+        options={[
+          { value: "signin", label: "Sign in" },
+          { value: "signup", label: "Sign up" },
+        ]}
+      />
 
       {/* Remounting on mode change clears any error left over from the other tab. */}
       <AuthForm key={mode} mode={mode} next={next} />

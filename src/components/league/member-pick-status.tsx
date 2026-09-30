@@ -101,7 +101,7 @@ export function MemberPickStatus({
   return (
     <section
       className={cn(
-        "overflow-hidden rounded-2xl border border-border bg-chalk shadow-card",
+        "overflow-hidden rounded-[1.4rem] bg-chalk shadow-card",
         className,
       )}
     >
@@ -124,7 +124,7 @@ export function MemberPickStatus({
             type="button"
             disabled={pinging}
             onClick={() => void ping()}
-            className="flex h-8 items-center gap-1.5 rounded-lg border border-border-strong px-2.5 text-[11px] font-bold uppercase tracking-wide text-ink transition active:scale-95 disabled:opacity-60"
+            className="flex h-8 items-center gap-1.5 rounded-full bg-ink/[0.06] px-2.5 text-[11px] font-bold uppercase tracking-wide text-ink transition active:scale-95 disabled:opacity-60"
           >
             <BellRing className="h-3.5 w-3.5" aria-hidden />
             {pinging ? "Pinging…" : `Ping ${missing}`}

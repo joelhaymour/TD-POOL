@@ -95,7 +95,7 @@ export function TdHistory() {
         return (
           <section
             key={w.week.id}
-            className="overflow-hidden rounded-2xl border border-border bg-chalk shadow-card"
+            className="overflow-hidden rounded-[1.4rem] bg-chalk shadow-card"
           >
             <div className="flex items-center justify-between gap-2 border-b border-border bg-field px-4 py-3">
               <div>

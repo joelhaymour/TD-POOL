@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { glassButton } from "@/components/layout/league-header";
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { BellOff, BellRing, ChevronLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -114,7 +115,7 @@ export function NotificationsClient() {
     group.length > 0 ? (
       <section>
         <h2 className="mb-2 font-display text-sm font-bold uppercase tracking-[0.12em] text-ink-muted">{label}</h2>
-        <ul className="divide-y divide-border overflow-hidden rounded-2xl border border-border bg-chalk shadow-card">
+        <ul className="divide-y divide-border overflow-hidden rounded-[1.4rem] bg-chalk shadow-card">
           {group.map((n) => (
             <li key={n.id}>
               <Link href={n.url || "/"} className="flex gap-3 px-3.5 py-3 transition active:bg-field-deep">
@@ -144,7 +145,7 @@ export function NotificationsClient() {
             type="button"
             aria-label="Back"
             onClick={() => (window.history.length > 1 ? router.back() : router.push("/"))}
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-border bg-chalk text-ink transition active:scale-95"
+            className={glassButton}
           >
             <ChevronLeft className="h-5 w-5" strokeWidth={2.5} />
           </button>
@@ -153,14 +154,14 @@ export function NotificationsClient() {
             type="button"
             onClick={() => setSettingsOpen((v) => !v)}
             aria-expanded={settingsOpen}
-            className="h-10 rounded-xl border border-border bg-chalk px-3 text-xs font-bold uppercase tracking-wider text-ink-muted"
+            className="glass-thick pressable h-10 rounded-full px-4 text-[13px] font-semibold text-ink"
           >
             Settings
           </button>
         </header>
 
         {settingsOpen || (support !== "unsupported" && !pushOn && items !== null && items.length === 0) ? (
-          <section className="mt-4 space-y-3 rounded-2xl border border-border bg-chalk p-4 shadow-card">
+          <section className="mt-4 space-y-3 rounded-[1.4rem] bg-chalk shadow-card p-4">
             <div className="flex items-start gap-3">
               {pushOn ? (
                 <BellRing className="mt-0.5 h-5 w-5 shrink-0 text-turf" aria-hidden />
