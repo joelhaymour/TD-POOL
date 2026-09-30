@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { requireViewerMembership } from "@/lib/auth/league";
+import { isAppOwner } from "@/lib/auth/owner";
+import { requireUser } from "@/lib/auth/session";
 import { AdminTools } from "./admin-tools";
 
 export default async function AdminPage({ params }: PageProps<"/[slug]">) {
@@ -25,5 +27,6 @@ export default async function AdminPage({ params }: PageProps<"/[slug]">) {
     );
   }
 
-  return <AdminTools slug={slug} viewerMemberId={member.id} />;
+  const user = await requireUser();
+  return <AdminTools slug={slug} viewerMemberId={member.id} isOwner={isAppOwner(user.email)} />;
 }

@@ -12,8 +12,8 @@ type SyncBody = {
 
 /**
  * Admin: sync NFL game statuses and resolve TD pick results for the league week.
- * Body: { simulateFinal?: boolean }
- * When simulateFinal=true, asOf is set far in the future so all games finalize.
+ * Body: { simulateFinal?: boolean } — development only: asOf is set far in the
+ * future so the mock provider finalizes every game.
  */
 export async function POST(
   request: Request,
@@ -45,9 +45,9 @@ export async function POST(
       }
     }
 
-    const asOf = body.simulateFinal
-      ? new Date("2099-12-31T23:59:59.000Z")
-      : new Date();
+    // A testing aid: never in production, where it would only confuse.
+    const simulateFinal = Boolean(body.simulateFinal) && process.env.NODE_ENV !== "production";
+    const asOf = simulateFinal ? new Date("2099-12-31T23:59:59.000Z") : new Date();
 
     const summary = await syncNflWeek(store, {
       season,
@@ -58,7 +58,7 @@ export async function POST(
 
     return NextResponse.json({
       ok: true,
-      simulateFinal: Boolean(body.simulateFinal),
+      simulateFinal,
       summary,
     });
   } catch (err) {

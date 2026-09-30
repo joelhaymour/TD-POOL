@@ -16,9 +16,12 @@ const labelClass =
 export function AdminTools({
   slug,
   viewerMemberId,
+  isOwner = false,
 }: {
   slug: string;
   viewerMemberId: string;
+  /** Pool'd's owner: may force an odds pull (spends shared credits). */
+  isOwner?: boolean;
 }) {
   const { toast } = useToast();
 
@@ -266,8 +269,8 @@ export function AdminTools({
           Admin
         </h2>
         <p className="mt-1 text-sm text-ink-muted">
-          Override picks and force-refresh results or odds. Sync runs
-          automatically when the league is opened.
+          Override picks and refresh results. Scores and results update on
+          their own while the league is open.
         </p>
       </div>
 
@@ -302,8 +305,8 @@ export function AdminTools({
           Odds
         </h3>
         <p className="text-sm leading-relaxed text-ink-muted">
-          Anytime TD odds refresh automatically when the league is opened
-          (about every 5 minutes).
+          Anytime TD odds refresh on their own on Wednesday, Thursday, Sunday
+          and Monday mornings.
         </p>
         <p className="text-xs text-ink-muted">
           Source:{" "}
@@ -316,14 +319,16 @@ export function AdminTools({
             ? new Date(dashboard.odds_updated_at).toLocaleString()
             : "n/a"}
         </p>
-        <Button
-          fullWidth
-          variant="secondary"
-          disabled={oddsRefreshing}
-          onClick={() => void runOddsRefresh()}
-        >
-          {oddsRefreshing ? "Refreshing…" : "Force odds refresh"}
-        </Button>
+        {isOwner ? (
+          <Button
+            fullWidth
+            variant="secondary"
+            disabled={oddsRefreshing}
+            onClick={() => void runOddsRefresh()}
+          >
+            {oddsRefreshing ? "Refreshing…" : "Force odds refresh (owner only · uses credits)"}
+          </Button>
+        ) : null}
         {lastOddsSync ? (
           <p className="rounded-xl bg-field px-3 py-2 text-xs text-ink-muted">
             Last force refresh · {lastOddsSync.source} · {lastOddsSync.quotes}{" "}
