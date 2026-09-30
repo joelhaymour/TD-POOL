@@ -19,6 +19,16 @@ final class MainViewController: CAPBridgeViewController {
         bridge?.registerPluginInstance(TDPoolClipboardPlugin())
         bridge?.registerPluginInstance(PooldShareInboxPlugin())
         webView?.allowsBackForwardNavigationGestures = true
+        // Behind the page (while it loads, and past the edges when it
+        // rubber-bands): the site's field colour, light or dark with the phone.
+        let field = UIColor { traits in
+            traits.userInterfaceStyle == .dark
+                ? UIColor(red: 0x0e / 255, green: 0x11 / 255, blue: 0x0d / 255, alpha: 1)
+                : UIColor(red: 0xf2 / 255, green: 0xf3 / 255, blue: 0xee / 255, alpha: 1)
+        }
+        view.backgroundColor = field
+        webView?.backgroundColor = field
+        webView?.scrollView.backgroundColor = field
         if let scrollView = webView?.scrollView {
             scrollView.bounces = true
             scrollView.alwaysBounceVertical = true

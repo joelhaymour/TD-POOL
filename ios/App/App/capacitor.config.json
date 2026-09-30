@@ -27,6 +27,7 @@
 	"packageClassList": [
 		"HapticsPlugin",
 		"KeyboardPlugin",
-		"PushNotificationsPlugin"
+		"PushNotificationsPlugin",
+		"StatusBarPlugin"
 	]
 }

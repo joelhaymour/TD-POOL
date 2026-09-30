@@ -51,10 +51,44 @@
 /**
  * Night — the same names, turned down. A green-black field, cards a step
  * lighter, soft white ink, and a brighter green so actions and wins still
- * stand out. Follows the phone's appearance setting.
+ * stand out. Used when the account sheet says Dark, or says Automatic and
+ * the phone is in dark mode.
  */
+:root[data-theme="dark"] {
+  --field: #0e110d;
+  --field-deep: #181c17;
+  --ink: #eef1ea;
+  --ink-muted: #a4aba2;
+  --ink-faint: #737b71;
+  --turf: #4cc47a;
+  --turf-deep: #3aa864;
+  --chalk: #181c17;
+  --lime: #22a355;
+  --danger: #ff6a55;
+  --warning: #e3a33d;
+  --border: #2a3028;
+  --border-strong: #394036;
+  --raised: #1d221c;
+  --raised-fg: #eef1ea;
+  --accent-fg: #ffffff;
+  --scrim: rgba(0, 0, 0, 0.62);
+  --shadow-card: 0 0 0 0.5px rgba(255, 255, 255, 0.07), 0 1px 2px rgba(0, 0, 0, 0.3),
+    0 10px 24px -12px rgba(0, 0, 0, 0.6);
+  --glass: rgba(30, 35, 29, 0.62);
+  --glass-thick: rgba(34, 40, 33, 0.82);
+  --glass-edge: rgba(255, 255, 255, 0.1);
+  --glass-shadow: 0 0 0 0.5px rgba(255, 255, 255, 0.08), 0 10px 30px -6px rgba(0, 0, 0, 0.55),
+    inset 0 1px 0 var(--glass-edge);
+  --on-ink: #0e110d;
+  --thumb: #3a4238;
+  --wash-green: rgba(34, 163, 85, 0.12);
+  --wash-warm: rgba(236, 205, 150, 0.05);
+  --wash-low: rgba(34, 163, 85, 0.06);
+  color-scheme: dark;
+}
+
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme="light"]) {
     --field: #0e110d;
     --field-deep: #181c17;
     --ink: #eef1ea;
@@ -85,6 +119,18 @@
     --wash-warm: rgba(236, 205, 150, 0.05);
     --wash-low: rgba(34, 163, 85, 0.06);
     color-scheme: dark;
+  }
+}
+
+/* `dark:` utilities follow the same rule as the tokens. */
+@custom-variant dark {
+  &:where(:root[data-theme="dark"] *) {
+    @slot;
+  }
+  @media (prefers-color-scheme: dark) {
+    &:where(:root:not([data-theme="light"]) *) {
+      @slot;
+    }
   }
 }
 

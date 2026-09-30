@@ -1,9 +1,12 @@
 import type { Metadata, Viewport } from "next";
 import type { CSSProperties } from "react";
+import { cookies } from "next/headers";
 import { Barlow_Condensed, Manrope } from "next/font/google";
 import { PwaRegister } from "@/components/pwa-register";
 import { PushBootstrap } from "@/components/notify/push-bootstrap";
 import { NativeRefresh } from "@/components/native-refresh";
+import { ThemeSync } from "@/components/appearance-picker";
+import { parseTheme, THEME_COOKIE } from "@/lib/theme";
 import { ToastProvider } from "@/components/ui/toast";
 import "./globals.css";
 
@@ -57,10 +60,13 @@ const stagingVars = {
   "--top-inset": "0px",
 } as CSSProperties;
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default async function RootLayout({ children }: LayoutProps<"/">) {
+  // Light, Dark or Automatic from the account sheet, painted on the first frame.
+  const theme = parseTheme((await cookies()).get(THEME_COOKIE)?.value);
   return (
     <html
       lang="en"
+      data-theme={theme}
       className={`${manrope.variable} ${barlow.variable} h-full antialiased`}
     >
       <body
@@ -76,6 +82,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <PwaRegister />
         <PushBootstrap />
         <NativeRefresh />
+        <ThemeSync />
       </body>
     </html>
   );
