@@ -35,7 +35,7 @@ export function NotificationBell({ className }: { className?: string }) {
       href="/notifications"
       aria-label={unread > 0 ? `Notifications, ${unread} unread` : "Notifications"}
       className={cn(
-        "relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-border bg-chalk text-ink-muted transition active:scale-95",
+        "glass-thick pressable relative flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-ink-muted",
         className,
       )}
     >

@@ -511,7 +511,7 @@ export function GroupBettingClient({
               <button
                 type="button"
                 onClick={() => setSheet("lock")}
-                className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-lime font-display text-sm font-extrabold uppercase tracking-wider text-accent-fg transition active:scale-[0.98]"
+                className="flex h-11 w-full items-center justify-center gap-2 rounded-full bg-lime pressable text-[15px] font-semibold text-accent-fg shadow-[0_6px_16px_-6px_rgba(17,128,60,0.55)]"
               >
                 <Lock className="h-4 w-4" /> Lock in bet
               </button>
@@ -546,7 +546,7 @@ export function GroupBettingClient({
             type="button"
             disabled={creating}
             onClick={() => void createSlip(nextSlipTitle())}
-            className="mt-4 flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-lime font-display text-sm font-extrabold uppercase tracking-wider text-accent-fg transition active:scale-[0.98] disabled:opacity-60"
+            className="mt-4 flex h-12 w-full items-center justify-center gap-2 rounded-full bg-lime pressable text-[15px] font-semibold text-accent-fg shadow-[0_6px_16px_-6px_rgba(17,128,60,0.55)] disabled:opacity-60"
           >
             <Plus className="h-4 w-4" />
             {creating ? "Starting…" : "Start a parlay"}
@@ -825,7 +825,7 @@ export function GroupBettingClient({
         <div className="space-y-2 pb-2">
           <button
             type="button"
-            className="h-12 w-full rounded-xl bg-lime font-display text-sm font-extrabold uppercase tracking-wider text-accent-fg transition active:scale-[0.98]"
+            className="h-12 w-full rounded-full bg-lime pressable text-[15px] font-semibold text-accent-fg shadow-[0_6px_16px_-6px_rgba(17,128,60,0.55)]"
             onClick={() => {
               setSheet(null);
               void patchSlip({ status: "locked" });

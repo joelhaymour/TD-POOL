@@ -9,14 +9,18 @@ type InboxPlugin = { take(): Promise<{ image?: string | null; text?: string | nu
 let plugin: InboxPlugin | null = null;
 
 /**
- * One take per page load: taking clears the inbox, so a second caller (React
- * runs effects twice in development) must get the same answer, not an empty
- * inbox.
+ * Taking clears the inbox, so a caller that arrives while a take is still in
+ * flight (React runs effects twice in development) shares its answer. Once it
+ * settles the slot empties: the app keeps one page alive across screens, and
+ * a remembered answer would hand the last shared bet to the next "Post a
+ * ticket".
  */
 let taking: Promise<SharedTicket | null> | null = null;
 
 export function takeSharedTicket(): Promise<SharedTicket | null> {
-  taking ??= take();
+  taking ??= take().finally(() => {
+    taking = null;
+  });
   return taking;
 }
 

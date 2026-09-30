@@ -14,8 +14,9 @@ export type LeagueHeaderProps = {
   children?: ReactNode;
 };
 
-const squareButton =
-  "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-border bg-chalk text-ink transition active:scale-95 hover:border-border-strong";
+/** Round glass buttons, like the ones floating in iOS 26 navigation bars. */
+export const glassButton =
+  "glass-thick pressable flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-ink";
 
 export function LeagueHeader({
   leagueName,
@@ -30,7 +31,7 @@ export function LeagueHeader({
     <div className={className}>
       <div className="flex items-center gap-2.5">
         {/* The way back to every league: a full-size button, not a caption. */}
-        <Link href="/" aria-label="All leagues" className={squareButton}>
+        <Link href="/" aria-label="All leagues" className={glassButton}>
           <ChevronLeft className="h-5 w-5" strokeWidth={2.5} />
         </Link>
         <div className="min-w-0 flex-1">
@@ -43,7 +44,7 @@ export function LeagueHeader({
           </p>
         </div>
         {actions}
-        <Link href={settingsHref} aria-label="League settings" className={`${squareButton} text-ink-muted`}>
+        <Link href={settingsHref} aria-label="League settings" className={`${glassButton} text-ink-muted`}>
           <Settings className="h-5 w-5" />
         </Link>
       </div>

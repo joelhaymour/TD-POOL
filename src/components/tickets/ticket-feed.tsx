@@ -221,7 +221,7 @@ export function TicketFeed({
         <button
           type="button"
           onClick={() => setPosting(true)}
-          className="flex h-11 shrink-0 items-center gap-1.5 rounded-xl bg-lime px-4 font-display text-sm font-extrabold uppercase tracking-wider text-accent-fg transition active:scale-[0.98]"
+          className="flex h-11 shrink-0 items-center gap-1.5 rounded-full bg-lime px-4 pressable text-[15px] font-semibold text-accent-fg shadow-[0_6px_16px_-6px_rgba(17,128,60,0.55)]"
         >
           <Plus className="h-4 w-4" /> Post
         </button>
@@ -236,7 +236,7 @@ export function TicketFeed({
           <button
             type="button"
             onClick={() => setPosting(true)}
-            className="mt-4 inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-lime px-5 font-display text-sm font-extrabold uppercase tracking-wider text-accent-fg transition active:scale-[0.98]"
+            className="mt-4 inline-flex h-11 items-center justify-center gap-2 rounded-full bg-lime px-5 pressable text-[15px] font-semibold text-accent-fg shadow-[0_6px_16px_-6px_rgba(17,128,60,0.55)]"
           >
             <Plus className="h-4 w-4" /> Post a ticket
           </button>

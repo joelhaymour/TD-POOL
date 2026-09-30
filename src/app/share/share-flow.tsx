@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Check, ClipboardPaste, Loader2, X } from "lucide-react";
+import { glassButton } from "@/components/layout/league-header";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
 import { BookBadge } from "@/components/tickets/book-badge";
@@ -229,7 +230,7 @@ export function ShareFlow({ leagues }: { leagues: ShareLeague[] }) {
           <Link
             href="/"
             aria-label="Close"
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-border bg-chalk text-ink transition active:scale-95"
+            className={glassButton}
           >
             <X className="h-5 w-5" />
           </Link>
@@ -351,8 +352,8 @@ export function ShareFlow({ leagues }: { leagues: ShareLeague[] }) {
       </main>
 
       {phase === "review" || phase === "posting" ? (
-        <div className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-field/95 px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3 backdrop-blur-md">
-          <div className="mx-auto max-w-lg">
+        <div className="fixed inset-x-0 bottom-[max(0.75rem,calc(env(safe-area-inset-bottom)-0.625rem))] z-40 px-4">
+          <div className="glass mx-auto max-w-lg rounded-[1.75rem] p-2">
             <Button
               type="button"
               fullWidth
@@ -369,7 +370,7 @@ export function ShareFlow({ leagues }: { leagues: ShareLeague[] }) {
                     : `Post to ${selected.length} leagues`}
             </Button>
             {blocked && legs.length > 0 && phase === "review" ? (
-              <p className="mt-1.5 text-center text-[11px] text-ink-faint">Fill in the flagged legs to post.</p>
+              <p className="mt-1.5 pb-0.5 text-center text-[11px] text-ink-muted">Fill in the flagged legs to post.</p>
             ) : null}
           </div>
         </div>

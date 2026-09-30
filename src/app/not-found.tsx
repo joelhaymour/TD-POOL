@@ -14,7 +14,7 @@ export default function NotFound() {
         </p>
         <Link
           href="/"
-          className="mt-8 inline-flex h-12 w-fit items-center rounded-xl bg-lime px-5 font-display text-sm font-extrabold uppercase tracking-wider text-accent-fg transition active:scale-[0.98]"
+          className="mt-8 inline-flex h-12 w-fit items-center rounded-full bg-lime px-5 pressable text-[15px] font-semibold text-accent-fg shadow-[0_6px_16px_-6px_rgba(17,128,60,0.55)]"
         >
           Back to your leagues
         </Link>

@@ -1,8 +1,16 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import {
+  useOptimistic,
+  useRef,
+  useState,
+  useTransition,
+  type PointerEvent as ReactPointerEvent,
+} from "react";
 import { ClipboardList, History, Layers } from "lucide-react";
+import { tap, tick } from "@/lib/native/haptics";
 import { cn } from "@/lib/utils/cn";
 import type { BottomNavItem, SectionNav } from "@/components/layout/nav-items";
 
@@ -63,41 +71,149 @@ const iconMap = {
   board: TrophyIcon,
 };
 
+function activeIndex(items: BottomNavItem[], basePath: string, pathname: string): number {
+  return items.findIndex(
+    (item) => pathname === item.href || (item.href !== basePath && pathname.startsWith(item.href)),
+  );
+}
+
+/**
+ * The floating glass tab bar. A lens sits behind the current tab; put a
+ * finger on the bar and slide, and the lens follows it tab to tab with a tick
+ * at each, opening the one you let go on. The lens moves the moment you
+ * choose, before the new screen has loaded.
+ */
 export function BottomNav({ basePath, items, className }: BottomNavProps) {
   const pathname = usePathname();
+  const router = useRouter();
+  const [, startTransition] = useTransition();
+  const current = activeIndex(items, basePath, pathname);
+  const [chosen, setChosen] = useOptimistic(current);
+  const [dragIndex, setDragIndex] = useState<number | null>(null);
+  const bar = useRef<HTMLDivElement>(null);
+  const drag = useRef<{ id: number; startX: number; moved: boolean } | null>(null);
+  const swallowClick = useRef(false);
+
+  const shown = dragIndex ?? chosen;
+
+  function indexAt(clientX: number): number {
+    const rect = bar.current?.getBoundingClientRect();
+    if (!rect) return shown;
+    const i = Math.floor(((clientX - rect.left) / rect.width) * items.length);
+    return Math.min(items.length - 1, Math.max(0, i));
+  }
+
+  function go(index: number, slid: boolean) {
+    const item = items[index];
+    if (!item) return;
+    if (index === current) {
+      // Tapping the tab you're on scrolls it back to the top, like iOS.
+      if (!slid) window.scrollTo({ top: 0, behavior: "smooth" });
+      return;
+    }
+    tap();
+    startTransition(() => {
+      setChosen(index);
+      router.push(item.href);
+    });
+  }
+
+  function onPointerDown(e: ReactPointerEvent<HTMLDivElement>) {
+    if (e.pointerType === "mouse" && e.button !== 0) return;
+    drag.current = { id: e.pointerId, startX: e.clientX, moved: false };
+    setDragIndex(indexAt(e.clientX));
+  }
+
+  function onPointerMove(e: ReactPointerEvent<HTMLDivElement>) {
+    const d = drag.current;
+    if (!d || d.id !== e.pointerId) return;
+    if (!d.moved && Math.abs(e.clientX - d.startX) > 6) d.moved = true;
+    const i = indexAt(e.clientX);
+    if (i !== dragIndex) {
+      if (d.moved) tick();
+      setDragIndex(i);
+    }
+  }
+
+  function onPointerUp(e: ReactPointerEvent<HTMLDivElement>) {
+    const d = drag.current;
+    if (!d || d.id !== e.pointerId) return;
+    drag.current = null;
+    setDragIndex(null);
+    // The click that follows lands on whichever tab the finger started on;
+    // the bar has already chosen, so let it go by.
+    swallowClick.current = true;
+    window.setTimeout(() => {
+      swallowClick.current = false;
+    }, 400);
+    go(indexAt(e.clientX), d.moved);
+  }
+
+  function onPointerCancel() {
+    drag.current = null;
+    setDragIndex(null);
+  }
 
   return (
     <nav
       className={cn(
-        "fixed inset-x-0 bottom-0 z-40 border-t border-border bg-chalk/95 backdrop-blur-md",
-        "pb-[env(safe-area-inset-bottom)]",
+        "fixed inset-x-0 z-40 px-4",
+        "bottom-[max(0.75rem,calc(env(safe-area-inset-bottom)-0.625rem))]",
         className,
       )}
       aria-label="Primary"
     >
       <div
-        className="mx-auto grid max-w-lg"
-        style={{
-          gridTemplateColumns: `repeat(${items.length}, minmax(0, 1fr))`,
+        ref={bar}
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={onPointerUp}
+        onPointerCancel={onPointerCancel}
+        onClickCapture={(e) => {
+          if (swallowClick.current) {
+            e.preventDefault();
+            e.stopPropagation();
+            swallowClick.current = false;
+          }
         }}
+        className="glass relative mx-auto grid max-w-md touch-none rounded-full p-1"
+        style={{ gridTemplateColumns: `repeat(${items.length}, minmax(0, 1fr))` }}
       >
-        {items.map((item) => {
+        {shown >= 0 ? (
+          <span
+            aria-hidden
+            className={cn(
+              "pointer-events-none absolute inset-y-1 left-1 rounded-full bg-white shadow-[0_1px_2px_rgba(18,23,15,0.08),0_4px_14px_-4px_rgba(18,23,15,0.18)] transition-[transform,scale] duration-[420ms] ease-[var(--spring)]",
+              dragIndex != null && "scale-[1.07] bg-white/90",
+            )}
+            style={{
+              width: `calc((100% - 0.5rem) / ${items.length})`,
+              transform: `translateX(${shown * 100}%)`,
+            }}
+          />
+        ) : null}
+        {items.map((item, index) => {
           const Icon = iconMap[item.icon];
-          const active =
-            pathname === item.href ||
-            (item.href !== basePath && pathname.startsWith(item.href));
+          const active = index === shown;
 
           return (
             <Link
               key={item.href}
               href={item.href}
+              aria-current={index === current ? "page" : undefined}
+              draggable={false}
               className={cn(
-                "relative flex flex-col items-center gap-0.5 px-1 py-2.5 text-[10px] font-bold uppercase tracking-wider transition-colors",
-                active ? "text-turf" : "text-ink-faint hover:text-ink-muted",
+                "relative flex flex-col items-center gap-0.5 rounded-full px-1 pb-1.5 pt-2 text-[10.5px] font-semibold transition-colors duration-200",
+                active ? "text-turf" : "text-ink-muted",
               )}
             >
               <span className="relative">
-                <Icon className={cn("h-5 w-5", active && "stroke-[2.25]")} />
+                <Icon
+                  className={cn(
+                    "h-[22px] w-[22px] transition-transform duration-300 ease-[var(--spring)]",
+                    active && "scale-110 stroke-[2.25]",
+                  )}
+                />
                 {item.badge && item.badge > 0 ? (
                   <span className="absolute -right-2 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-lime px-1 font-display text-[10px] font-bold text-accent-fg">
                     {item.badge > 9 ? "9+" : item.badge}
@@ -105,9 +221,6 @@ export function BottomNav({ basePath, items, className }: BottomNavProps) {
                 ) : null}
               </span>
               {item.label}
-              {active ? (
-                <span className="absolute inset-x-6 top-0 h-0.5 rounded-full bg-lime" />
-              ) : null}
             </Link>
           );
         })}

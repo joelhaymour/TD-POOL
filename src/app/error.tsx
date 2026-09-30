@@ -18,7 +18,7 @@ export default function ErrorPage({ reset }: { error: Error & { digest?: string 
           <button
             type="button"
             onClick={reset}
-            className="inline-flex h-12 items-center rounded-xl bg-lime px-5 font-display text-sm font-extrabold uppercase tracking-wider text-accent-fg transition active:scale-[0.98]"
+            className="inline-flex h-12 items-center rounded-full bg-lime px-5 pressable text-[15px] font-semibold text-accent-fg shadow-[0_6px_16px_-6px_rgba(17,128,60,0.55)]"
           >
             Try again
           </button>

@@ -25,6 +25,7 @@
 		"preferredContentMode": "mobile"
 	},
 	"packageClassList": [
+		"HapticsPlugin",
 		"KeyboardPlugin",
 		"PushNotificationsPlugin"
 	]

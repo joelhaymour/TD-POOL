@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { ChevronRight, Pin, Search } from "lucide-react";
 import { useToast } from "@/components/ui/toast";
+import { tap } from "@/lib/native/haptics";
 import { apiError, apiJson } from "@/lib/api/client";
 import { cn } from "@/lib/utils/cn";
 
@@ -28,6 +29,22 @@ function initials(name: string): string {
   return (words.length > 1 ? words[0][0] + words[1][0] : name.slice(0, 2)).toUpperCase();
 }
 
+/** Each league keeps its own tile colour, so a long list is easy to scan. */
+const TILES = [
+  "bg-[#dcefe1] text-[#0d6a31]",
+  "bg-[#f6e7c9] text-[#8a5a08]",
+  "bg-[#dde8f6] text-[#24518c]",
+  "bg-[#f4dede] text-[#9a2f2f]",
+  "bg-[#e6e0f4] text-[#54408f]",
+  "bg-[#d9eeec] text-[#1f6b64]",
+];
+
+function tileFor(id: string): string {
+  let hash = 0;
+  for (const ch of id) hash = (hash * 31 + ch.charCodeAt(0)) | 0;
+  return TILES[Math.abs(hash) % TILES.length];
+}
+
 function LeagueRow({
   league,
   onPin,
@@ -42,11 +59,15 @@ function LeagueRow({
     <li className="flex items-center">
       <Link
         href={`/${league.slug}`}
-        className="flex min-w-0 flex-1 items-center gap-3 py-3 pl-3.5 transition active:bg-field-deep"
+        onClick={() => tap()}
+        className="flex min-w-0 flex-1 items-center gap-3 py-3 pl-3.5 transition-colors active:bg-ink/[0.04]"
       >
         <span
           aria-hidden
-          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-field-deep font-display text-sm font-extrabold text-ink"
+          className={cn(
+            "flex h-11 w-11 shrink-0 items-center justify-center rounded-[0.85rem] font-display text-[15px] font-extrabold",
+            tileFor(league.id),
+          )}
         >
           {initials(league.name)}
         </span>
@@ -64,7 +85,10 @@ function LeagueRow({
       <button
         type="button"
         disabled={busy}
-        onClick={() => onPin(league)}
+        onClick={() => {
+          tap();
+          onPin(league);
+        }}
         aria-pressed={pinned}
         aria-label={pinned ? `Unpin ${league.name}` : `Pin ${league.name}`}
         className={cn(
@@ -88,7 +112,7 @@ function Group({ title, count, children }: { title: string; count?: number; chil
         <h2 className="font-display text-sm font-bold uppercase tracking-[0.12em] text-ink-muted">{title}</h2>
         {count != null ? <span className="text-xs text-ink-faint">{count}</span> : null}
       </div>
-      <ul className="divide-y divide-border overflow-hidden rounded-2xl border border-border bg-chalk shadow-card">
+      <ul className="divide-y divide-ink/[0.06] overflow-hidden rounded-[1.4rem] bg-white/75 shadow-[var(--glass-shadow)] backdrop-blur-xl">
         {children}
       </ul>
     </section>
@@ -156,7 +180,7 @@ export function LeagueList({ leagues: initial }: { leagues: LeagueListItem[] }) 
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Find a league"
-            className="h-11 w-full rounded-xl border border-border bg-chalk pl-9 pr-3 text-sm text-ink outline-none focus:border-turf"
+            className="h-11 w-full rounded-full bg-ink/[0.06] pl-9 pr-4 text-sm text-ink outline-none transition focus:bg-white focus:shadow-[0_0_0_2px_rgba(17,128,60,0.35)]"
           />
         </label>
       ) : null}

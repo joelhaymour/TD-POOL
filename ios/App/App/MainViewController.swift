@@ -6,7 +6,8 @@ import Capacitor
  The one screen in the app: Capacitor's web view pointed at the live site.
 
  On top of the stock controller — the swipe-from-the-left-edge back gesture
- people expect from a native app, the pasteboard plugin, and a `TD_POOL_SITE`
+ people expect from a native app, rubber-band scrolling on every screen (even
+ short ones), pull-to-refresh, the pasteboard plugin, and a `TD_POOL_SITE`
  global so the offline page (native/www/error.html) can send them back.
  */
 final class MainViewController: CAPBridgeViewController {
@@ -18,6 +19,13 @@ final class MainViewController: CAPBridgeViewController {
         bridge?.registerPluginInstance(TDPoolClipboardPlugin())
         bridge?.registerPluginInstance(PooldShareInboxPlugin())
         webView?.allowsBackForwardNavigationGestures = true
+        if let scrollView = webView?.scrollView {
+            scrollView.bounces = true
+            scrollView.alwaysBounceVertical = true
+            let refresh = UIRefreshControl()
+            refresh.addTarget(self, action: #selector(pullToRefresh(_:)), for: .valueChanged)
+            scrollView.refreshControl = refresh
+        }
         guard let site = bridge?.config.serverURL.absoluteString,
               let json = try? JSONEncoder().encode(site),
               let literal = String(data: json, encoding: .utf8) else { return }
@@ -32,6 +40,18 @@ final class MainViewController: CAPBridgeViewController {
         if let path = MainViewController.pendingPath {
             MainViewController.pendingPath = nil
             open(path: path)
+        }
+    }
+
+    /// Pull down to refresh: the site reloads the screen's data in place
+    /// (`window.__pooldRefresh`, src/components/native-refresh.tsx); a page
+    /// without it (the offline page) reloads whole.
+    @objc private func pullToRefresh(_ control: UIRefreshControl) {
+        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+        let script = "typeof window.__pooldRefresh === 'function' ? (window.__pooldRefresh(), true) : false"
+        webView?.evaluateJavaScript(script) { [weak self] result, _ in
+            if (result as? Bool) != true { self?.webView?.reload() }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.7) { control.endRefreshing() }
         }
     }
 

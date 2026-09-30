@@ -17,9 +17,9 @@ export function AccountMenu({ name, email }: { name: string; email: string }) {
         type="button"
         aria-label="Your account"
         onClick={() => setOpen(true)}
-        className="rounded-full transition active:scale-95"
+        className="pressable rounded-full"
       >
-        <MemberChip name={name} className="h-10 w-10 border border-border bg-chalk text-xs text-ink" />
+        <MemberChip name={name} className="h-10 w-10 bg-white/80 text-xs text-ink shadow-[var(--glass-shadow)] backdrop-blur-xl" />
       </button>
       <Sheet open={open} onClose={() => setOpen(false)} title={name} description={email}>
         <div className="space-y-2 pb-2">

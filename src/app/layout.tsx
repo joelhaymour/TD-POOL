@@ -3,6 +3,7 @@ import type { CSSProperties } from "react";
 import { Barlow_Condensed, Manrope } from "next/font/google";
 import { PwaRegister } from "@/components/pwa-register";
 import { PushBootstrap } from "@/components/notify/push-bootstrap";
+import { NativeRefresh } from "@/components/native-refresh";
 import { ToastProvider } from "@/components/ui/toast";
 import "./globals.css";
 
@@ -71,6 +72,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <ToastProvider>{children}</ToastProvider>
         <PwaRegister />
         <PushBootstrap />
+        <NativeRefresh />
       </body>
     </html>
   );

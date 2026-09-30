@@ -254,7 +254,7 @@ export function RideBet({
           <button
             type="submit"
             disabled={busy || !url.trim()}
-            className="h-12 w-full rounded-xl bg-lime font-display text-sm font-extrabold uppercase tracking-wider text-accent-fg transition active:scale-[0.98] disabled:opacity-50"
+            className="h-12 w-full rounded-full bg-lime pressable text-[15px] font-semibold text-accent-fg shadow-[0_6px_16px_-6px_rgba(17,128,60,0.55)] disabled:opacity-50"
           >
             {busy ? "Saving…" : "Save link"}
           </button>

@@ -38,7 +38,7 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
 
   return (
     <div className="field-atmosphere min-h-dvh">
-      <main className="mx-auto w-full max-w-lg px-5 pb-[max(2.5rem,calc(env(safe-area-inset-bottom)+1.5rem))] pt-[max(1.25rem,calc(env(safe-area-inset-top)+0.75rem))]">
+      <main className="animate-page-in mx-auto w-full max-w-lg px-5 pb-[max(2.5rem,calc(env(safe-area-inset-bottom)+1.5rem))] pt-[max(1.25rem,calc(env(safe-area-inset-top)+0.75rem))]">
         <header className="flex items-center justify-between gap-3">
           <Wordmark className="text-4xl text-ink" />
           <div className="flex items-center gap-2">
@@ -50,9 +50,9 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
         {leagues.some((l) => l.sections.includes("Tickets")) ? (
           <Link
             href="/share"
-            className="mt-5 flex h-12 items-center justify-center gap-2 rounded-xl bg-lime font-display text-sm font-extrabold uppercase tracking-wider text-accent-fg shadow-card transition active:scale-[0.98]"
+            className="pressable mt-5 flex h-[3.25rem] items-center justify-center gap-2 rounded-full bg-lime text-[15px] font-semibold text-accent-fg shadow-[0_1px_0_rgba(255,255,255,0.25)_inset,0_8px_20px_-8px_rgba(17,128,60,0.6)]"
           >
-            <Plus className="h-4 w-4" aria-hidden /> Post a ticket
+            <Plus className="h-[18px] w-[18px]" strokeWidth={2.5} aria-hidden /> Post a ticket
           </Link>
         ) : null}
 

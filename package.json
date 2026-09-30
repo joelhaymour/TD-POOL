@@ -23,6 +23,7 @@
   },
   "dependencies": {
     "@capacitor/core": "^8.5.2",
+    "@capacitor/haptics": "^8.0.2",
     "@capacitor/keyboard": "^8.0.5",
     "@capacitor/push-notifications": "^8.1.2",
     "@supabase/ssr": "^0.12.6",
