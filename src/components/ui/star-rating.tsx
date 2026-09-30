@@ -32,15 +32,15 @@ export function StarRating({
       aria-label={label ?? `${clamped} out of ${max} stars`}
     >
       {label ? (
-        <span className="mr-1.5 text-[10px] font-bold uppercase tracking-wider text-ink-faint">
+        <span className="mr-1.5 text-[11px] font-semibold text-ink-faint">
           {label}
         </span>
       ) : null}
-      <span className="inline-flex items-center leading-none text-turf">
+      <span className="inline-flex items-center leading-none text-ink">
         {Array.from({ length: max }, (_, i) => (
           <span
             key={i}
-            className={cn(i < clamped ? "text-turf" : "text-ink/15")}
+            className={cn(i < clamped ? "text-ink" : "text-ink/15")}
             aria-hidden
           >
             ★

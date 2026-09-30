@@ -78,7 +78,7 @@ export function TdHistory() {
   return (
     <div className="space-y-4">
       <div>
-        <h2 className="font-display text-xl font-extrabold uppercase tracking-wide text-ink">
+        <h2 className="text-xl font-bold text-ink tracking-tight">
           Season history
         </h2>
         <p className="mt-1 text-sm text-ink-muted">
@@ -99,7 +99,7 @@ export function TdHistory() {
           >
             <div className="flex items-center justify-between gap-2 border-b border-border bg-field px-4 py-3">
               <div>
-                <h3 className="font-display text-lg font-bold uppercase tracking-wide text-ink">
+                <h3 className="text-[17px] font-semibold text-ink">
                   {w.week.label ?? `Week ${w.week.week}`}
                 </h3>
                 <p className="text-xs text-ink-muted">
@@ -151,11 +151,11 @@ export function TdHistory() {
                       >
                         {p.playerName}
                       </Link>
-                      <p className="truncate text-[11px] uppercase tracking-wide text-ink-faint">
+                      <p className="truncate text-[11px] text-ink-faint">
                         {[p.team, p.memberName].filter(Boolean).join(" · ")}
                       </p>
                     </div>
-                    <span className="shrink-0 font-display text-sm font-bold text-turf">
+                    <span className="shrink-0 font-display text-sm font-bold text-ink">
                       {formatAmerican(p.americanOdds)}
                     </span>
                   </li>

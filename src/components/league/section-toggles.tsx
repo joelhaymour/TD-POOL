@@ -39,22 +39,22 @@ export function SectionToggles({
             className={cn(
               "flex items-start gap-3 rounded-xl border p-3 text-left transition disabled:cursor-default",
               on
-                ? "border-turf bg-turf/10 ring-2 ring-turf/20"
-                : "border-border-strong bg-field hover:border-turf",
+                ? "border-ink bg-chalk shadow-card"
+                : "border-border bg-transparent hover:border-border-strong",
             )}
             onClick={() => onChange({ ...value, [section.key]: !on })}
           >
             <span
               className={cn(
                 "mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-md border",
-                on ? "border-lime bg-lime text-accent-fg" : "border-border-strong",
+                on ? "border-ink bg-ink text-white" : "border-border-strong",
               )}
               aria-hidden
             >
               {on ? <Check className="h-3.5 w-3.5" strokeWidth={3} /> : null}
             </span>
             <span className="min-w-0">
-              <span className="block font-display text-sm font-bold uppercase tracking-wide text-ink">
+              <span className="block text-sm font-semibold text-ink">
                 {section.label}
               </span>
               <span className="mt-0.5 block text-xs text-ink-muted">

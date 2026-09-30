@@ -99,7 +99,7 @@ export async function GroupLeaderboard({
   return (
     <div className="space-y-4">
       <div>
-        <h2 className="font-display text-xl font-extrabold uppercase tracking-wide text-ink">
+        <h2 className="text-xl font-bold text-ink tracking-tight">
           Leaderboard
         </h2>
         <p className="mt-1 text-sm text-ink-muted">
@@ -135,7 +135,7 @@ export async function GroupLeaderboard({
               <p className="truncate text-sm font-semibold text-ink">
                 {row.name}
                 {row.memberId === viewerMemberId ? (
-                  <span className="ml-1.5 text-[10px] font-bold uppercase tracking-wider text-lime">
+                  <span className="ml-1.5 text-[11px] font-semibold text-lime">
                     You
                   </span>
                 ) : null}
@@ -158,7 +158,7 @@ export async function GroupLeaderboard({
 
       {bestLeg?.hit ? (
         <div className="rounded-[1.4rem] bg-chalk shadow-card p-4">
-          <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-ink-faint">
+          <p className="text-[11px] font-semibold text-ink-faint">
             Leg of the season
           </p>
           <div className="mt-2 flex items-center gap-3">
@@ -199,7 +199,7 @@ function Podium({ row, place }: { row: Standing | undefined; place: number }) {
     >
       <p
         className={cn(
-          "font-display text-[11px] font-bold uppercase tracking-[0.1em]",
+          "text-[11px] font-bold",
           leader ? "text-lime" : "text-ink-faint",
         )}
       >

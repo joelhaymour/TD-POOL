@@ -74,8 +74,8 @@ export function PlayerCard({
       )}
     >
       <div className="flex items-start gap-3">
-        <div className="flex h-11 w-11 shrink-0 flex-col items-center justify-center rounded-xl bg-field-deep text-turf">
-          <span className="text-[9px] font-bold uppercase leading-none tracking-wider text-ink-faint">
+        <div className="flex h-11 w-11 shrink-0 flex-col items-center justify-center rounded-xl bg-field-deep text-ink">
+          <span className="text-[9px] font-semibold leading-none text-ink-faint">
             Rank
           </span>
           <span className="font-display text-xl font-extrabold leading-none">
@@ -86,7 +86,7 @@ export function PlayerCard({
         <div className="min-w-0 flex-1">
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0">
-              <h3 className="truncate font-display text-lg font-bold uppercase leading-tight tracking-wide text-ink">
+              <h3 className="truncate text-[17px] font-semibold leading-tight text-ink">
                 {player.name}
               </h3>
               <p className="mt-0.5 text-xs font-medium text-ink-muted">
@@ -104,15 +104,15 @@ export function PlayerCard({
           long, and every card is scanned for the same three things. */}
       <div className="mt-2.5 flex items-end gap-5 border-t border-border pt-2.5">
         <div>
-          <p className="text-[9px] font-bold uppercase tracking-wider text-ink-faint">TD chance</p>
+          <p className="text-[9px] font-semibold text-ink-faint">TD chance</p>
           <p className="font-display text-xl font-extrabold leading-tight text-ink">
             {pct(player.ourProbability)}
           </p>
         </div>
         {player.americanOdds != null ? (
           <div>
-            <p className="text-[9px] font-bold uppercase tracking-wider text-ink-faint">Odds</p>
-            <p className="font-display text-xl font-extrabold leading-tight text-turf">
+            <p className="text-[9px] font-semibold text-ink-faint">Odds</p>
+            <p className="font-display text-xl font-bold leading-tight text-ink">
               {formatAmerican(player.americanOdds)}
             </p>
           </div>
@@ -123,7 +123,7 @@ export function PlayerCard({
       </div>
 
       {player.limitedData ? (
-        <p className="mt-2 text-[10px] font-semibold uppercase tracking-wider text-warning">
+        <p className="mt-2 text-[11px] font-semibold text-warning">
           Limited data
         </p>
       ) : null}
@@ -136,7 +136,7 @@ export function PlayerCard({
             "hover:bg-field-deep focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-turf",
           )}
         >
-          View Analysis
+          View analysis
         </Link>
 
         {taken ? (
@@ -154,8 +154,8 @@ export function PlayerCard({
             className="w-full"
           />
         ) : (
-          <Button variant="primary" size="sm" disabled className="w-full">
-            Select Player
+          <Button variant="primary" size="sm" disabled className="w-full bg-lime/10 text-turf shadow-none">
+            Select player
           </Button>
         )}
       </div>

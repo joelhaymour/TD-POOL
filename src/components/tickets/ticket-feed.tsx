@@ -171,7 +171,7 @@ export function TicketFeed({
     list.length === 0 ? null : (
       <section key={label} className="space-y-2">
         <div className="flex items-baseline justify-between">
-          <h3 className="font-display text-sm font-bold uppercase tracking-[0.12em] text-ink-muted">
+          <h3 className="text-sm font-semibold text-ink-muted">
             {label}
           </h3>
           {blurb ? <span className="text-[11px] text-ink-faint">{blurb}</span> : null}
@@ -202,7 +202,7 @@ export function TicketFeed({
     <div className="space-y-5">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <h2 className="font-display text-xl font-extrabold uppercase tracking-wide text-ink">
+          <h2 className="text-xl font-bold text-ink tracking-tight">
             Tickets
           </h2>
           <p className="mt-1 text-sm text-ink-muted">
@@ -212,7 +212,7 @@ export function TicketFeed({
             {" · "}
             <Link
               href={`/${slug}/tickets/history`}
-              className="font-semibold text-turf underline-offset-2 hover:underline"
+              className="font-semibold text-ink-muted underline decoration-ink/20 underline-offset-2"
             >
               finished ones are in History
             </Link>

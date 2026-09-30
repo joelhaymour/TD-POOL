@@ -50,7 +50,7 @@ export async function TicketHistory({
   return (
     <div className="space-y-4">
       <div>
-        <h2 className="font-display text-xl font-extrabold uppercase tracking-wide text-ink">
+        <h2 className="text-xl font-bold text-ink tracking-tight">
           Ticket history
         </h2>
         <p className="mt-1 text-sm text-ink-muted">
@@ -61,16 +61,16 @@ export async function TicketHistory({
       {settled.length > 0 ? (
         <section className="grid grid-cols-2 gap-3 rounded-2xl border border-border bg-raised p-4 text-raised-fg shadow-card">
           <div>
-            <p className="text-[10px] font-bold uppercase tracking-[0.1em] text-ink-faint">
+            <p className="text-[11px] font-semibold text-ink-faint">
               League record
             </p>
-            <p className="mt-0.5 font-display text-2xl font-extrabold text-lime">
+            <p className="mt-0.5 font-display text-2xl font-bold text-ink">
               {wins}-{losses}
             </p>
           </div>
           {showMoney && priced.length > 0 ? (
             <div>
-              <p className="text-[10px] font-bold uppercase tracking-[0.1em] text-ink-faint">
+              <p className="text-[11px] font-semibold text-ink-faint">
                 Net
               </p>
               <p className="mt-0.5 font-display text-2xl font-extrabold">
@@ -103,9 +103,9 @@ export async function TicketHistory({
                 <div className="flex items-center gap-2">
                   <MemberChip
                     name={who}
-                    className={mine ? "bg-lime/20 text-lime" : undefined}
+                    className={mine ? "bg-ink text-white" : undefined}
                   />
-                  <h3 className="truncate font-display text-base font-bold uppercase tracking-wide text-ink">
+                  <h3 className="truncate text-[15px] font-semibold text-ink">
                     {who}
                   </h3>
                   <BookBadge book={parlay.sportsbook} />
@@ -126,7 +126,7 @@ export async function TicketHistory({
               </div>
               <span
                 className={cn(
-                  "shrink-0 rounded-md border px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.08em]",
+                  "shrink-0 rounded-md border px-2 py-0.5 text-[11px] font-semibold",
                   badge.className,
                 )}
               >
@@ -156,7 +156,7 @@ export async function TicketHistory({
                       <p className="truncate text-sm font-semibold text-ink">
                         {legTitle(leg)}
                       </p>
-                      <p className="truncate text-[11px] uppercase tracking-wide text-ink-faint">
+                      <p className="truncate text-[11px] text-ink-faint">
                         {[leg.market_label, gameLabel(gamesById.get(leg.game_id)), actual]
                           .filter(Boolean)
                           .join(" · ")}

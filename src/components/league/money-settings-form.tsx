@@ -39,7 +39,7 @@ function Field({
 }) {
   return (
     <label className="block">
-      <span className="mb-1.5 block text-[10px] font-bold uppercase tracking-[0.1em] text-ink-faint">
+      <span className="mb-1.5 block text-[11px] font-semibold text-ink-faint">
         {label}
       </span>
       {children}
@@ -61,8 +61,8 @@ export function MoneySettingsForm({
   return (
     <div className={cn("space-y-5", className)}>
       <fieldset disabled={disabled} className="space-y-2">
-        <legend className="mb-2 font-display text-lg font-bold uppercase tracking-wide text-ink">
-          Betting Mode
+        <legend className="mb-2 text-[17px] font-semibold text-ink">
+          Betting mode
         </legend>
         {modes.map((mode) => {
           const selected = value.betting_mode === mode.id;
@@ -72,7 +72,7 @@ export function MoneySettingsForm({
               className={cn(
                 "flex cursor-pointer gap-3 rounded-xl border px-3 py-3 transition",
                 selected
-                  ? "border-turf bg-turf/8"
+                  ? "border-ink bg-chalk shadow-card"
                   : "border-border bg-chalk hover:border-border-strong",
               )}
             >
@@ -117,7 +117,7 @@ export function MoneySettingsForm({
 
       {value.betting_mode !== "none" ? (
         <div className="rounded-2xl bg-ink/[0.04] px-4 py-3">
-          <p className="text-[10px] font-bold uppercase tracking-[0.1em] text-ink-faint">
+          <p className="text-[11px] font-semibold text-ink-faint">
             Weekly stake
           </p>
           <p className="font-display text-3xl font-extrabold text-ink">

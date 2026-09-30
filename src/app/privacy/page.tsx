@@ -16,13 +16,13 @@ export default function PrivacyPage() {
   return (
     <div className="field-atmosphere min-h-dvh">
       <main className="mx-auto w-full max-w-lg px-5 pb-16 pt-[max(3rem,env(safe-area-inset-top))]">
-        <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-turf">Pool’d</p>
+        <p className="text-[11px] font-semibold text-ink-faint">Pool’d</p>
         <h1 className="mt-2 font-display text-4xl font-extrabold uppercase tracking-wide text-ink">
           Privacy
         </h1>
         <div className="mt-6 space-y-5 text-sm leading-relaxed text-ink-muted">
           <section>
-            <h2 className="font-display text-base font-bold uppercase tracking-wide text-ink">
+            <h2 className="text-[15px] font-semibold text-ink">
               What Pool’d keeps
             </h2>
             <ul className="mt-2 list-disc space-y-1 pl-5">
@@ -36,7 +36,7 @@ export default function PrivacyPage() {
             </ul>
           </section>
           <section>
-            <h2 className="font-display text-base font-bold uppercase tracking-wide text-ink">
+            <h2 className="text-[15px] font-semibold text-ink">
               Who can see it
             </h2>
             <p className="mt-2">
@@ -45,7 +45,7 @@ export default function PrivacyPage() {
             </p>
           </section>
           <section>
-            <h2 className="font-display text-base font-bold uppercase tracking-wide text-ink">
+            <h2 className="text-[15px] font-semibold text-ink">
               Bet slip screenshots
             </h2>
             <p className="mt-2">
@@ -55,7 +55,7 @@ export default function PrivacyPage() {
             </p>
           </section>
           <section>
-            <h2 className="font-display text-base font-bold uppercase tracking-wide text-ink">
+            <h2 className="text-[15px] font-semibold text-ink">
               Where it lives
             </h2>
             <p className="mt-2">
@@ -65,12 +65,12 @@ export default function PrivacyPage() {
             </p>
           </section>
           <section>
-            <h2 className="font-display text-base font-bold uppercase tracking-wide text-ink">
+            <h2 className="text-[15px] font-semibold text-ink">
               Deleting your account
             </h2>
             <p className="mt-2">
               Email{" "}
-              <a className="font-semibold text-turf underline-offset-2 hover:underline" href={`mailto:${CONTACT}`}>
+              <a className="font-semibold text-ink underline underline-offset-2" href={`mailto:${CONTACT}`}>
                 {CONTACT}
               </a>{" "}
               and your account, picks, tickets and screenshots are removed.
@@ -79,7 +79,7 @@ export default function PrivacyPage() {
         </div>
         <Link
           href="/login"
-          className="mt-10 inline-block text-xs font-bold uppercase tracking-wider text-ink-faint underline-offset-2 hover:underline"
+          className="mt-10 inline-block text-xs font-semibold text-ink-faint underline-offset-2 hover:underline"
         >
           Back to Pool’d
         </Link>

@@ -7,7 +7,7 @@ export default function ErrorPage({ reset }: { error: Error & { digest?: string 
   return (
     <div className="field-atmosphere min-h-dvh">
       <main className="mx-auto flex min-h-dvh w-full max-w-lg flex-col justify-center px-5 pb-[max(3rem,env(safe-area-inset-bottom))] pt-[max(3rem,env(safe-area-inset-top))]">
-        <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-turf">Pool’d</p>
+        <p className="text-[11px] font-semibold text-ink-faint">Pool’d</p>
         <h1 className="mt-2 font-display text-5xl font-extrabold uppercase leading-[0.9] tracking-wide text-ink">
           Something broke
         </h1>
@@ -24,7 +24,7 @@ export default function ErrorPage({ reset }: { error: Error & { digest?: string 
           </button>
           <Link
             href="/"
-            className="inline-flex h-12 items-center rounded-full bg-ink/[0.06] px-5 font-display text-sm font-extrabold uppercase tracking-wider text-ink transition active:scale-[0.98]"
+            className="inline-flex h-12 items-center rounded-full bg-ink/[0.06] px-5 text-sm font-semibold text-ink transition active:scale-[0.98]"
           >
             Your leagues
           </Link>

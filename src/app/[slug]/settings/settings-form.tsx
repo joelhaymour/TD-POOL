@@ -20,7 +20,7 @@ const inputClass =
   "h-11 w-full rounded-xl border border-transparent bg-ink/[0.05] px-3 focus:bg-white text-sm font-semibold text-ink outline-none focus:border-turf focus:ring-2 focus:ring-turf/20";
 
 const labelClass =
-  "mb-1.5 block text-[10px] font-bold uppercase tracking-[0.1em] text-ink-faint";
+  "mb-1.5 block text-[11px] font-semibold text-ink-faint";
 
 export function SettingsForm({
   slug,
@@ -224,7 +224,7 @@ export function SettingsForm({
     <>
     <form onSubmit={onSave} className="space-y-5">
       <div>
-        <h2 className="font-display text-xl font-extrabold uppercase tracking-wide text-ink">
+        <h2 className="text-xl font-bold text-ink tracking-tight">
           League settings
         </h2>
         <p className="mt-1 text-sm text-ink-muted">
@@ -235,7 +235,7 @@ export function SettingsForm({
       </div>
 
       <section className="space-y-3 rounded-[1.4rem] bg-chalk shadow-card p-4">
-        <h3 className="font-display text-base font-bold uppercase tracking-wide text-ink">
+        <h3 className="text-[15px] font-semibold text-ink">
           Invite friends
         </h3>
         <p className="text-sm text-ink-muted">
@@ -385,13 +385,13 @@ export function SettingsForm({
 
           <Link
             href={`/${slug}/admin`}
-            className="block rounded-2xl bg-ink/[0.04] px-4 py-3 text-center text-sm font-bold text-turf hover:bg-field-deep"
+            className="block rounded-2xl bg-ink/[0.04] px-4 py-3 text-center text-sm font-semibold text-ink hover:bg-field-deep"
           >
             Open admin tools →
           </Link>
 
           <section className="space-y-3 rounded-2xl border border-danger/30 bg-chalk p-4">
-            <h3 className="font-display text-base font-bold uppercase tracking-wide text-danger">
+            <h3 className="text-[15px] font-semibold text-danger">
               Delete this league
             </h3>
             <p className="text-sm text-ink-muted">

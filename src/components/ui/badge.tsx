@@ -19,7 +19,7 @@ export type BadgeProps = {
 };
 
 const statusStyles: Record<BadgeStatus, string> = {
-  available: "bg-turf/12 text-turf-deep border-turf/25",
+  available: "bg-transparent text-ink-muted border-border-strong",
   taken: "bg-ink/8 text-ink-muted border-border-strong",
   locked: "bg-ink/10 text-ink border-border-strong",
   injured: "bg-danger/10 text-danger border-danger/25",
@@ -27,7 +27,7 @@ const statusStyles: Record<BadgeStatus, string> = {
   pending: "bg-field-deep text-ink-muted border-border",
   td: "bg-lime/25 text-lime border-lime/40",
   no_td: "bg-ink/6 text-ink-faint border-border",
-  healthy: "bg-turf/10 text-turf border-turf/20",
+  healthy: "bg-transparent text-ink-muted border-border-strong",
   default: "bg-chalk text-ink-muted border-border",
 };
 
@@ -47,7 +47,7 @@ export function Badge({ status = "default", children, className }: BadgeProps) {
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.08em]",
+        "inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-[11px] font-semibold",
         statusStyles[status],
         className,
       )}

@@ -18,7 +18,7 @@ import type { NflGame } from "@/lib/types";
 const inputClass =
   "h-10 w-full rounded-lg border border-transparent bg-ink/[0.05] px-2.5 focus:bg-white text-sm font-semibold text-ink outline-none focus:border-turf";
 const labelClass =
-  "mb-1 block text-[10px] font-bold uppercase tracking-[0.1em] text-ink-faint";
+  "mb-1 block text-[11px] font-semibold text-ink-faint";
 
 const TD_SCORER = new Set(["player_anytime_td", "player_1st_td", "player_last_td"]);
 const isTeamMarket = (key: string) => /^(h2h|spreads|alternate_spreads)/.test(key);
@@ -125,7 +125,7 @@ export function LegEditor({
             <span className="block truncate text-sm font-semibold text-ink">{title}</span>
             <span
               className={cn(
-                "block truncate text-[11px] uppercase tracking-wide",
+                "block truncate text-[11px]",
                 flagged ? "text-warning" : "text-ink-faint",
               )}
             >

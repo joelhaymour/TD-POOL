@@ -39,7 +39,7 @@ export function LeagueHeader({
             {leagueName}
           </h1>
           <p className="truncate text-xs text-ink-muted">
-            <span className="font-semibold text-turf">Week {weekNumber}</span>
+            <span className="font-semibold text-ink-muted">Week {weekNumber}</span>
             {subtitle ? <> · {subtitle}</> : null}
           </p>
         </div>

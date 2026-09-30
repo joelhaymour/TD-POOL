@@ -84,7 +84,7 @@ export function Sheet({
                 {title ? (
                   <h2
                     id={titleId}
-                    className="font-display text-xl font-bold uppercase tracking-wide text-ink"
+                    className="text-xl font-bold text-ink tracking-tight"
                   >
                     {title}
                   </h2>

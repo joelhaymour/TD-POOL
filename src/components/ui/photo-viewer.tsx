@@ -61,7 +61,7 @@ export function PhotoViewer({
       className="fixed inset-0 z-[80] flex flex-col bg-black/95 animate-fade-in"
     >
       <div className="flex shrink-0 items-center justify-between gap-3 px-4 pb-2 pt-[max(0.75rem,env(safe-area-inset-top))]">
-        <p className="min-w-0 truncate font-display text-base font-bold uppercase tracking-wide text-white">
+        <p className="min-w-0 truncate text-[15px] font-semibold text-white">
           {title}
         </p>
         <div className="flex shrink-0 items-center gap-2">

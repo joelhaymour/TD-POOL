@@ -60,7 +60,7 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
           <LeagueList leagues={leagues} />
         ) : (
           <section className="mt-10">
-            <h1 className="font-display text-3xl font-extrabold uppercase leading-tight tracking-wide text-ink">
+            <h1 className="text-3xl font-bold leading-tight text-ink tracking-tight">
               Welcome, {accountName.split(" ")[0]}
             </h1>
             <p className="mt-2 max-w-sm text-base leading-relaxed text-ink-muted">

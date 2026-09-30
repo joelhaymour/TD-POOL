@@ -35,7 +35,7 @@ const NO_REACTIONS: ReactionSummary = { up: 0, down: 0, mine: 0 };
 
 export function MemberPickStatus({
   members,
-  defaultOpen = true,
+  defaultOpen = false,
   className,
   highlightMemberId,
   slug,
@@ -112,19 +112,19 @@ export function MemberPickStatus({
           onClick={() => setOpen((v) => !v)}
           aria-expanded={open}
         >
-          <h2 className="font-display text-base font-bold uppercase tracking-wide text-ink">
-            Member Picks
+          <h2 className="text-[15px] font-semibold text-ink">
+            Member picks{" "}
+            <span className="font-normal text-ink-muted">
+              · {submitted} of {members.length} in
+            </span>
           </h2>
-          <p className="text-xs text-ink-muted">
-            {submitted} of {members.length} in
-          </p>
         </button>
         {slug && missing > 0 ? (
           <button
             type="button"
             disabled={pinging}
             onClick={() => void ping()}
-            className="flex h-8 items-center gap-1.5 rounded-full bg-ink/[0.06] px-2.5 text-[11px] font-bold uppercase tracking-wide text-ink transition active:scale-95 disabled:opacity-60"
+            className="pressable flex h-8 items-center gap-1.5 rounded-full bg-ink/[0.06] px-3 text-xs font-semibold text-ink disabled:opacity-60"
           >
             <BellRing className="h-3.5 w-3.5" aria-hidden />
             {pinging ? "Pinging…" : `Ping ${missing}`}
@@ -146,7 +146,7 @@ export function MemberPickStatus({
       </div>
 
       {open ? (
-        <ul className="divide-y divide-border border-t border-border">
+        <ul className="divide-y divide-ink/[0.06] border-t border-ink/[0.06]">
           {members.map((m) => {
             const hasPick = Boolean(m.playerName);
             const isViewer = m.memberId === highlightMemberId;
@@ -155,7 +155,7 @@ export function MemberPickStatus({
                 key={m.memberId}
                 className={cn(
                   "flex items-center gap-2.5 px-4 py-2.5 text-sm",
-                  isViewer && "bg-turf/5",
+                  isViewer && "bg-ink/[0.025]",
                 )}
               >
                 <MemberChip name={m.memberName} />
@@ -163,16 +163,14 @@ export function MemberPickStatus({
                 <span className="min-w-0 flex-1 truncate font-semibold text-ink">
                   {m.memberName}
                   {isViewer ? (
-                    <span className="ml-1.5 text-[10px] font-bold uppercase tracking-wider text-turf">
-                      You
-                    </span>
+                    <span className="ml-1.5 text-xs font-normal text-ink-faint">(you)</span>
                   ) : null}
                 </span>
                 <span className="text-ink-faint">—</span>
                 {hasPick && m.playerHref ? (
                   <Link
                     href={m.playerHref}
-                    className="max-w-[45%] truncate font-medium text-turf underline-offset-2 hover:underline"
+                    className="max-w-[45%] truncate font-medium text-ink underline-offset-2 hover:underline"
                   >
                     {m.playerName}
                   </Link>
@@ -181,7 +179,7 @@ export function MemberPickStatus({
                     {m.playerName}
                   </span>
                 ) : (
-                  <span className="text-ink-faint">Needs Pick</span>
+                  <span className="text-ink-faint">No pick yet</span>
                 )}
                 {slug && m.pickId ? (
                   <ReactionButtons

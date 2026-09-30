@@ -71,7 +71,7 @@ function Section({
 }) {
   return (
     <section className="rounded-[1.4rem] bg-chalk shadow-card p-4">
-      <h2 className="font-display text-base font-bold uppercase tracking-[0.1em] text-ink">
+      <h2 className="text-[15px] font-semibold text-ink">
         {title}
       </h2>
       <div className="mt-3">{children}</div>
@@ -89,7 +89,7 @@ function StatGrid({ stats }: { stats?: ResearchStat[] }) {
     <dl className="grid grid-cols-2 gap-2">
       {stats.map((s) => (
         <div key={s.label} className="rounded-xl bg-field px-3 py-2.5">
-          <dt className="text-[10px] font-bold uppercase tracking-wider text-ink-faint">
+          <dt className="text-[11px] font-semibold text-ink-faint">
             {s.label}
           </dt>
           <dd className="mt-0.5 font-display text-lg font-bold text-ink">
@@ -156,7 +156,7 @@ function GameLogTable({
   return (
     <div className="overflow-hidden rounded-xl border border-border">
       <table className="w-full text-left text-sm">
-        <thead className="bg-field text-[10px] font-bold uppercase tracking-wider text-ink-faint">
+        <thead className="bg-field text-[11px] font-semibold text-ink-faint">
           <tr>
             <th className="px-2 py-2 font-bold">Wk</th>
             <th className="px-2 py-2 font-bold">Opp</th>
@@ -247,7 +247,7 @@ function HistorySection({
       <div className="space-y-4">
         <div>
           <div className="mb-1.5 flex items-center justify-between gap-2">
-            <p className="text-[10px] font-bold uppercase tracking-wider text-ink-faint">
+            <p className="text-[11px] font-semibold text-ink-faint">
               Last 5 games
             </p>
             <p className="text-[11px] font-semibold text-ink-muted">
@@ -264,7 +264,7 @@ function HistorySection({
         </div>
 
         <div>
-          <p className="mb-1.5 text-[10px] font-bold uppercase tracking-wider text-ink-faint">
+          <p className="mb-1.5 text-[11px] font-semibold text-ink-faint">
             vs {opponent}
           </p>
           {/* The summary already says "no recent games" when the list is
@@ -303,10 +303,10 @@ export function PlayerDetail({
       <header className="rounded-[1.4rem] bg-chalk shadow-card p-4">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-turf">
-              Player Research
+            <p className="text-[11px] font-semibold text-ink-muted">
+              Player research
             </p>
-            <h1 className="font-display text-3xl font-extrabold uppercase leading-none tracking-wide text-ink">
+            <h1 className="text-3xl font-bold leading-none text-ink tracking-tight">
               {player.name}
             </h1>
             <p className="mt-1.5 text-sm text-ink-muted">
@@ -324,16 +324,16 @@ export function PlayerDetail({
             sportsbook actually returned a quote. */}
         <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3">
           <div className="rounded-xl bg-field-deep px-3 py-2.5 text-ink">
-            <p className="text-[10px] font-bold uppercase tracking-wider text-raised-fg/55">
-              TD Pool Rank
+            <p className="text-[11px] font-semibold text-raised-fg/55">
+              TD Pool rank
             </p>
-            <p className="font-display text-3xl font-extrabold text-lime">
+            <p className="font-display text-3xl font-bold text-raised-fg">
               #{player.rank}
             </p>
           </div>
           <div className="rounded-xl bg-field px-3 py-2.5">
-            <p className="text-[10px] font-bold uppercase tracking-wider text-ink-faint">
-              TD Chance
+            <p className="text-[11px] font-semibold text-ink-faint">
+              TD chance
             </p>
             <p className="font-display text-3xl font-extrabold text-ink">
               {pct(player.ourProbability)}
@@ -341,10 +341,10 @@ export function PlayerDetail({
           </div>
           {player.americanOdds != null ? (
             <div className="rounded-xl bg-field px-3 py-2.5">
-              <p className="text-[10px] font-bold uppercase tracking-wider text-ink-faint">
+              <p className="text-[11px] font-semibold text-ink-faint">
                 Anytime TD
               </p>
-              <p className="font-display text-3xl font-extrabold text-turf">
+              <p className="font-display text-3xl font-bold text-ink">
                 {formatAmerican(player.americanOdds)}
               </p>
             </div>
@@ -352,7 +352,7 @@ export function PlayerDetail({
         </div>
 
         {player.limitedData ? (
-          <p className="mt-2 text-[10px] font-semibold uppercase tracking-wider text-warning">
+          <p className="mt-2 text-[11px] font-semibold text-warning">
             Limited data — lower confidence estimate
           </p>
         ) : null}
@@ -396,7 +396,7 @@ export function PlayerDetail({
         <div className="space-y-3">
           {player.overview?.whyWeLike?.length ? (
             <div>
-              <p className="mb-1.5 text-[10px] font-bold uppercase tracking-wider text-turf">
+              <p className="mb-1.5 text-[11px] font-semibold text-ink-muted">
                 Why we like him
               </p>
               <BulletList items={player.overview.whyWeLike} />
@@ -404,7 +404,7 @@ export function PlayerDetail({
           ) : null}
           {player.overview?.concerns?.length ? (
             <div>
-              <p className="mb-1.5 text-[10px] font-bold uppercase tracking-wider text-warning">
+              <p className="mb-1.5 text-[11px] font-semibold text-warning">
                 Concerns
               </p>
               <BulletList items={player.overview.concerns} tone="bad" />
@@ -437,7 +437,7 @@ export function PlayerDetail({
             {player.consensusOdds != null ? (
               <li className="flex items-center justify-between rounded-xl bg-field-deep px-3 py-2 text-sm">
                 <span className="font-medium text-raised-fg/70">Consensus</span>
-                <span className="font-display text-lg font-bold text-lime">
+                <span className="font-display text-lg font-bold text-raised-fg">
                   {formatAmerican(player.consensusOdds)}
                 </span>
               </li>

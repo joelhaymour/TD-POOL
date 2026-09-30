@@ -9,7 +9,7 @@ export default async function AdminPage({ params }: PageProps<"/[slug]">) {
   if (member.role !== "admin") {
     return (
       <div className="space-y-3 rounded-[1.4rem] bg-chalk shadow-card p-6 text-center">
-        <h2 className="font-display text-lg font-bold uppercase tracking-wide text-ink">
+        <h2 className="text-[17px] font-semibold text-ink">
           Admins only
         </h2>
         <p className="text-sm text-ink-muted">
@@ -17,7 +17,7 @@ export default async function AdminPage({ params }: PageProps<"/[slug]">) {
         </p>
         <Link
           href={`/${slug}`}
-          className="inline-block text-sm font-bold text-turf hover:underline"
+          className="inline-block text-sm font-semibold text-ink underline underline-offset-2"
         >
           Back to the league
         </Link>

@@ -8,7 +8,7 @@ import type { Currency, NflGame } from "@/lib/types";
 export const ticketInputClass =
   "h-11 w-full rounded-xl border border-transparent bg-ink/[0.05] px-3 focus:bg-white text-sm font-semibold text-ink outline-none focus:border-turf focus:ring-2 focus:ring-turf/20";
 export const ticketLabelClass =
-  "mb-1.5 block text-[10px] font-bold uppercase tracking-[0.1em] text-ink-faint";
+  "mb-1.5 block text-[11px] font-semibold text-ink-faint";
 
 export type TicketMoney = { stake: string; odds: string; payout: string; shareText: string };
 
@@ -52,7 +52,7 @@ export function TicketFields({
         </ul>
         <button
           type="button"
-          className="mt-2 flex h-10 w-full items-center justify-center gap-1.5 rounded-xl border border-dashed border-border-strong text-xs font-bold uppercase tracking-wide text-ink-muted transition hover:text-ink"
+          className="mt-2 flex h-10 w-full items-center justify-center gap-1.5 rounded-xl border border-dashed border-border-strong text-xs font-semibold text-ink-muted transition hover:text-ink"
           onClick={onAddLeg}
         >
           <Plus className="h-4 w-4" /> Add a leg

@@ -25,7 +25,7 @@ import type { Currency, NflGame } from "@/lib/types";
 const inputClass =
   "h-11 w-full rounded-xl border border-transparent bg-ink/[0.05] px-3 focus:bg-white text-sm font-semibold text-ink outline-none focus:border-turf focus:ring-2 focus:ring-turf/20";
 const labelClass =
-  "mb-1.5 block text-[10px] font-bold uppercase tracking-[0.1em] text-ink-faint";
+  "mb-1.5 block text-[11px] font-semibold text-ink-faint";
 
 type Picture = ShrunkImage & { url: string };
 
@@ -438,7 +438,7 @@ export function PostTicketSheet({
               </>
             ) : (
               <>
-                <ClipboardPaste className="h-7 w-7 text-turf" aria-hidden />
+                <ClipboardPaste className="h-7 w-7 text-ink" aria-hidden />
                 <span className="text-sm font-semibold text-ink">
                   {shareText.trim()
                     ? "Tap to add a screenshot of the bet slip"
@@ -533,7 +533,7 @@ export function PostTicketSheet({
               </Button>
               <button
                 type="button"
-                className="block w-full text-center text-xs font-bold uppercase tracking-wider text-ink-faint hover:text-ink"
+                className="block w-full text-center text-xs font-semibold text-ink-faint hover:text-ink"
                 onClick={() => void enterByHand()}
               >
                 Or enter the legs by hand
@@ -542,7 +542,7 @@ export function PostTicketSheet({
           )}
 
           <div className="rounded-2xl bg-ink/[0.04] p-3">
-            <p className="text-[11px] font-bold uppercase tracking-wide text-ink-faint">
+            <p className="text-[11px] font-semibold text-ink-faint">
               Where to find it
             </p>
             <ul className="mt-1.5 space-y-1">

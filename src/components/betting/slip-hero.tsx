@@ -26,7 +26,7 @@ function Stat({
 }) {
   const body = (
     <>
-      <p className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-[0.1em] text-ink-faint">
+      <p className="flex items-center gap-1 text-[11px] font-semibold text-ink-faint">
         {label}
         {onEdit ? <Pencil className="h-2.5 w-2.5" aria-hidden /> : null}
       </p>
@@ -101,7 +101,7 @@ export function SlipHero({
       <div className="relative">
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">
-            <h2 className="line-clamp-2 font-display text-lg font-extrabold uppercase leading-tight tracking-[0.12em] text-lime">
+            <h2 className="line-clamp-2 text-[17px] font-semibold leading-tight text-lime">
               {title}
             </h2>
             <p className="text-xs font-medium text-raised-fg/60">Week {weekNumber}</p>
@@ -110,7 +110,7 @@ export function SlipHero({
             {actions}
             <span
               className={cn(
-                "rounded-md px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider",
+                "rounded-md px-2 py-0.5 text-[11px] font-semibold",
                 PHASE[phase].className,
               )}
             >

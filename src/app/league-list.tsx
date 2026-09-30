@@ -72,7 +72,7 @@ function LeagueRow({
           {initials(league.name)}
         </span>
         <span className="min-w-0 flex-1">
-          <span className="block truncate font-display text-base font-bold uppercase leading-tight tracking-wide text-ink">
+          <span className="block truncate text-[15px] font-semibold leading-tight text-ink">
             {league.name}
           </span>
           <span className="block truncate text-xs text-ink-muted">
@@ -93,7 +93,7 @@ function LeagueRow({
         aria-label={pinned ? `Unpin ${league.name}` : `Pin ${league.name}`}
         className={cn(
           "flex h-11 w-11 shrink-0 items-center justify-center transition active:scale-90 disabled:opacity-50",
-          pinned ? "text-turf" : "text-ink-faint",
+          pinned ? "text-ink" : "text-ink-faint",
         )}
       >
         <Pin className={cn("h-4 w-4", pinned && "fill-current")} aria-hidden />
@@ -109,7 +109,7 @@ function Group({ title, count, children }: { title: string; count?: number; chil
   return (
     <section className="mt-6">
       <div className="mb-2 flex items-baseline justify-between">
-        <h2 className="font-display text-sm font-bold uppercase tracking-[0.12em] text-ink-muted">{title}</h2>
+        <h2 className="text-sm font-semibold text-ink-muted">{title}</h2>
         {count != null ? <span className="text-xs text-ink-faint">{count}</span> : null}
       </div>
       <ul className="divide-y divide-ink/[0.06] overflow-hidden rounded-[1.4rem] bg-white/75 shadow-[var(--glass-shadow)] backdrop-blur-xl">

@@ -455,7 +455,7 @@ export function GroupBettingClient({
           >
             <span className={cn("h-2 w-2 shrink-0 rounded-full", PHASE_DOT[phase])} />
             <span className="min-w-0 flex-1">
-              <span className="block truncate font-display text-sm font-bold uppercase tracking-wide text-ink">
+              <span className="block truncate text-sm font-semibold text-ink">
                 {selected?.parlay.title ?? "Pick a parlay"}
               </span>
               <span className="block text-[11px] text-ink-faint">
@@ -470,7 +470,7 @@ export function GroupBettingClient({
             type="button"
             disabled={creating}
             onClick={() => void createSlip(nextSlipTitle())}
-            className="flex h-[3.25rem] shrink-0 items-center gap-1 rounded-xl border border-dashed border-border-strong px-3 font-display text-xs font-bold uppercase tracking-wide text-ink-muted transition hover:text-ink disabled:opacity-50"
+            className="flex h-[3.25rem] shrink-0 items-center gap-1 rounded-xl border border-dashed border-border-strong px-3 text-xs font-bold text-ink-muted transition hover:text-ink disabled:opacity-50"
           >
             <Plus className="h-4 w-4" /> New
           </button>
@@ -531,7 +531,7 @@ export function GroupBettingClient({
         </SlipHero>
       ) : (
         <section className="relative overflow-hidden rounded-2xl bg-raised p-5 text-raised-fg shadow-card">
-          <h2 className="font-display text-lg font-extrabold uppercase tracking-[0.12em] text-lime">
+          <h2 className="text-[17px] font-semibold text-lime">
             Week {week.week} Parlay
           </h2>
           <p className="mt-2 text-sm text-raised-fg/70">
@@ -563,8 +563,8 @@ export function GroupBettingClient({
             aria-expanded={membersOpen}
           >
             <div>
-              <h2 className="font-display text-base font-bold uppercase tracking-wide text-ink">
-                Member Picks
+              <h2 className="text-[15px] font-semibold text-ink">
+                Member picks
               </h2>
               <p className="text-xs text-ink-muted">
                 {membersDone} of {members.length}{" "}
@@ -593,7 +593,7 @@ export function GroupBettingClient({
                       <span className="min-w-0 flex-1 truncate font-semibold text-ink">
                         {m.name}
                         {isViewer ? (
-                          <span className="ml-1.5 text-[10px] font-bold uppercase tracking-wider text-turf">
+                          <span className="ml-1.5 text-[11px] font-semibold text-turf">
                             You
                           </span>
                         ) : null}
@@ -647,8 +647,8 @@ export function GroupBettingClient({
       <section className="overflow-hidden rounded-[1.4rem] bg-chalk shadow-card">
         <div className="flex items-center justify-between gap-3 px-4 py-3">
           <div>
-            <h2 className="font-display text-base font-bold uppercase tracking-wide text-ink">
-              Add Picks
+            <h2 className="text-[15px] font-semibold text-ink">
+              Add picks
             </h2>
             <p className="text-xs text-ink-muted">
               {slipLocked
@@ -675,7 +675,7 @@ export function GroupBettingClient({
                     started && "opacity-60",
                   )}
                 >
-                  <span className="font-display text-sm font-bold uppercase tracking-wide text-ink">
+                  <span className="text-sm font-semibold text-ink">
                     {game.away_team} @ {game.home_team}
                   </span>
                   <span className="flex items-center gap-1 text-xs text-ink-faint">
@@ -801,7 +801,7 @@ export function GroupBettingClient({
         <div className="space-y-2 pb-2">
           <button
             type="button"
-            className="h-12 w-full rounded-xl bg-danger font-display text-sm font-extrabold uppercase tracking-wider text-white transition active:scale-[0.98]"
+            className="h-12 w-full rounded-xl bg-danger text-sm font-semibold text-white transition active:scale-[0.98]"
             onClick={() => void deleteSlip()}
           >
             Delete parlay

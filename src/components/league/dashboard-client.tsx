@@ -1,9 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ParlaySummary } from "@/components/league/parlay-summary";
 import { MemberPickStatus } from "@/components/league/member-pick-status";
-import { WeeklyResults } from "@/components/league/weekly-results";
 import { PlayerList } from "@/components/players/player-list";
 import type { PlayerFiltersValue } from "@/components/players/player-filters";
 import { GameBoard, type GameGroup } from "@/components/games/game-board";
@@ -99,6 +98,27 @@ export function DashboardClient({
     return [...byGame.values()];
   }, [dashboard, players]);
 
+  // The viewer's own pick, with the board's odds for that player.
+  const yourPick = useMemo(() => {
+    const mine = dashboard?.members.find((m) => m.member.id === viewer.memberId);
+    if (!mine?.pick || !mine.player) return null;
+    const card = players.find((p) => p.id === mine.player!.id);
+    return {
+      name: mine.player.name,
+      detail: card
+        ? `${card.position} · ${card.team} vs ${card.opponent}`
+        : `${mine.player.position} · ${mine.player.team}`,
+      odds: card?.americanOdds ?? null,
+      result: mine.pick.result,
+    };
+  }, [dashboard, players, viewer.memberId]);
+
+  const boardRef = useRef<HTMLDivElement>(null);
+  function goToBoard() {
+    setBoard("players");
+    boardRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
   const memberRows = useMemo(() => {
     if (!dashboard) return [];
     return dashboard.members.map((m) => ({
@@ -173,6 +193,9 @@ export function DashboardClient({
     <div className="space-y-4">
       <ParlaySummary
         weekNumber={dashboard.week.week}
+        yourPick={yourPick}
+        picksLocked={dashboard.picks_locked}
+        onChoose={goToBoard}
         pickResults={memberRows.map((m) => m.result)}
         picksSubmitted={dashboard.parlay.picks_submitted}
         totalMembers={dashboard.parlay.picks_total}
@@ -186,24 +209,13 @@ export function DashboardClient({
         oddsNote={dashboard.odds_note}
       />
 
-      <WeeklyResults
-        members={memberRows}
-        picksSubmitted={dashboard.parlay.picks_submitted}
-        totalMembers={dashboard.parlay.picks_total}
-        stake={dashboard.parlay.stake}
-        payout={dashboard.parlay.estimated_payout}
-        currency={dashboard.league.currency}
-        showMoney={dashboard.league.betting_mode !== "none"}
-      />
-
       <MemberPickStatus
         slug={slug}
         members={memberRows}
-        defaultOpen
         highlightMemberId={viewer.memberId}
       />
 
-      <div>
+      <div ref={boardRef} className="scroll-mt-40">
         <Segmented
           label="Board view"
           className="mb-3"

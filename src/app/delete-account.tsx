@@ -26,7 +26,7 @@ export function DeleteAccount({ email }: { email: string }) {
     <>
       <button
         type="button"
-        className="text-[11px] font-bold uppercase tracking-wider text-ink-faint underline-offset-2 hover:underline"
+        className="text-[11px] font-semibold text-ink-faint underline-offset-2 hover:underline"
         onClick={() => setOpen(true)}
       >
         Delete account

@@ -11,7 +11,7 @@ const inputClass =
   "h-11 w-full rounded-xl border border-transparent bg-ink/[0.05] px-3 focus:bg-white text-sm font-semibold text-ink outline-none focus:border-turf focus:ring-2 focus:ring-turf/20";
 
 const labelClass =
-  "mb-1.5 block text-[10px] font-bold uppercase tracking-[0.1em] text-ink-faint";
+  "mb-1.5 block text-[11px] font-semibold text-ink-faint";
 
 export function AdminTools({
   slug,
@@ -262,7 +262,7 @@ export function AdminTools({
   return (
     <div className="space-y-5">
       <div>
-        <h2 className="font-display text-xl font-extrabold uppercase tracking-wide text-ink">
+        <h2 className="text-xl font-bold text-ink tracking-tight">
           Admin
         </h2>
         <p className="mt-1 text-sm text-ink-muted">
@@ -272,7 +272,7 @@ export function AdminTools({
       </div>
 
       <section className="space-y-3 rounded-[1.4rem] bg-chalk shadow-card p-4">
-        <h3 className="font-display text-base font-bold uppercase tracking-wide text-ink">
+        <h3 className="text-[15px] font-semibold text-ink">
           Results
         </h3>
         <p className="text-sm leading-relaxed text-ink-muted">
@@ -298,7 +298,7 @@ export function AdminTools({
       </section>
 
       <section className="space-y-3 rounded-[1.4rem] bg-chalk shadow-card p-4">
-        <h3 className="font-display text-base font-bold uppercase tracking-wide text-ink">
+        <h3 className="text-[15px] font-semibold text-ink">
           Odds
         </h3>
         <p className="text-sm leading-relaxed text-ink-muted">
@@ -334,7 +334,7 @@ export function AdminTools({
       </section>
 
       <section className="space-y-3 rounded-[1.4rem] bg-chalk shadow-card p-4">
-        <h3 className="font-display text-base font-bold uppercase tracking-wide text-ink">
+        <h3 className="text-[15px] font-semibold text-ink">
           Override pick
         </h3>
         <label className="block">
@@ -377,7 +377,7 @@ export function AdminTools({
       </section>
 
       <section className="rounded-[1.4rem] bg-chalk shadow-card p-4">
-        <h3 className="font-display text-base font-bold uppercase tracking-wide text-ink">
+        <h3 className="text-[15px] font-semibold text-ink">
           Members
         </h3>
         <p className="mt-1 text-sm text-ink-muted">
@@ -401,11 +401,11 @@ export function AdminTools({
                     <span className="font-semibold text-ink">
                       {m.member.display_name}
                       {isSelf ? (
-                        <span className="ml-1.5 text-[10px] font-bold uppercase tracking-wider text-turf">
+                        <span className="ml-1.5 text-xs font-normal text-ink-faint">
                           You
                         </span>
                       ) : null}
-                      <span className="ml-2 text-xs font-medium uppercase text-ink-faint">
+                      <span className="ml-2 text-xs font-medium text-ink-faint">
                         {m.member.role}
                       </span>
                     </span>

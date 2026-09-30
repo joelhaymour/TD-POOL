@@ -204,7 +204,7 @@ export function BottomNav({ basePath, items, className }: BottomNavProps) {
               draggable={false}
               className={cn(
                 "relative flex flex-col items-center gap-0.5 rounded-full px-1 pb-1.5 pt-2 text-[10.5px] font-semibold transition-colors duration-200",
-                active ? "text-turf" : "text-ink-muted",
+                active ? "text-ink" : "text-ink-muted",
               )}
             >
               <span className="relative">
@@ -215,7 +215,7 @@ export function BottomNav({ basePath, items, className }: BottomNavProps) {
                   )}
                 />
                 {item.badge && item.badge > 0 ? (
-                  <span className="absolute -right-2 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-lime px-1 font-display text-[10px] font-bold text-accent-fg">
+                  <span className="absolute -right-2 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-danger px-1 text-[10px] font-bold text-white">
                     {item.badge > 9 ? "9+" : item.badge}
                   </span>
                 ) : null}

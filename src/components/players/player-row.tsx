@@ -23,7 +23,7 @@ function pct(n: number | null | undefined) {
 /** Column labels for a PlayerRow list. */
 export function PlayerRowHeader() {
   return (
-    <div className="flex items-center gap-2 bg-field px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-ink-faint">
+    <div className="flex items-center gap-2 bg-field px-3 py-1.5 text-[11px] font-semibold text-ink-faint">
       <span className="w-6 shrink-0 text-center">#</span>
       <span className="min-w-0 flex-1">Player</span>
       <span className={TD_COL}>TD %</span>
@@ -57,16 +57,16 @@ export function PlayerRow({
         </span>
 
         <div className="min-w-0 flex-1">
-          <h4 className="truncate font-display text-sm font-bold uppercase leading-tight tracking-wide text-ink">
+          <h4 className="truncate text-sm font-semibold leading-tight text-ink">
             {player.name}
           </h4>
           <p className="mt-0.5 flex items-center gap-1.5 text-[11px] font-medium text-ink-muted">
             <span>{player.position}</span>
             {player.availability === "questionable" ? (
-              <span className="font-bold uppercase text-warning">Q</span>
+              <span className="font-semibold text-warning">Q</span>
             ) : null}
             {out ? (
-              <span className="font-bold uppercase text-danger">Out</span>
+              <span className="font-semibold text-danger">Out</span>
             ) : null}
             {taken ? (
               <span className="truncate">
@@ -87,7 +87,7 @@ export function PlayerRow({
         <span
           className={cn(
             ODDS_COL,
-            "font-display text-sm font-bold leading-none text-turf",
+            "font-display text-sm font-bold leading-none text-ink",
           )}
         >
           {player.americanOdds != null
@@ -104,7 +104,7 @@ export function PlayerRow({
             "hover:bg-field-deep focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-turf",
           )}
         >
-          View Analysis
+          View analysis
         </Link>
 
         {taken ? (
@@ -126,7 +126,7 @@ export function PlayerRow({
             onConfirm={() => onSelect?.(player.id)}
             size="sm"
             className="h-8 flex-1 text-[11px]"
-            label="Select Player"
+            label="Select player"
           />
         ) : (
           <Button
@@ -135,7 +135,7 @@ export function PlayerRow({
             disabled
             className="h-8 flex-1 text-[11px]"
           >
-            Select Player
+            Select player
           </Button>
         )}
       </div>

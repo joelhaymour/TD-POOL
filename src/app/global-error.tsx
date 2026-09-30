@@ -22,7 +22,7 @@ export default function GlobalError({ reset }: { error: Error & { digest?: strin
         }}
       >
         <div>
-          <h1 style={{ fontSize: 28, letterSpacing: "0.04em", textTransform: "uppercase", margin: "0 0 8px" }}>
+          <h1 style={{ fontSize: 28, letterSpacing: "0.04em", textTransform: "", margin: "0 0 8px" }}>
             Pool’d
           </h1>
           <p style={{ color: "#545b53", margin: "0 0 20px", lineHeight: 1.5 }}>
@@ -39,7 +39,7 @@ export default function GlobalError({ reset }: { error: Error & { digest?: strin
               fontWeight: 800,
               fontSize: 14,
               letterSpacing: "0.06em",
-              textTransform: "uppercase",
+              textTransform: "",
               padding: "14px 22px",
             }}
           >

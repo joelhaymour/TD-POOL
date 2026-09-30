@@ -114,18 +114,18 @@ export function NotificationsClient() {
   const list = (group: Item[], label: string) =>
     group.length > 0 ? (
       <section>
-        <h2 className="mb-2 font-display text-sm font-bold uppercase tracking-[0.12em] text-ink-muted">{label}</h2>
+        <h2 className="mb-2 text-sm font-semibold text-ink-muted">{label}</h2>
         <ul className="divide-y divide-border overflow-hidden rounded-[1.4rem] bg-chalk shadow-card">
           {group.map((n) => (
             <li key={n.id}>
               <Link href={n.url || "/"} className="flex gap-3 px-3.5 py-3 transition active:bg-field-deep">
                 <span
                   aria-hidden
-                  className={cn("mt-1.5 h-2 w-2 shrink-0 rounded-full", n.read_at ? "bg-transparent" : "bg-lime")}
+                  className={cn("mt-1.5 h-2 w-2 shrink-0 rounded-full", n.read_at ? "bg-transparent" : "bg-danger")}
                 />
                 <span className="min-w-0 flex-1">
                   <span className="flex items-baseline justify-between gap-2">
-                    <span className="truncate text-[11px] font-bold uppercase tracking-wider text-ink-faint">{n.title}</span>
+                    <span className="truncate text-[11px] font-semibold text-ink-faint">{n.title}</span>
                     <span className="shrink-0 text-[11px] text-ink-faint">{ago(n.created_at)}</span>
                   </span>
                   <span className="mt-0.5 block text-sm leading-snug text-ink">{n.body}</span>
@@ -149,7 +149,7 @@ export function NotificationsClient() {
           >
             <ChevronLeft className="h-5 w-5" strokeWidth={2.5} />
           </button>
-          <h1 className="flex-1 font-display text-xl font-extrabold uppercase tracking-wide text-ink">Notifications</h1>
+          <h1 className="flex-1 text-xl font-bold text-ink tracking-tight">Notifications</h1>
           <button
             type="button"
             onClick={() => setSettingsOpen((v) => !v)}
@@ -164,7 +164,7 @@ export function NotificationsClient() {
           <section className="mt-4 space-y-3 rounded-[1.4rem] bg-chalk shadow-card p-4">
             <div className="flex items-start gap-3">
               {pushOn ? (
-                <BellRing className="mt-0.5 h-5 w-5 shrink-0 text-turf" aria-hidden />
+                <BellRing className="mt-0.5 h-5 w-5 shrink-0 text-ink" aria-hidden />
               ) : (
                 <BellOff className="mt-0.5 h-5 w-5 shrink-0 text-ink-faint" aria-hidden />
               )}

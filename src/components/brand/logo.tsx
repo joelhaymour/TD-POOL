@@ -25,7 +25,7 @@ export function Wordmark({ className }: { className?: string }) {
   return (
     <span
       className={cn(
-        "inline-flex items-start font-display font-extrabold uppercase leading-[0.9] tracking-wide",
+        "inline-flex items-start font-bold leading-[0.9]",
         className,
       )}
       role="img"

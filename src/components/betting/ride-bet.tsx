@@ -124,7 +124,7 @@ export function RideBet({
         <>
           <p
             className={cn(
-              "mb-2 text-[10px] font-bold uppercase tracking-[0.1em]",
+              "mb-2 text-[11px] font-semibold",
               dark ? "text-raised-fg/50" : "text-ink-faint",
             )}
           >
@@ -236,7 +236,7 @@ export function RideBet({
             <button
               type="button"
               onClick={() => void pasteFromClipboard()}
-              className="flex shrink-0 items-center gap-1.5 rounded-full bg-ink/[0.06] px-3 text-xs font-bold uppercase tracking-wide text-ink-muted transition hover:text-ink"
+              className="flex shrink-0 items-center gap-1.5 rounded-full bg-ink/[0.06] px-3 text-xs font-semibold text-ink-muted transition hover:text-ink"
             >
               <ClipboardPaste className="h-4 w-4" aria-hidden />
               Paste
@@ -259,7 +259,7 @@ export function RideBet({
             {busy ? "Saving…" : "Save link"}
           </button>
           <div className="rounded-2xl bg-ink/[0.04] p-3">
-            <p className="text-[11px] font-bold uppercase tracking-wide text-ink-faint">
+            <p className="text-[11px] font-semibold text-ink-faint">
               Where to find it
             </p>
             <ul className="mt-1.5 space-y-1">

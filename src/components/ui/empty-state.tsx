@@ -27,11 +27,11 @@ export function EmptyState({
       )}
     >
       {icon ? (
-        <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-field-deep text-turf">
+        <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-field-deep text-ink-muted">
           {icon}
         </div>
       ) : null}
-      <h3 className="font-display text-xl font-bold uppercase tracking-wide text-ink">
+      <h3 className="text-xl font-bold text-ink tracking-tight">
         {title}
       </h3>
       {description ? (

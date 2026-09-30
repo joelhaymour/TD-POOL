@@ -36,7 +36,7 @@ export function PickModeField({
             className={cn(
               "flex cursor-pointer gap-3 rounded-xl border px-3 py-3 transition",
               selected
-                ? "border-turf bg-turf/8"
+                ? "border-ink bg-chalk shadow-card"
                 : "border-border bg-chalk hover:border-border-strong",
             )}
           >

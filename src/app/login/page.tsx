@@ -16,7 +16,7 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
         }}
       />
       <main className="relative mx-auto flex min-h-dvh w-full max-w-lg flex-col justify-center px-5 pb-[max(3rem,calc(env(safe-area-inset-bottom)+1.5rem))] pt-[max(3rem,calc(env(safe-area-inset-top)+1.5rem))]">
-        <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-turf">
+        <p className="text-[11px] font-semibold text-ink-faint">
           Weekly TD picks · every bet, followed live
         </p>
         <h1 className="mt-3">
@@ -30,7 +30,7 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
         <LoginForm next={returnTo} />
         <Link
           href="/privacy"
-          className="mt-6 self-start text-[11px] font-bold uppercase tracking-wider text-ink-faint underline-offset-2 hover:underline"
+          className="mt-6 self-start text-[11px] font-semibold text-ink-faint underline-offset-2 hover:underline"
         >
           Privacy
         </Link>

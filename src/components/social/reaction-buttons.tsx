@@ -67,11 +67,7 @@ export function ReactionButtons({
             className={cn(
               "pressable flex items-center gap-1 rounded-full font-bold tabular-nums disabled:cursor-default disabled:active:scale-100",
               pad,
-              on
-                ? dir === 1
-                  ? "bg-lime text-accent-fg"
-                  : "bg-danger text-white"
-                : "bg-ink/[0.06] text-ink-muted",
+              on ? "bg-ink text-white" : "bg-ink/[0.06] text-ink-muted",
               disabled && !on && "bg-transparent",
             )}
           >

@@ -153,14 +153,14 @@ export function GameBoard({
         <button
           type="button"
           onClick={closeGame}
-          className="inline-flex items-center gap-1 text-xs font-bold uppercase tracking-wider text-turf hover:underline"
+          className="inline-flex items-center gap-1 text-xs font-semibold text-ink-muted hover:underline"
         >
           <ChevronLeft className="h-3.5 w-3.5" />
           All games
         </button>
 
         <div className="rounded-2xl border border-border bg-raised px-4 py-3 text-raised-fg">
-          <h3 className="font-display text-lg font-extrabold uppercase leading-tight tracking-wide">
+          <h3 className="text-[17px] font-semibold leading-tight">
             {teamNickname(game.away_team)}
             <span className="mx-1.5 text-raised-fg/40">@</span>
             {teamNickname(game.home_team)}
@@ -217,7 +217,7 @@ export function GameBoard({
     <div className="space-y-4">
       {days.map(([day, dayGames]) => (
         <section key={day}>
-          <h3 className="mb-1.5 text-[11px] font-bold uppercase tracking-[0.12em] text-ink-faint">
+          <h3 className="mb-1.5 text-[11px] font-semibold text-ink-faint">
             {day}
           </h3>
           <ul className="space-y-2">
@@ -239,7 +239,7 @@ export function GameBoard({
                     )}
                   >
                     <div className="min-w-0 flex-1">
-                      <p className="truncate font-display text-base font-bold uppercase leading-tight tracking-wide text-ink">
+                      <p className="truncate text-[15px] font-semibold leading-tight text-ink">
                         {teamNickname(game.away_team)}
                         <span className="mx-1.5 text-ink/30">@</span>
                         {teamNickname(game.home_team)}
@@ -247,7 +247,7 @@ export function GameBoard({
                       <p className="mt-0.5 text-xs font-medium text-ink-muted">
                         {kickoffLabel(game.kickoff_at)}
                         {status ? (
-                          <span className="ml-1.5 font-bold text-turf">
+                          <span className="ml-1.5 font-bold text-ink">
                             {status}
                           </span>
                         ) : null}
@@ -264,7 +264,7 @@ export function GameBoard({
                       <p className="font-display text-lg font-extrabold leading-none text-ink">
                         {available}
                       </p>
-                      <p className="text-[10px] font-bold uppercase tracking-wider text-ink-faint">
+                      <p className="text-[11px] font-semibold text-ink-faint">
                         open
                       </p>
                     </div>

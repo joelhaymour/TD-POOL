@@ -102,7 +102,7 @@ export default function PlayerDetailPage() {
     <div>
       <Link
         href={backHref}
-        className="mb-3 inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-ink-muted hover:text-ink"
+        className="mb-3 inline-flex items-center gap-1.5 text-xs font-semibold text-ink-muted hover:text-ink"
       >
         <ArrowLeft className="h-3.5 w-3.5" />{" "}
         {fromGame ? "Back to game" : "Back to picks"}

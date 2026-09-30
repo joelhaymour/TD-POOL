@@ -234,7 +234,7 @@ export function ShareFlow({ leagues }: { leagues: ShareLeague[] }) {
           >
             <X className="h-5 w-5" />
           </Link>
-          <h1 className="flex-1 font-display text-xl font-extrabold uppercase tracking-wide text-ink">Post a ticket</h1>
+          <h1 className="flex-1 text-xl font-bold text-ink tracking-tight">Post a ticket</h1>
         </header>
 
         {leagues.length === 0 ? (
@@ -266,7 +266,7 @@ export function ShareFlow({ leagues }: { leagues: ShareLeague[] }) {
               <div className="min-w-0 flex-1">
                 {phase === "reading" ? (
                   <p className="flex items-center gap-2 text-sm font-semibold text-ink">
-                    <Loader2 className="h-4 w-4 animate-spin text-turf" aria-hidden /> Reading your ticket…
+                    <Loader2 className="h-4 w-4 animate-spin text-ink-muted" aria-hidden /> Reading your ticket…
                   </p>
                 ) : (
                   <>
@@ -288,7 +288,7 @@ export function ShareFlow({ leagues }: { leagues: ShareLeague[] }) {
 
             {/* Where it goes */}
             <section>
-              <h2 className="mb-2 font-display text-sm font-bold uppercase tracking-[0.12em] text-ink-muted">
+              <h2 className="mb-2 text-sm font-semibold text-ink-muted">
                 Post to
               </h2>
               <ul className="divide-y divide-border overflow-hidden rounded-[1.4rem] bg-chalk shadow-card">
@@ -307,12 +307,12 @@ export function ShareFlow({ leagues }: { leagues: ShareLeague[] }) {
                           aria-hidden
                           className={cn(
                             "flex h-6 w-6 shrink-0 items-center justify-center rounded-md border-2 transition",
-                            on ? "border-lime bg-lime text-accent-fg" : "border-border-strong",
+                            on ? "border-ink bg-ink text-white" : "border-border-strong",
                           )}
                         >
                           {on ? <Check className="h-4 w-4" strokeWidth={3} /> : null}
                         </span>
-                        <span className="min-w-0 flex-1 truncate font-display text-base font-bold uppercase tracking-wide text-ink">
+                        <span className="min-w-0 flex-1 truncate text-[15px] font-semibold text-ink">
                           {l.name}
                         </span>
                       </button>

@@ -212,7 +212,7 @@ export function PropPickerSheet({
           {onRefresh ? (
             <button
               type="button"
-              className="mt-3 inline-flex items-center gap-1 text-xs font-bold uppercase tracking-wider text-turf"
+              className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-turf"
               onClick={onRefresh}
             >
               <RefreshCw className="h-3 w-3" /> Try again
@@ -245,7 +245,7 @@ export function PropPickerSheet({
                     key={g}
                     type="button"
                     className={cn(
-                      "shrink-0 rounded-full px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider transition",
+                      "shrink-0 rounded-full px-3 py-1.5 text-[11px] font-semibold transition",
                       active === g
                         ? "bg-raised text-lime"
                         : "border border-border text-ink-muted hover:text-ink",
@@ -264,7 +264,7 @@ export function PropPickerSheet({
                 {onRefresh ? (
                   <button
                     type="button"
-                    className="inline-flex shrink-0 items-center gap-1 font-bold uppercase tracking-wider hover:text-ink"
+                    className="inline-flex shrink-0 items-center gap-1 font-semibold hover:text-ink"
                     onClick={onRefresh}
                   >
                     <RefreshCw className="h-3 w-3" /> Refresh
@@ -288,7 +288,7 @@ export function PropPickerSheet({
                     aria-expanded={open}
                     onClick={() => toggle(section.key)}
                   >
-                    <span className="min-w-0 flex-1 truncate font-display text-sm font-bold uppercase tracking-wide text-ink">
+                    <span className="min-w-0 flex-1 truncate text-sm font-semibold text-ink">
                       {section.label}
                     </span>
                     {section.picked ? (
@@ -378,7 +378,7 @@ export function PropPickerSheet({
               type="button"
               disabled={loading}
               onClick={onLoadExtended}
-              className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-border-strong py-3 text-xs font-bold uppercase tracking-wider text-ink-muted transition hover:border-turf hover:text-ink disabled:opacity-50"
+              className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-border-strong py-3 text-xs font-semibold text-ink-muted transition hover:border-turf hover:text-ink disabled:opacity-50"
             >
               <Plus className="h-3.5 w-3.5" />
               {loading ? "Loading…" : "Alt lines, defense & more markets"}

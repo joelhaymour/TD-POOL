@@ -5,7 +5,7 @@ export default function NotFound() {
   return (
     <div className="field-atmosphere min-h-dvh">
       <main className="mx-auto flex min-h-dvh w-full max-w-lg flex-col justify-center px-5 pb-[max(3rem,env(safe-area-inset-bottom))] pt-[max(3rem,env(safe-area-inset-top))]">
-        <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-turf">Pool’d</p>
+        <p className="text-[11px] font-semibold text-ink-faint">Pool’d</p>
         <h1 className="mt-2 font-display text-5xl font-extrabold uppercase leading-[0.9] tracking-wide text-ink">
           Nothing here
         </h1>

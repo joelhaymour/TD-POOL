@@ -18,7 +18,7 @@ export function SelectPickButton({
   playerName,
   onConfirm,
   disabled,
-  label = "Select Player",
+  label = "Select player",
   size = "sm",
   className,
 }: SelectPickButtonProps) {
@@ -41,7 +41,8 @@ export function SelectPickButton({
         variant="primary"
         size={size}
         disabled={disabled || loading}
-        className={cn(className)}
+        // Soft green: it's the action, but it repeats on every card.
+        className={cn("bg-lime/10 text-turf shadow-none hover:bg-lime/15", className)}
         onClick={() => setOpen(true)}
       >
         {label}

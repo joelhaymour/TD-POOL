@@ -76,7 +76,7 @@ export function TdLeaderboard({ viewerMemberId }: { viewerMemberId?: string }) {
   return (
     <div className="space-y-4">
       <div>
-        <h2 className="font-display text-xl font-extrabold uppercase tracking-wide text-ink">
+        <h2 className="text-xl font-bold text-ink tracking-tight">
           Leaderboard
         </h2>
         <p className="mt-1 text-sm text-ink-muted">
@@ -106,8 +106,8 @@ export function TdLeaderboard({ viewerMemberId }: { viewerMemberId?: string }) {
                 className={cn(
                   "flex items-center gap-3 rounded-xl border px-3 py-2.5",
                   row.memberId === viewerMemberId
-                    ? "border-lime/30 bg-lime/[0.07]"
-                    : "border-border bg-chalk",
+                    ? "border-transparent bg-ink/[0.04]"
+                    : "border-transparent bg-chalk shadow-card",
                 )}
               >
                 <span className="w-4 shrink-0 font-display text-base font-extrabold text-ink-faint">
@@ -118,7 +118,7 @@ export function TdLeaderboard({ viewerMemberId }: { viewerMemberId?: string }) {
                   <p className="truncate text-sm font-semibold text-ink">
                     {row.memberName}
                     {row.memberId === viewerMemberId ? (
-                      <span className="ml-1.5 text-[10px] font-bold uppercase tracking-wider text-lime">
+                      <span className="ml-1.5 text-xs font-normal text-ink-faint">
                         You
                       </span>
                     ) : null}
@@ -143,14 +143,14 @@ export function TdLeaderboard({ viewerMemberId }: { viewerMemberId?: string }) {
 
           {best?.avgOdds != null ? (
             <div className="rounded-[1.4rem] bg-chalk shadow-card p-4">
-              <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-ink-faint">
+              <p className="text-[11px] font-semibold text-ink-faint">
                 Longest average odds
               </p>
               <div className="mt-2 flex items-center gap-3">
                 <p className="min-w-0 flex-1 truncate text-sm font-semibold text-ink">
                   {best.memberName}
                 </p>
-                <span className="shrink-0 font-display text-xl font-extrabold text-lime">
+                <span className="shrink-0 font-display text-xl font-bold text-ink">
                   {formatAmerican(best.avgOdds)}
                 </span>
               </div>
@@ -170,13 +170,13 @@ function Podium({ row, place }: { row: Standing | undefined; place: number }) {
     <div
       className={cn(
         "rounded-2xl border px-2 text-center",
-        leader ? "border-lime/40 bg-lime/[0.1] py-4" : "border-border bg-chalk py-3",
+        leader ? "border-transparent bg-chalk py-4 shadow-card" : "border-transparent bg-chalk py-3 shadow-card",
       )}
     >
       <p
         className={cn(
-          "font-display text-[11px] font-bold uppercase tracking-[0.1em]",
-          leader ? "text-lime" : "text-ink-faint",
+          "text-[11px] font-bold",
+          leader ? "text-ink-muted" : "text-ink-faint",
         )}
       >
         {leader ? "Leader" : place === 2 ? "2nd" : "3rd"}
@@ -185,14 +185,14 @@ function Podium({ row, place }: { row: Standing | undefined; place: number }) {
         name={row.memberName}
         className={cn(
           "mx-auto mt-2",
-          leader ? "h-10 w-10 bg-lime text-[12px] text-accent-fg" : "h-8 w-8 text-[10px]",
+          leader ? "h-10 w-10 bg-ink text-[12px] text-white" : "h-8 w-8 text-[10px]",
         )}
       />
       <p className="mt-2 truncate text-xs font-semibold text-ink">{row.memberName}</p>
       <p
         className={cn(
           "mt-0.5 font-display text-xl font-extrabold leading-none",
-          leader ? "text-lime" : "text-ink",
+          "text-ink",
         )}
       >
         {row.correct}/{row.decided}

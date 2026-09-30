@@ -25,7 +25,8 @@ export function ticketPhaseLabel(
     if (result === "lost") return { label: "Lost", className: "bg-ink/6 text-ink-muted" };
     return { label: "Push", className: "bg-ink/6 text-ink-muted" };
   }
-  if (phase === "busted") return { label: "Busted", className: "bg-danger text-white" };
-  if (phase === "live") return { label: "Live", className: "bg-lime text-accent-fg" };
-  return { label: "Upcoming", className: "border border-border text-ink-muted" };
+  if (phase === "busted") return { label: "Busted", className: "bg-danger/10 text-danger" };
+  // Green is kept for wins; live reads from the pulsing dot beside it.
+  if (phase === "live") return { label: "Live", className: "bg-ink/6 text-ink" };
+  return { label: "Upcoming", className: "bg-ink/6 text-ink-muted" };
 }

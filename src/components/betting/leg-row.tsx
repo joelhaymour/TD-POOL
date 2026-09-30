@@ -72,7 +72,7 @@ export function LegRow({
         >
           {legTitle(leg)}
         </p>
-        <p className="truncate text-[11px] uppercase tracking-wide text-ink-faint">
+        <p className="truncate text-[11px] text-ink-faint">
           {detail}
         </p>
         {onGrade ? (

@@ -1,9 +1,23 @@
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils/cn";
 import { formatAmerican, formatMoney } from "@/lib/utils/odds";
 import type { PickResult } from "@/lib/types";
 
+export type YourPick = {
+  name: string;
+  /** "RB · BAL vs CIN" */
+  detail: string;
+  odds: number | null;
+  result: PickResult;
+};
+
 export type ParlaySummaryProps = {
   weekNumber: number;
+  /** The viewer's own pick this week; null when they haven't made one. */
+  yourPick: YourPick | null;
+  picksLocked: boolean;
+  /** Jump to the board to pick (or change) a player. */
+  onChoose?: () => void;
   /** One entry per member, in board order — drives the result bar. */
   pickResults?: PickResult[];
   picksSubmitted: number;
@@ -20,41 +34,14 @@ export type ParlaySummaryProps = {
   className?: string;
 };
 
-function Stat({
-  label,
-  value,
-  accent,
-}: {
-  label: string;
-  value: string;
-  accent?: boolean;
-}) {
-  return (
-    <div className="min-w-0">
-      <p className="text-[10px] font-bold uppercase tracking-[0.1em] text-ink-faint">
-        {label}
-      </p>
-      <p
-        className={cn(
-          "mt-0.5 font-display text-2xl font-extrabold leading-none tracking-tight",
-          accent ? "text-lime" : "text-raised-fg",
-        )}
-      >
-        {value}
-      </p>
-    </div>
-  );
-}
-
 /**
- * One segment per member's pick — scored lime, missed red, still playing a
- * pulse, not yet decided dim. The parlay cards carry the same bar, so both
- * league types read the same way at a glance.
+ * One segment per member's pick — scored green, missed red, still playing a
+ * pulse, not yet decided dim.
  */
 function PickResults({ results }: { results: PickResult[] }) {
   if (results.length === 0) return null;
   return (
-    <div className="mt-3 flex gap-1" aria-hidden>
+    <div className="mt-2.5 flex gap-1" aria-hidden>
       {results.map((result, i) => (
         <span
           key={i}
@@ -62,8 +49,8 @@ function PickResults({ results }: { results: PickResult[] }) {
             "h-1.5 flex-1 rounded-full",
             result === "td" && "bg-lime",
             result === "no_td" && "bg-danger",
-            result === "game_not_finished" && "animate-pulse bg-turf",
-            result === "pending" && "bg-raised-fg/15",
+            result === "game_not_finished" && "animate-pulse bg-ink/35",
+            result === "pending" && "bg-ink/10",
           )}
         />
       ))}
@@ -71,8 +58,22 @@ function PickResults({ results }: { results: PickResult[] }) {
   );
 }
 
+const RESULT_LABEL: Record<PickResult, string> = {
+  pending: "Game not started",
+  game_not_finished: "Playing now",
+  td: "Scored",
+  no_td: "No TD",
+};
+
+/**
+ * The top of the TD Pool screen: your pick for the week is the headline, and
+ * the league's parlay sits underneath it in one quiet block.
+ */
 export function ParlaySummary({
   weekNumber,
+  yourPick,
+  picksLocked,
+  onChoose,
   pickResults = [],
   picksSubmitted,
   totalMembers,
@@ -96,68 +97,111 @@ export function ParlaySummary({
     hasOdds ? null : oddsNote,
   );
 
+  const hits = pickResults.filter((r) => r === "td").length;
+  const misses = pickResults.filter((r) => r === "no_td").length;
+  const live = pickResults.filter((r) => r === "game_not_finished").length;
+  const decided = hits + misses > 0 || live > 0;
+  const allIn = picksSubmitted > 0 && picksSubmitted === totalMembers;
+  const parlayWon = allIn && hits === totalMembers;
+  const parlayLost = misses > 0;
+
   return (
-    <section
-      className={cn(
-        "relative overflow-hidden rounded-2xl bg-raised p-4 text-raised-fg shadow-card",
-        className,
-      )}
-    >
-      <div
-        className="pointer-events-none absolute inset-0 opacity-40"
-        style={{
-          backgroundImage:
-            "radial-gradient(ellipse at 90% -10%, rgba(17,128,60,0.12), transparent 55%), radial-gradient(ellipse at 0% 100%, rgba(17,128,60,0.07), transparent 50%)",
-        }}
-      />
-      <div className="relative">
-        <div className="flex items-center justify-between gap-2">
-          <h2 className="font-display text-lg font-extrabold uppercase tracking-[0.12em] text-lime">
-            Week {weekNumber} Parlay
-          </h2>
-          <span className="rounded-md bg-raised-fg/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-raised-fg/70">
-            Estimates
+    <section className={cn("rounded-[1.4rem] bg-chalk p-4 shadow-card", className)}>
+      <p className="text-[13px] font-medium text-ink-muted">Week {weekNumber} · Your pick</p>
+
+      {yourPick ? (
+        <div className="mt-1 flex items-end justify-between gap-3">
+          <div className="min-w-0">
+            <p className="truncate text-[26px] font-bold leading-tight tracking-tight text-ink">
+              {yourPick.name}
+            </p>
+            <p className="mt-0.5 truncate text-sm text-ink-muted">
+              {yourPick.detail}
+              {yourPick.odds != null ? (
+                <>
+                  {" · "}
+                  <span className="font-display text-base font-bold text-ink">
+                    {formatAmerican(yourPick.odds)}
+                  </span>
+                </>
+              ) : null}
+            </p>
+          </div>
+          <span
+            className={cn(
+              "shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold",
+              yourPick.result === "td"
+                ? "bg-lime text-accent-fg"
+                : yourPick.result === "no_td"
+                  ? "bg-danger/10 text-danger"
+                  : "bg-ink/[0.06] text-ink-muted",
+            )}
+          >
+            {RESULT_LABEL[yourPick.result]}
           </span>
         </div>
+      ) : (
+        <p className="mt-1 text-[26px] font-bold leading-tight tracking-tight text-ink">No pick yet</p>
+      )}
 
-        <p className="mt-3 font-display text-4xl font-extrabold leading-none tracking-tight">
-          {picksSubmitted}
-          <span className="text-raised-fg/40"> / {totalMembers}</span>
-        </p>
-        <p className="mt-1 text-xs font-medium text-raised-fg/65">
-          Picks submitted
-        </p>
-        <PickResults results={pickResults} />
-
-        {showMoney ? (
-          <div className="mt-4 grid grid-cols-3 gap-3 border-t border-chalk/10 pt-4">
-            <Stat
-              label="Est. odds"
-              value={
-                estimatedAmericanOdds != null
-                  ? formatAmerican(estimatedAmericanOdds)
-                  : "—"
-              }
-              accent
-            />
-            <Stat
-              label="Stake"
-              value={stake != null ? formatMoney(stake, currency) : "—"}
-            />
-            <Stat
-              label="Est. payout"
-              value={payout != null ? formatMoney(payout, currency) : "—"}
-            />
-          </div>
+      {!picksLocked && onChoose ? (
+        yourPick ? (
+          <button
+            type="button"
+            onClick={onChoose}
+            className="mt-2 text-sm font-semibold text-ink-muted underline decoration-ink/20 underline-offset-4"
+          >
+            Change pick
+          </button>
         ) : (
-          <p className="mt-4 text-xs text-raised-fg/55">
-            Money tracking is off for this league.
-          </p>
-        )}
+          <Button fullWidth size="lg" className="mt-3" onClick={onChoose}>
+            Choose a player
+          </Button>
+        )
+      ) : picksLocked && !yourPick ? (
+        <p className="mt-1 text-sm text-ink-muted">Picks are locked for this week.</p>
+      ) : null}
 
+      <div className="mt-4 border-t border-ink/[0.07] pt-3">
+        <div className="flex items-baseline justify-between gap-3">
+          <p className="text-[15px] font-semibold text-ink">
+            {parlayWon ? "League parlay hit" : parlayLost ? "League parlay lost" : "League parlay"}
+          </p>
+          <p className="text-[13px] text-ink-muted">
+            {decided
+              ? `${hits} of ${picksSubmitted} scored${live ? ` · ${live} playing` : ""}`
+              : `${picksSubmitted} of ${totalMembers} in`}
+          </p>
+        </div>
+        <PickResults results={pickResults} />
+        {showMoney ? (
+          <p className="mt-2.5 text-[13px] text-ink-muted">
+            {hasOdds ? (
+              <span className="font-display text-[15px] font-bold text-ink">
+                {formatAmerican(estimatedAmericanOdds)}
+              </span>
+            ) : (
+              "Odds when picks are in"
+            )}
+            {stake != null && stake > 0 ? (
+              <>
+                {" · "}
+                <span className="font-display text-[15px] font-bold text-ink">{formatMoney(stake, currency)}</span>
+                {payout != null ? (
+                  <>
+                    {" to win "}
+                    <span className="font-display text-[15px] font-bold text-ink">
+                      {formatMoney(payout, currency)}
+                    </span>
+                  </>
+                ) : null}
+              </>
+            ) : null}
+          </p>
+        ) : null}
         {oddsLabel ? (
-          <p suppressHydrationWarning className="mt-3 text-[10px] font-medium uppercase tracking-wider text-raised-fg/45">
-            {oddsLabel}
+          <p suppressHydrationWarning className="mt-1 text-[11px] text-ink-faint">
+            {oddsLabel} · estimates
           </p>
         ) : null}
       </div>

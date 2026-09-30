@@ -34,7 +34,7 @@ export function ResultMark({
     <span
       className={cn(
         "inline-block h-1.5 w-1.5 shrink-0 rounded-full",
-        live ? "animate-pulse bg-lime/45" : "bg-ink/30",
+        live ? "animate-pulse bg-ink/45" : "bg-ink/30",
       )}
       aria-hidden
     />

@@ -50,7 +50,7 @@ export async function GroupHistory({
   return (
     <div className="space-y-4">
       <div>
-        <h2 className="font-display text-xl font-extrabold uppercase tracking-wide text-ink">
+        <h2 className="text-xl font-bold text-ink tracking-tight">
           Season history
         </h2>
         <p className="mt-1 text-sm text-ink-muted">
@@ -61,7 +61,7 @@ export async function GroupHistory({
       {settled.length > 0 ? (
         <section className="grid grid-cols-2 gap-3 rounded-2xl bg-raised p-4 text-raised-fg shadow-card">
           <div>
-            <p className="text-[10px] font-bold uppercase tracking-[0.1em] text-ink-faint">
+            <p className="text-[11px] font-semibold text-ink-faint">
               Slip record
             </p>
             <p className="mt-0.5 font-display text-2xl font-extrabold text-lime">
@@ -70,7 +70,7 @@ export async function GroupHistory({
           </div>
           {showMoney ? (
             <div>
-              <p className="text-[10px] font-bold uppercase tracking-[0.1em] text-ink-faint">
+              <p className="text-[11px] font-semibold text-ink-faint">
                 Net
               </p>
               <p className="mt-0.5 font-display text-2xl font-extrabold">
@@ -100,7 +100,7 @@ export async function GroupHistory({
           >
             <div className="flex items-start justify-between gap-3 border-b border-border bg-field px-4 py-3">
               <div className="min-w-0">
-                <h3 className="truncate font-display text-base font-bold uppercase tracking-wide text-ink">
+                <h3 className="truncate text-[15px] font-semibold text-ink">
                   {parlay.title}
                 </h3>
                 <p className="text-xs text-ink-muted">
@@ -114,7 +114,7 @@ export async function GroupHistory({
               </div>
               <span
                 className={cn(
-                  "shrink-0 rounded-md border px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.08em]",
+                  "shrink-0 rounded-md border px-2 py-0.5 text-[11px] font-semibold",
                   badge.className,
                 )}
               >
@@ -151,7 +151,7 @@ export async function GroupHistory({
                       <p className="truncate text-sm font-semibold text-ink">
                         {legTitle(leg)}
                       </p>
-                      <p className="truncate text-[11px] uppercase tracking-wide text-ink-faint">
+                      <p className="truncate text-[11px] text-ink-faint">
                         {[leg.market_label, gameLabel(gamesById.get(leg.game_id)), actual]
                           .filter(Boolean)
                           .join(" · ")}

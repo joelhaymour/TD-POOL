@@ -145,7 +145,7 @@ export function ParlayBoard({
           </p>
           <Link
             href={`/${slug}/group`}
-            className="mt-4 inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-raised px-5 font-display text-sm font-extrabold uppercase tracking-wider text-lime"
+            className="mt-4 inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-raised px-5 text-sm font-semibold text-lime"
           >
             <Plus className="h-4 w-4" /> Create a parlay
           </Link>
@@ -183,7 +183,7 @@ export function ParlayBoard({
               >
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
-                    <h3 className="truncate font-display text-base font-bold uppercase tracking-wide text-ink">
+                    <h3 className="truncate text-[15px] font-semibold text-ink">
                       {parlay.title}
                     </h3>
                     <p className="mt-0.5 truncate text-xs text-ink-muted">
@@ -194,7 +194,7 @@ export function ParlayBoard({
                   </div>
                   <span
                     className={cn(
-                      "shrink-0 rounded-md px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider",
+                      "shrink-0 rounded-md px-2 py-0.5 text-[11px] font-semibold",
                       PHASE_BADGE[phase].className,
                     )}
                   >
@@ -205,7 +205,7 @@ export function ParlayBoard({
                 <div className="mt-3 flex items-end justify-between gap-3">
                   <div className="flex items-end gap-6">
                     <div>
-                      <p className="text-[10px] font-bold uppercase tracking-[0.1em] text-ink-faint">
+                      <p className="text-[11px] font-semibold text-ink-faint">
                         Est. odds
                       </p>
                       <p className="font-display text-2xl font-extrabold leading-none tracking-tight text-turf">
@@ -216,7 +216,7 @@ export function ParlayBoard({
                     </div>
                     {showMoney ? (
                       <div>
-                        <p className="text-[10px] font-bold uppercase tracking-[0.1em] text-ink-faint">
+                        <p className="text-[11px] font-semibold text-ink-faint">
                           Est. payout
                         </p>
                         <p className="font-display text-2xl font-extrabold leading-none tracking-tight text-ink">
@@ -279,7 +279,7 @@ export function ParlayBoard({
                               <span className="block truncate text-sm font-semibold text-ink">
                                 {legTitle(leg)}
                               </span>
-                              <span className="block truncate text-[11px] uppercase tracking-wide text-ink-faint">
+                              <span className="block truncate text-[11px] text-ink-faint">
                                 {[leg.market_label, gameLabel(game), actual]
                                   .filter(Boolean)
                                   .join(" · ")}
@@ -318,7 +318,7 @@ export function ParlayBoard({
                   {phase === "building" ? (
                     <Link
                       href={`/${slug}/group?slip=${parlay.id}`}
-                      className="mt-3 flex h-11 items-center justify-center gap-2 rounded-full bg-ink/[0.06] font-display text-sm font-bold uppercase tracking-wide text-ink transition hover:border-turf"
+                      className="mt-3 flex h-11 items-center justify-center gap-2 rounded-full bg-ink/[0.06] text-sm font-semibold text-ink transition hover:border-turf"
                     >
                       <Plus className="h-4 w-4" /> Add picks
                     </Link>
@@ -336,7 +336,7 @@ export function ParlayBoard({
 function Header({ count }: { count: number }) {
   return (
     <div>
-      <h2 className="font-display text-xl font-extrabold uppercase tracking-wide text-ink">
+      <h2 className="text-xl font-bold text-ink tracking-tight">
         Parlays
       </h2>
       <p className="mt-1 text-sm text-ink-muted">

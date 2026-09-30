@@ -93,10 +93,10 @@ export function BetSlip({
       )}
     >
       <div className="border-b border-border bg-field px-4 py-3">
-        <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-lime">
-          Bet Slip
+        <p className="text-[11px] font-semibold text-raised-fg/60">
+          Bet slip
         </p>
-        <h2 className="font-display text-xl font-extrabold uppercase tracking-wide text-raised-fg">
+        <h2 className="text-xl font-bold text-raised-fg tracking-tight">
           Week {weekNumber} Legs
         </h2>
       </div>
@@ -117,11 +117,11 @@ export function BetSlip({
                 <p className="truncate text-sm font-semibold text-ink">
                   {leg.playerName}
                 </p>
-                <p className="truncate text-[11px] uppercase tracking-wide text-ink-faint">
+                <p className="truncate text-[11px] text-ink-faint">
                   {[leg.team, leg.memberName].filter(Boolean).join(" · ")}
                 </p>
               </div>
-              <span className="shrink-0 font-display text-sm font-bold text-turf">
+              <span className="shrink-0 font-display text-sm font-bold text-ink">
                 {formatAmerican(leg.americanOdds)}
               </span>
             </li>
@@ -132,7 +132,7 @@ export function BetSlip({
       <div className="space-y-3 border-t border-border bg-field/60 px-4 py-4">
         <div className="flex items-end justify-between gap-3">
           <div>
-            <p className="text-[10px] font-bold uppercase tracking-[0.1em] text-ink-faint">
+            <p className="text-[11px] font-semibold text-ink-faint">
               Combined odds (est.)
             </p>
             <p className="font-display text-3xl font-extrabold text-ink">
@@ -143,7 +143,7 @@ export function BetSlip({
           </div>
           {showMoney ? (
             <div className="text-right">
-              <p className="text-[10px] font-bold uppercase tracking-[0.1em] text-ink-faint">
+              <p className="text-[11px] font-semibold text-ink-faint">
                 Stake → payout
               </p>
               <p className="text-sm font-semibold text-ink">
