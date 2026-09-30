@@ -174,45 +174,102 @@ The App Store adds full App Review. Two guidelines matter for this app:
 
 ### App Store listing (copy/paste)
 
-- **Name:** Pool’d (check it is free in App Store Connect; fall back to "Pool’d: TD Picks" if not)
-- **Subtitle:** Weekly TD picks with friends
-- **Category:** Sports. **Price:** Free, no in-app purchases.
-- **Keywords:** touchdown,pool,football,picks,league,friends,anytime td,leaderboard,tracker
-- **Description:**
+Every App Store Connect field, filled in, as submitted for 1.0. The four
+screenshots (1320×2868, iPhone 6.9") were rendered from the real components
+with sample data at 440×956 CSS px and 3× scale in headless Chrome.
 
-  > Pool’d is a private weekly game for your friend group. Each week everyone
-  > picks one player to score a touchdown. Picks lock at kickoff and grade
-  > themselves live from the box score, and the leaderboard keeps the season
-  > standings.
-  >
-  > Post the tickets you placed, and Pool’d reads the slip for you. Your
-  > friends see every leg fill in live during the game.
-  >
-  > Pool’d never takes a bet and never holds or moves money. Leagues are
-  > invite-only.
+```text
+POOL’D — APP STORE CONNECT, FIELD BY FIELD
+(Copy each block into the matching box. Screenshots are the 4 PNGs in this folder.)
 
-- **Privacy Policy URL:** `https://td-pool-five.vercel.app/privacy`
-- **App Privacy answers:** Data collected = *Contact Info → Email* and *User
-  Content → Photos* (bet slip screenshots) and *Other User Content*. All are
-  **linked to the user**, used for **App Functionality** only, and **not used
-  for tracking**.
-- **Age rating:** answer *Simulated Gambling: None*. Answer *Gambling &
-  Contests* honestly: the app has contests between friends but no real-money
-  gambling in the app. Expect a 17+ rating.
-- **App Review Information → Sign-in required:** yes. Create a demo account
-  on the live site (for example `appreview@…`) and put it in a small demo
-  league with a few picks and one ticket. Give Apple that email and password
-  in the review form. This is the most common reason first submissions bounce.
-- **Review notes:**
+================================================================
+APP INFORMATION  (left sidebar → App Information)
+================================================================
+Name:        Pool’d
+Subtitle:    TD picks & bets with friends
+Primary category:    Sports
+Secondary category:  Social Networking
+Content rights:      "Yes, it contains third-party content" → tick that you have
+                     the rights (player names, schedules and odds come from
+                     data providers). Your call — say if you're unsure.
+Age rating:  click Set Up / Edit and answer honestly:
+             - Simulated gambling: None
+             - Real-money gambling in the app: No (the app takes no bets)
+             - Contests: Yes (friends' pick'em, no money through the app)
+             - Everything else (violence, profanity, etc.): None
+             It will likely come out 17+ / 18+ because of betting themes. That's fine.
 
-  > Pool’d is a private pick'em game and bet tracker for friend groups. It
-  > takes no wagers and handles no money. Users record bets they already
-  > placed elsewhere. "Ride" links open the user's own sportsbook app.
-  > Account deletion: home screen → Delete account. Demo league:
-  > <slug>, already joined by the demo account.
+================================================================
+PRICING AND AVAILABILITY
+================================================================
+Price:         Free (USD 0)
+Availability:  United States and Canada (or all countries — your call)
 
-You'll also need screenshots (Xcode → Simulator → ⌘S on an iPhone 17 Pro Max
-and an iPhone SE-size device) and the privacy URL above.
+================================================================
+APP PRIVACY  (left sidebar → App Privacy → Get Started)
+================================================================
+Privacy Policy URL:  https://td-pool-five.vercel.app/privacy
+"Do you or your third-party partners collect data from this app?"  → Yes
+Data types to tick (for each: Linked to the user = Yes,
+Used for tracking = No, Purpose = App Functionality only):
+  - Contact Info → Email Address
+  - Contact Info → Name            (display name in leagues)
+  - User Content → Photos or Videos (bet slip screenshots)
+  - User Content → Other User Content (picks, tickets, thumbs)
+  - Identifiers → User ID
+Nothing else (no analytics, no ads, no location).
+
+================================================================
+VERSION 1.0  (left sidebar → iOS App → 1.0 Prepare for Submission)
+================================================================
+Screenshots → iPhone 6.9" Display: drag in the 4 PNGs, in order 1–4.
+
+Promotional text:
+New: share a slip straight from your sportsbook, ride your friends’ tickets, and get a buzz the moment a leg hits.
+
+Description:
+Pool’d is where your group chat’s football week lives.
+
+WEEKLY TD POOL
+Every week, everyone in your league picks one player to score a touchdown. All the picks together make the league’s parlay, and Pool’d shows the odds and the pot as picks come in. Picks grade themselves live and the leaderboard keeps the season standings.
+
+POST YOUR BETS
+Share a bet slip from your sportsbook straight to Pool’d, or paste it. Pool’d reads the legs, odds and payout for you, so you just pick your leagues and tap Post.
+
+RIDE ALONG
+See every bet your friends place and watch each leg fill in as the games are played. Ride a ticket you like, follow one you’re curious about, and give it a thumbs up (or down).
+
+KNOW THE MOMENT IT HITS
+Get a notification when a friend posts a ticket, when a leg hits on a ticket you ride or follow, when tickets win or lose, when all the picks are in, and when it’s time to make yours.
+
+PRIVATE LEAGUES
+Leagues are invite-only. Share one link and your friends are in with a tap.
+
+Pool’d never takes bets and never holds or moves money. It tracks bets you’ve placed elsewhere. Please bet responsibly. 21+ where required by law.
+
+Keywords:
+touchdown,td pool,pick em,football,parlay,bet tracker,sportsbook,friends,league,leaderboard,picks
+
+Support URL:    https://td-pool-five.vercel.app/privacy
+Marketing URL:  (leave blank)
+Copyright:      2026 Joel Haymour
+
+Build:  click "Add Build" and pick 1.0 (1) — it appears ~15–30 min after I upload it.
+
+================================================================
+APP REVIEW INFORMATION  (same page, bottom)
+================================================================
+Sign-in required: YES
+User name / Password: a DEMO account you create on the live site
+  (e.g. appreview.poold@gmail.com). Put it in a small demo league
+  with a few picks and one posted ticket so the reviewer sees content.
+Contact: your name, phone, email.
+
+Notes (paste):
+Pool’d is a private pick’em game and bet tracker for groups of friends. It takes no wagers and handles no money: users record bets they already placed elsewhere, and the "Ride" link opens the user's own sportsbook app or website. The demo account is already a member of the demo league "<your demo league code>" so you can see the weekly TD pool (TD Pool tab) and posted tickets (Tickets tab). To post a ticket: Home → Post a ticket → Paste the bet, or share a screenshot to Pool’d from the Photos share sheet. Account deletion: Home → tap your initials (top right) → Delete account.
+
+Version release: "Manually release this version" (you choose the day it goes live).
+```
 
 ## How the shell behaves
 
