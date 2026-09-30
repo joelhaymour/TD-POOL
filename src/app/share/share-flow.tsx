@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { Check, ClipboardPaste, ImagePlus, Loader2, X } from "lucide-react";
 import { glassButton } from "@/components/layout/league-header";
 import { Button } from "@/components/ui/button";
@@ -15,7 +15,7 @@ import { readNativeClipboard } from "@/lib/native/clipboard";
 import { isNativeApp } from "@/lib/push/client";
 import { rememberPendingShare, takePendingShare } from "@/lib/tickets/pending-share";
 import { takeSharedTicket, type SharedTicket } from "@/lib/native/share-inbox";
-import { parseShareLink } from "@/lib/props/sportsbooks";
+import { parseShareLink, sportsbookName } from "@/lib/props/sportsbooks";
 import type { TicketDraft, TicketLegDraft } from "@/lib/tickets/normalize";
 import type { TicketReaderStatus } from "@/lib/tickets/reader";
 import { shrinkImage, type ShrunkImage } from "@/lib/tickets/shrink-image";
@@ -100,9 +100,8 @@ export function ShareFlow({ leagues }: { leagues: ShareLeague[] }) {
       }
 
       if (!shrunk) {
-        // A link-only share: keep the link for the screenshot that should
-        // follow (the card below walks through it); legs by hand meanwhile.
-        if (shareText) rememberPendingShare(shareText);
+        // A link-only share: the card below walks through adding the
+        // screenshot; legs by hand meanwhile.
         const r = await apiJson<{ games: NflGame[] }>(`/api/leagues/${readSlug}/tickets/read`);
         if (r.ok) setGames(r.data.games);
         setReader("off");
@@ -422,9 +421,10 @@ export function ShareFlow({ leagues }: { leagues: ShareLeague[] }) {
 
 /**
  * A link came without a picture. The quickest way to one: back to the bet
- * through the link, screenshot it, share the screenshot to Pool'd — which
- * reopens this screen and picks the link back up. Pasting or choosing a
- * screenshot also works (and is the way in a browser).
+ * (iOS's own "◀ bet365" in the corner — an app can't send you back itself,
+ * and the link opens the book's bet builder, not the placed bet), screenshot
+ * it, share the screenshot to Pool'd — which reopens this screen and picks
+ * the link back up. Pasting or choosing a screenshot also works.
  */
 function ScreenshotSteps({
   link,
@@ -438,37 +438,38 @@ function ScreenshotSteps({
   onPhoto: (file: File) => void;
 }) {
   const photoInput = useRef<HTMLInputElement>(null);
-  const steps = inApp
-    ? ["Screenshot the bet.", "Tap the screenshot, tap Share, and pick Pool’d.", "It comes back here with your link, read and ready to post."]
-    : ["Screenshot the bet, then copy the screenshot.", "Come back and tap Paste screenshot below.", "It’s read and ready to post, with your link."];
+  const parsed = parseShareLink(link);
+  const book = parsed.ok ? sportsbookName(parsed.sportsbook) : "your sportsbook";
+  const steps: ReactNode[] = inApp
+    ? [
+        <>
+          Go back to your bet: tap <span className="font-semibold">◀ {book}</span> in the top-left corner, or
+          swipe right along the bottom edge.
+        </>,
+        "Screenshot the bet.",
+        "Tap the screenshot, tap Share, and pick Pool’d.",
+        "It comes back here with your link, read and ready to post. (Or copy the screenshot, come back, and tap Paste screenshot.)",
+      ]
+    : [
+        `Go back to your bet in ${book}.`,
+        "Screenshot it, then copy the screenshot.",
+        "Come back and tap Paste screenshot below.",
+        "It’s read and ready to post, with your link.",
+      ];
+  // Sharing the screenshot reopens this screen: keep the link for it.
+  const url = parsed.ok ? parsed.url : null;
+  useEffect(() => {
+    if (url) rememberPendingShare(url);
+  }, [url]);
   return (
     <div>
-      <p className="text-[15px] font-semibold text-ink">Add a picture of the bet</p>
-      <p className="mt-0.5 text-[13px] text-ink-muted">This link came without one. It takes a few seconds:</p>
+      <p className="text-[15px] font-semibold text-ink">Your link didn’t include a picture</p>
+      <p className="mt-0.5 text-[13px] text-ink-muted">Add a screenshot and the legs are filled in for you:</p>
       <ol className="mt-3 space-y-2.5">
-        <li className="flex gap-2.5">
-          <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-ink text-[11px] font-bold text-on-ink">1</span>
-          <span className="text-[13px] leading-snug text-ink">
-            {link ? (
-              <a
-                href={link}
-                target="_blank"
-                rel="noreferrer"
-                onClick={() => rememberPendingShare(link)}
-                className="font-semibold text-turf underline underline-offset-2"
-              >
-                Open your bet
-              </a>
-            ) : (
-              "Open the bet in your sportsbook"
-            )}
-            {link ? " to go back to it." : "."}
-          </span>
-        </li>
         {steps.map((step, i) => (
-          <li key={step} className="flex gap-2.5">
+          <li key={i} className="flex gap-2.5">
             <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-ink text-[11px] font-bold text-on-ink">
-              {i + 2}
+              {i + 1}
             </span>
             <span className="text-[13px] leading-snug text-ink">{step}</span>
           </li>
