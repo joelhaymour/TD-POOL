@@ -19,7 +19,7 @@ export function AccountMenu({ name, email }: { name: string; email: string }) {
         onClick={() => setOpen(true)}
         className="pressable rounded-full"
       >
-        <MemberChip name={name} className="h-10 w-10 bg-white/80 text-xs text-ink shadow-[var(--glass-shadow)] backdrop-blur-xl" />
+        <MemberChip name={name} className="h-10 w-10 bg-chalk/80 text-xs text-ink shadow-[var(--glass-shadow)] backdrop-blur-xl" />
       </button>
       <Sheet open={open} onClose={() => setOpen(false)} title={name} description={email}>
         <div className="space-y-2 pb-2">

@@ -228,7 +228,7 @@ export function PropPickerSheet({
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="Search a player or market"
-                className="h-10 w-full rounded-full border border-transparent bg-ink/[0.05] pl-9 focus:bg-white pr-3 text-sm font-semibold text-ink outline-none focus:border-turf focus:ring-2 focus:ring-turf/20"
+                className="h-10 w-full rounded-full border border-transparent bg-ink/[0.05] pl-9 focus:bg-chalk pr-3 text-sm font-semibold text-ink outline-none focus:border-turf focus:ring-2 focus:ring-turf/20"
               />
             </div>
 

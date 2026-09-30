@@ -37,8 +37,11 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#f2f3ee",
-  colorScheme: "light",
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#f2f3ee" },
+    { media: "(prefers-color-scheme: dark)", color: "#0e110d" },
+  ],
+  colorScheme: "light dark",
   // Draw under the notch and home bar; the shell pads with env(safe-area-inset-*).
   viewportFit: "cover",
 };

@@ -8,7 +8,7 @@ import { signIn, signUp, type AuthState } from "./actions";
 const emptyAuthState: AuthState = { error: null, notice: null };
 
 const inputClass =
-  "h-11 w-full rounded-xl border border-transparent bg-ink/[0.05] px-3 focus:bg-white text-sm font-semibold text-ink outline-none focus:border-turf focus:ring-2 focus:ring-turf/20";
+  "h-11 w-full rounded-xl border border-transparent bg-ink/[0.05] px-3 focus:bg-chalk text-sm font-semibold text-ink outline-none focus:border-turf focus:ring-2 focus:ring-turf/20";
 
 const labelClass =
   "mb-1.5 block text-[11px] font-semibold text-ink-faint";
@@ -24,7 +24,7 @@ function AuthForm({ mode, next }: { mode: Mode; next: string }) {
   return (
     <form
       action={formAction}
-      className="mt-4 space-y-3 rounded-[1.4rem] bg-white/80 p-4 shadow-card backdrop-blur-xl"
+      className="mt-4 space-y-3 rounded-[1.4rem] bg-chalk/80 p-4 shadow-card backdrop-blur-xl"
     >
       <input type="hidden" name="next" value={next} />
 

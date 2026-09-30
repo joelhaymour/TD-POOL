@@ -193,7 +193,7 @@ export function Onboarding() {
 
 function Phone({ children }: { children: ReactNode }) {
   return (
-    <div className="relative w-full max-w-[18rem] overflow-hidden rounded-[2rem] bg-white/70 p-3.5 shadow-[var(--glass-shadow)] backdrop-blur-xl">
+    <div className="relative w-full max-w-[18rem] overflow-hidden rounded-[2rem] bg-chalk/70 p-3.5 shadow-[var(--glass-shadow)] backdrop-blur-xl">
       {children}
     </div>
   );
@@ -225,7 +225,7 @@ function WelcomeDemo() {
           return (
             <span
               key={label as string}
-              className="ob-in flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-[13px] font-semibold text-ink shadow-card"
+              className="ob-in flex items-center gap-1.5 rounded-full bg-chalk px-3 py-1.5 text-[13px] font-semibold text-ink shadow-card"
               style={at(delay as number)}
             >
               <I className="h-4 w-4" aria-hidden /> {label as string}
@@ -250,7 +250,7 @@ function PickDemo() {
         {players.map(([name, detail, odds], i) => (
           <li
             key={name}
-            className="ob-in relative flex items-center gap-2.5 rounded-2xl bg-white px-3 py-2.5 shadow-card"
+            className="ob-in relative flex items-center gap-2.5 rounded-2xl bg-chalk px-3 py-2.5 shadow-card"
             style={at(0.15 + i * 0.12)}
           >
             {i === 1 ? (
@@ -283,7 +283,7 @@ function PostDemo() {
   return (
     <Phone>
       <p className="px-1 text-[11px] font-medium text-ink-muted">Share from your sportsbook</p>
-      <div className="relative mt-2 flex gap-3 rounded-2xl bg-white p-3 shadow-card">
+      <div className="relative mt-2 flex gap-3 rounded-2xl bg-chalk p-3 shadow-card">
         {[
           ["Messages", "bg-[#34c759]", ""],
           ["Mail", "bg-[#1e88e5]", ""],
@@ -299,7 +299,7 @@ function PostDemo() {
         ))}
         <Finger className="left-[7.6rem] top-3.5" style={at(0.5)} />
       </div>
-      <div className="ob-in mt-3 rounded-2xl bg-white p-3 shadow-card" style={at(1.2)}>
+      <div className="ob-in mt-3 rounded-2xl bg-chalk p-3 shadow-card" style={at(1.2)}>
         <div className="flex items-center justify-between">
           <span className="text-[13px] font-semibold text-ink">Your ticket</span>
           <span className="rounded-md bg-[#0f7a3d] px-1.5 py-0.5 text-[9px] font-bold text-white">bet365</span>
@@ -323,7 +323,7 @@ function RideDemo() {
   return (
     <div className="relative w-full max-w-[18rem]">
       <div
-        className="ob-drop absolute inset-x-0 -top-14 z-10 flex items-center gap-2.5 rounded-2xl bg-white/90 p-2.5 shadow-[var(--glass-shadow)] backdrop-blur-xl"
+        className="ob-drop absolute inset-x-0 -top-14 z-10 flex items-center gap-2.5 rounded-2xl bg-chalk/90 p-2.5 shadow-[var(--glass-shadow)] backdrop-blur-xl"
         style={at(2.6)}
       >
         <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[0.6rem] bg-[#fbf8f2]">
@@ -361,7 +361,7 @@ function RideDemo() {
           <span className="relative flex h-7 items-center gap-1 rounded-full bg-ink/[0.06] px-2.5 text-[11px] font-semibold text-ink-muted">
             <Users className="h-3 w-3" aria-hidden /> Ride
             <span
-              className="ob-pop absolute inset-0 flex items-center justify-center gap-1 rounded-full bg-ink text-white"
+              className="ob-pop absolute inset-0 flex items-center justify-center gap-1 rounded-full bg-ink text-on-ink"
               style={at(0.55)}
             >
               <Users className="h-3 w-3" aria-hidden /> Riding
@@ -379,7 +379,7 @@ function RideDemo() {
 
 function NotifyDemo() {
   return (
-    <span className="ob-pop flex h-24 w-24 items-center justify-center rounded-[1.8rem] bg-white shadow-[var(--glass-shadow)]">
+    <span className="ob-pop flex h-24 w-24 items-center justify-center rounded-[1.8rem] bg-chalk shadow-[var(--glass-shadow)]">
       <BellRing className="ob-ring h-11 w-11 text-ink" aria-hidden />
     </span>
   );
@@ -397,7 +397,7 @@ function NotifyList() {
     <ul className="mx-auto mt-4 max-w-xs space-y-2 text-left">
       {items.map(([Icon, text], i) => (
         <li key={text} className="ob-in flex items-center gap-2.5 text-sm text-ink" style={at(0.2 + i * 0.1)}>
-          <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white shadow-card">
+          <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-chalk shadow-card">
             <Icon className="h-3.5 w-3.5" aria-hidden />
           </span>
           {text}

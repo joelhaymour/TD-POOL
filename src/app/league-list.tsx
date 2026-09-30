@@ -31,12 +31,12 @@ function initials(name: string): string {
 
 /** Each league keeps its own tile colour, so a long list is easy to scan. */
 const TILES = [
-  "bg-[#dcefe1] text-[#0d6a31]",
-  "bg-[#f6e7c9] text-[#8a5a08]",
-  "bg-[#dde8f6] text-[#24518c]",
-  "bg-[#f4dede] text-[#9a2f2f]",
-  "bg-[#e6e0f4] text-[#54408f]",
-  "bg-[#d9eeec] text-[#1f6b64]",
+  "bg-[#dcefe1] text-[#0d6a31] dark:bg-[#1c3324] dark:text-[#8fdcaa]",
+  "bg-[#f6e7c9] text-[#8a5a08] dark:bg-[#3a2e17] dark:text-[#f0c979]",
+  "bg-[#dde8f6] text-[#24518c] dark:bg-[#1b2940] dark:text-[#9dbdf0]",
+  "bg-[#f4dede] text-[#9a2f2f] dark:bg-[#3b1f1f] dark:text-[#f0a3a3]",
+  "bg-[#e6e0f4] text-[#54408f] dark:bg-[#2a2440] dark:text-[#c3b3f0]",
+  "bg-[#d9eeec] text-[#1f6b64] dark:bg-[#17332f] dark:text-[#8fd9cf]",
 ];
 
 function tileFor(id: string): string {
@@ -112,7 +112,7 @@ function Group({ title, count, children }: { title: string; count?: number; chil
         <h2 className="text-sm font-semibold text-ink-muted">{title}</h2>
         {count != null ? <span className="text-xs text-ink-faint">{count}</span> : null}
       </div>
-      <ul className="divide-y divide-ink/[0.06] overflow-hidden rounded-[1.4rem] bg-white/75 shadow-[var(--glass-shadow)] backdrop-blur-xl">
+      <ul className="divide-y divide-ink/[0.06] overflow-hidden rounded-[1.4rem] bg-chalk/75 shadow-[var(--glass-shadow)] backdrop-blur-xl">
         {children}
       </ul>
     </section>
@@ -180,7 +180,7 @@ export function LeagueList({ leagues: initial }: { leagues: LeagueListItem[] }) 
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Find a league"
-            className="h-11 w-full rounded-full bg-ink/[0.06] pl-9 pr-4 text-sm text-ink outline-none transition focus:bg-white focus:shadow-[0_0_0_2px_rgba(17,128,60,0.35)]"
+            className="h-11 w-full rounded-full bg-ink/[0.06] pl-9 pr-4 text-sm text-ink outline-none transition focus:bg-chalk focus:shadow-[0_0_0_2px_rgba(17,128,60,0.35)]"
           />
         </label>
       ) : null}

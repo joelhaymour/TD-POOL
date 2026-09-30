@@ -169,7 +169,7 @@ export function TicketCard({
             aria-pressed={riding}
             className={cn(
               "pressable flex h-8 shrink-0 items-center gap-1 rounded-full px-2.5 text-xs font-semibold disabled:opacity-50",
-              riding ? "bg-ink text-white" : "bg-ink/[0.06] text-ink-muted hover:text-ink",
+              riding ? "bg-ink text-on-ink" : "bg-ink/[0.06] text-ink-muted hover:text-ink",
             )}
             onClick={() => void toggleRide()}
           >
@@ -186,7 +186,7 @@ export function TicketCard({
             aria-pressed={following}
             className={cn(
               "pressable flex h-8 shrink-0 items-center gap-1 rounded-full px-2.5 text-xs font-semibold disabled:opacity-50",
-              following ? "bg-ink text-white" : "bg-ink/[0.06] text-ink-muted hover:text-ink",
+              following ? "bg-ink text-on-ink" : "bg-ink/[0.06] text-ink-muted hover:text-ink",
             )}
             onClick={() => void toggleFollow()}
           >

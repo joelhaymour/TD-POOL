@@ -28,7 +28,7 @@ export type PlayerFiltersProps = {
 const positions: PlayerPositionFilter[] = ["ALL", "RB", "WR", "TE", "QB"];
 
 const inputClass =
-  "h-10 w-full rounded-xl border border-transparent bg-ink/[0.05] px-3 text-sm text-ink outline-none focus:bg-white transition focus:border-turf focus:ring-2 focus:ring-turf/20";
+  "h-10 w-full rounded-xl border border-transparent bg-ink/[0.05] px-3 text-sm text-ink outline-none focus:bg-chalk transition focus:border-turf focus:ring-2 focus:ring-turf/20";
 
 const SORT_LABEL: Record<PlayerSortOption, string> = {
   rank: "TD Pool rank",
@@ -71,7 +71,7 @@ export function PlayerFilters({
           aria-expanded={open}
           className={cn(
             "pressable flex h-10 shrink-0 items-center gap-1.5 rounded-full px-3.5 text-[13px] font-semibold",
-            open || active ? "bg-ink text-white" : "bg-ink/[0.06] text-ink",
+            open || active ? "bg-ink text-on-ink" : "bg-ink/[0.06] text-ink",
           )}
         >
           <SlidersHorizontal className="h-4 w-4" aria-hidden />
@@ -92,7 +92,7 @@ export function PlayerFilters({
                   aria-pressed={on}
                   className={cn(
                     "pressable shrink-0 rounded-full px-3.5 py-1.5 text-[13px] font-semibold",
-                    on ? "bg-ink text-white" : "bg-ink/[0.06] text-ink-muted",
+                    on ? "bg-ink text-on-ink" : "bg-ink/[0.06] text-ink-muted",
                   )}
                 >
                   {pos === "ALL" ? "All" : pos}

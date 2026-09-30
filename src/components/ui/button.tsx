@@ -14,7 +14,7 @@ const variantClasses: Record<ButtonVariant, string> = {
   primary:
     "bg-lime text-accent-fg shadow-[0_1px_0_rgba(255,255,255,0.25)_inset,0_6px_16px_-6px_rgba(17,128,60,0.55)] hover:bg-lime/90 disabled:bg-lime/30 disabled:text-accent-fg/50 disabled:shadow-none",
   secondary:
-    "bg-white/80 text-ink shadow-[0_0_0_0.5px_rgba(18,23,15,0.12),0_2px_8px_-3px_rgba(18,23,15,0.12)] hover:bg-white disabled:opacity-50",
+    "bg-chalk/80 text-ink shadow-[0_0_0_0.5px_rgba(18,23,15,0.12),0_2px_8px_-3px_rgba(18,23,15,0.12)] hover:bg-chalk disabled:opacity-50",
   ghost:
     "bg-transparent text-ink hover:bg-ink/5 active:bg-ink/8 disabled:opacity-40",
   danger:

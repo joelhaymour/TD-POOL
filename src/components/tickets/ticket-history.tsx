@@ -103,7 +103,7 @@ export async function TicketHistory({
                 <div className="flex items-center gap-2">
                   <MemberChip
                     name={who}
-                    className={mine ? "bg-ink text-white" : undefined}
+                    className={mine ? "bg-ink text-on-ink" : undefined}
                   />
                   <h3 className="truncate text-[15px] font-semibold text-ink">
                     {who}

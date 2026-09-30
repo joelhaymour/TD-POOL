@@ -307,7 +307,7 @@ export function ShareFlow({ leagues }: { leagues: ShareLeague[] }) {
                           aria-hidden
                           className={cn(
                             "flex h-6 w-6 shrink-0 items-center justify-center rounded-md border-2 transition",
-                            on ? "border-ink bg-ink text-white" : "border-border-strong",
+                            on ? "border-ink bg-ink text-on-ink" : "border-border-strong",
                           )}
                         >
                           {on ? <Check className="h-4 w-4" strokeWidth={3} /> : null}

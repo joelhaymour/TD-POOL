@@ -239,7 +239,7 @@ function Podium({ row, place }: { row: TicketStanding | undefined; place: number
         name={row.name}
         className={cn(
           "mx-auto mt-2",
-          leader ? "h-10 w-10 bg-ink text-[12px] text-white" : "h-8 w-8 text-[10px]",
+          leader ? "h-10 w-10 bg-ink text-[12px] text-on-ink" : "h-8 w-8 text-[10px]",
         )}
       />
       <p className="mt-2 truncate text-xs font-semibold text-ink">{row.name}</p>

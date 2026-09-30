@@ -71,7 +71,7 @@ export function Sheet({
         className={cn(
           // dvh, not vh: the on-screen keyboard shrinks the viewport on phones.
           // Floats inset from the edges with deep corners, like iOS 26 sheets.
-          "relative z-10 mx-2 mb-[max(0.5rem,calc(env(safe-area-inset-bottom)-1.25rem))] flex max-h-[88dvh] w-[calc(100%-1rem)] max-w-lg flex-col overflow-hidden rounded-[2rem] bg-white/95 pb-3 shadow-[0_20px_60px_-12px_rgba(18,23,15,0.35)] backdrop-blur-2xl",
+          "relative z-10 mx-2 mb-[max(0.5rem,calc(env(safe-area-inset-bottom)-1.25rem))] flex max-h-[88dvh] w-[calc(100%-1rem)] max-w-lg flex-col overflow-hidden rounded-[2rem] bg-chalk/95 pb-3 shadow-[0_20px_60px_-12px_rgba(18,23,15,0.35)] backdrop-blur-2xl",
           "animate-sheet-up",
           className,
         )}

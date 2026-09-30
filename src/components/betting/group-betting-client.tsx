@@ -780,7 +780,7 @@ export function GroupBettingClient({
             maxLength={60}
             onChange={(e) => setNameDraft(e.target.value)}
             placeholder={`Week ${week.week} parlay`}
-            className="h-11 w-full rounded-xl border border-transparent bg-ink/[0.05] px-3 focus:bg-white text-sm font-semibold text-ink outline-none focus:border-turf focus:ring-2 focus:ring-turf/20"
+            className="h-11 w-full rounded-xl border border-transparent bg-ink/[0.05] px-3 focus:bg-chalk text-sm font-semibold text-ink outline-none focus:border-turf focus:ring-2 focus:ring-turf/20"
           />
           <Button type="submit" fullWidth disabled={!nameDraft.trim()}>
             Save name
@@ -856,7 +856,7 @@ export function GroupBettingClient({
             value={stakeDraft ?? ""}
             onChange={(e) => setStakeDraft(e.target.value)}
             placeholder={String(calculateWeeklyStake(league))}
-            className="h-11 w-full rounded-xl border border-transparent bg-ink/[0.05] px-3 focus:bg-white text-sm font-semibold text-ink outline-none focus:border-turf focus:ring-2 focus:ring-turf/20"
+            className="h-11 w-full rounded-xl border border-transparent bg-ink/[0.05] px-3 focus:bg-chalk text-sm font-semibold text-ink outline-none focus:border-turf focus:ring-2 focus:ring-turf/20"
           />
           <Button type="submit" fullWidth>
             Save stake

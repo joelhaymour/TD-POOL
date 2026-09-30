@@ -69,7 +69,7 @@ export function Segmented<T extends string>({
       {index >= 0 ? (
         <span
           aria-hidden
-          className="pointer-events-none absolute inset-y-[3px] left-[3px] rounded-full bg-white shadow-[0_1px_2px_rgba(18,23,15,0.1),0_3px_10px_-3px_rgba(18,23,15,0.2)] transition-transform duration-[420ms] ease-[var(--spring)]"
+          className="pointer-events-none absolute inset-y-[3px] left-[3px] rounded-full bg-thumb shadow-[0_1px_2px_rgba(18,23,15,0.1),0_3px_10px_-3px_rgba(18,23,15,0.2)] transition-transform duration-[420ms] ease-[var(--spring)]"
           style={{
             width: `calc((100% - 6px) / ${options.length})`,
             transform: `translateX(${index * 100}%)`,

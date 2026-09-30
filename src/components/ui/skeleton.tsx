@@ -61,7 +61,7 @@ export function CardsSkeleton({ count = 3 }: { count?: number }) {
     <div className="space-y-3" aria-busy aria-label="Loading">
       <Skeleton className="h-5 w-32" />
       {Array.from({ length: count }, (_, i) => (
-        <div key={i} className="rounded-[1.4rem] bg-white/75 p-4 shadow-[var(--glass-shadow)]">
+        <div key={i} className="rounded-[1.4rem] bg-chalk/75 p-4 shadow-[var(--glass-shadow)]">
           <div className="flex items-center gap-3">
             <Skeleton className="h-10 w-10 shrink-0 rounded-full" />
             <div className="min-w-0 flex-1 space-y-2">

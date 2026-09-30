@@ -16,7 +16,7 @@ import { cn } from "@/lib/utils/cn";
 import type { NflGame } from "@/lib/types";
 
 const inputClass =
-  "h-10 w-full rounded-lg border border-transparent bg-ink/[0.05] px-2.5 focus:bg-white text-sm font-semibold text-ink outline-none focus:border-turf";
+  "h-10 w-full rounded-lg border border-transparent bg-ink/[0.05] px-2.5 focus:bg-chalk text-sm font-semibold text-ink outline-none focus:border-turf";
 const labelClass =
   "mb-1 block text-[11px] font-semibold text-ink-faint";
 

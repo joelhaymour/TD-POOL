@@ -183,8 +183,8 @@ export function BottomNav({ basePath, items, className }: BottomNavProps) {
           <span
             aria-hidden
             className={cn(
-              "pointer-events-none absolute inset-y-1 left-1 rounded-full bg-white shadow-[0_1px_2px_rgba(18,23,15,0.08),0_4px_14px_-4px_rgba(18,23,15,0.18)] transition-[transform,scale] duration-[420ms] ease-[var(--spring)]",
-              dragIndex != null && "scale-[1.07] bg-white/90",
+              "pointer-events-none absolute inset-y-1 left-1 rounded-full bg-thumb shadow-[0_1px_2px_rgba(18,23,15,0.08),0_4px_14px_-4px_rgba(18,23,15,0.18)] transition-[transform,scale] duration-[420ms] ease-[var(--spring)]",
+              dragIndex != null && "scale-[1.07] bg-thumb/90",
             )}
             style={{
               width: `calc((100% - 0.5rem) / ${items.length})`,

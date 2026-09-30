@@ -231,7 +231,7 @@ export function RideBet({
                 }
               }}
               placeholder="https://..."
-              className="min-w-0 flex-1 rounded-xl border border-transparent bg-ink/[0.05] px-3 py-2.5 focus:bg-white text-sm text-ink outline-none focus:border-turf"
+              className="min-w-0 flex-1 rounded-xl border border-transparent bg-ink/[0.05] px-3 py-2.5 focus:bg-chalk text-sm text-ink outline-none focus:border-turf"
             />
             <button
               type="button"
@@ -249,7 +249,7 @@ export function RideBet({
             maxLength={140}
             onChange={(e) => setNote(e.target.value)}
             placeholder="Note (optional) — e.g. $20 to win $340"
-            className="w-full rounded-xl border border-transparent bg-ink/[0.05] px-3 py-2.5 focus:bg-white text-sm text-ink outline-none focus:border-turf"
+            className="w-full rounded-xl border border-transparent bg-ink/[0.05] px-3 py-2.5 focus:bg-chalk text-sm text-ink outline-none focus:border-turf"
           />
           <button
             type="submit"

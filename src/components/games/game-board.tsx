@@ -235,7 +235,7 @@ export function GameBoard({
                     onClick={() => openGame(game.id)}
                     className={cn(
                       "flex w-full items-center gap-3 rounded-[1.4rem] bg-chalk px-4 py-3 text-left shadow-card pressable",
-                      "hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-turf",
+                      "hover:bg-chalk focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-turf",
                     )}
                   >
                     <div className="min-w-0 flex-1">

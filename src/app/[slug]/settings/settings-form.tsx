@@ -18,7 +18,7 @@ import type { League, LeagueSection, LeagueSections, PickLockType, PickMode } fr
 import { inviteLink } from "@/lib/league/invite";
 
 const inputClass =
-  "h-11 w-full rounded-xl border border-transparent bg-ink/[0.05] px-3 focus:bg-white text-sm font-semibold text-ink outline-none focus:border-turf focus:ring-2 focus:ring-turf/20";
+  "h-11 w-full rounded-xl border border-transparent bg-ink/[0.05] px-3 focus:bg-chalk text-sm font-semibold text-ink outline-none focus:border-turf focus:ring-2 focus:ring-turf/20";
 
 const labelClass =
   "mb-1.5 block text-[11px] font-semibold text-ink-faint";

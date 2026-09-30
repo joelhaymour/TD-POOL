@@ -47,7 +47,7 @@ export function SectionToggles({
             <span
               className={cn(
                 "mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-md border",
-                on ? "border-ink bg-ink text-white" : "border-border-strong",
+                on ? "border-ink bg-ink text-on-ink" : "border-border-strong",
               )}
               aria-hidden
             >
