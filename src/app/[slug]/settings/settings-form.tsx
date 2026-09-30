@@ -15,6 +15,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/components/ui/toast";
 import { ALL_SECTIONS_ON } from "@/lib/league/sections";
 import type { League, LeagueSection, LeagueSections, PickLockType, PickMode } from "@/lib/types";
+import { inviteLink } from "@/lib/league/invite";
 
 const inputClass =
   "h-11 w-full rounded-xl border border-transparent bg-ink/[0.05] px-3 focus:bg-white text-sm font-semibold text-ink outline-none focus:border-turf focus:ring-2 focus:ring-turf/20";
@@ -55,9 +56,9 @@ export function SettingsForm({
   const [deleting, setDeleting] = useState(false);
 
   const inviteUrl = useMemo(() => {
-    if (typeof window === "undefined") return `/${slug}`;
-    return `${window.location.origin}/${slug}`;
-  }, [slug]);
+    if (typeof window === "undefined") return inviteLink("", slug, joinPin);
+    return inviteLink(window.location.origin, slug, joinPin);
+  }, [slug, joinPin]);
 
   useEffect(() => {
     let cancelled = false;
@@ -92,22 +93,40 @@ export function SettingsForm({
   }, [slug]);
 
   /**
-   * The phone's own share sheet (Messages, WhatsApp…) with the link and, for
-   * an admin who has revealed it, the PIN. Falls back to copying.
+   * The phone's own share sheet (Messages, WhatsApp…). For an admin the link
+   * carries the PIN (fetched now if it isn't showing), so friends tap once to
+   * join. Falls back to copying.
    */
   async function shareInvite() {
-    const text = joinPin
-      ? `Join ${leagueName || "our league"} on Pool’d. League code ${slug}, PIN ${joinPin}.`
+    const pin = joinPin || (isAdmin ? await fetchPin() : null);
+    const url = inviteLink(window.location.origin, slug, pin);
+    const text = pin
+      ? `Join ${leagueName || "our league"} on Pool’d — tap the link to join.`
       : `Join ${leagueName || "our league"} on Pool’d. League code ${slug}.`;
     if (typeof navigator.share === "function") {
       try {
-        await navigator.share({ title: "Pool’d invite", text, url: inviteUrl });
+        await navigator.share({ title: "Pool’d invite", text, url });
         return;
       } catch (err) {
         if (err instanceof DOMException && err.name === "AbortError") return;
       }
     }
-    await copyText("Invite", `${text} ${inviteUrl}`);
+    await copyText("Invite", `${text} ${url}`);
+  }
+
+  /** The join PIN, quietly, for the share link. */
+  async function fetchPin(): Promise<string | null> {
+    try {
+      const res = await fetch(`/api/leagues/${slug}/invite`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ regenerate: false }),
+      });
+      const data = (await res.json()) as { join_pin?: string };
+      return res.ok && data.join_pin ? data.join_pin : null;
+    } catch {
+      return null;
+    }
   }
 
   async function copyText(label: string, value: string) {
@@ -239,8 +258,8 @@ export function SettingsForm({
           Invite friends
         </h3>
         <p className="text-sm text-ink-muted">
-          Share the link, league code, and join PIN in your group chat. Friends
-          use Join on the home page.
+          Share the link in your group chat. Opening it fills in everything, so
+          friends just tap Join.
         </p>
         <Button type="button" fullWidth onClick={() => void shareInvite()}>
           Share invite

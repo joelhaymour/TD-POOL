@@ -11,6 +11,13 @@ import { Segmented } from "@/components/ui/segmented";
 import { useToast } from "@/components/ui/toast";
 import { useLeagueRealtime } from "@/hooks/use-league-realtime";
 import { toPlayerCard } from "@/lib/api/mappers";
+import {
+  combineParlayDecimal,
+  decimalOddsForLeg,
+  decimalToAmerican,
+  estimatePayout,
+  isValidDecimalOdds,
+} from "@/lib/utils/odds";
 import type { LeagueDashboard } from "@/lib/types";
 
 export function DashboardClient({
@@ -113,6 +120,29 @@ export function DashboardClient({
     };
   }, [dashboard, players, viewer.memberId]);
 
+  // The parlay as it stands: odds and payout from the picks made so far, so
+  // the pot shows while the week fills up. Picks without a price are left out
+  // (and counted, so the card can say so).
+  const soFar = useMemo(() => {
+    if (!dashboard) return null;
+    const decimals = dashboard.members
+      .filter((m) => m.pick)
+      .map((m) =>
+        decimalOddsForLeg(m.player_week?.consensus_decimal_odds, m.pick!.odds_at_selection),
+      );
+    const priced = decimals.filter(isValidDecimalOdds);
+    const combined = priced.length > 0 ? combineParlayDecimal(priced) : null;
+    const stake = dashboard.parlay.stake;
+    return {
+      american: combined != null ? decimalToAmerican(combined) : null,
+      payout:
+        combined != null && stake != null && stake > 0 && dashboard.league.betting_mode !== "none"
+          ? Number(estimatePayout(stake, combined).payout.toFixed(2))
+          : null,
+      unpriced: decimals.length - priced.length,
+    };
+  }, [dashboard]);
+
   const boardRef = useRef<HTMLDivElement>(null);
   function goToBoard() {
     setBoard("players");
@@ -199,9 +229,10 @@ export function DashboardClient({
         pickResults={memberRows.map((m) => m.result)}
         picksSubmitted={dashboard.parlay.picks_submitted}
         totalMembers={dashboard.parlay.picks_total}
-        estimatedAmericanOdds={dashboard.parlay.combined_american}
+        estimatedAmericanOdds={soFar?.american ?? null}
+        unpricedPicks={soFar?.unpriced ?? 0}
         stake={dashboard.parlay.stake}
-        payout={dashboard.parlay.estimated_payout}
+        payout={soFar?.payout ?? null}
         showMoney={dashboard.league.betting_mode !== "none"}
         currency={dashboard.league.currency}
         oddsUpdatedAt={dashboard.odds_updated_at}

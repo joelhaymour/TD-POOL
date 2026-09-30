@@ -7,7 +7,8 @@ import { Sheet } from "@/components/ui/sheet";
 import { PickModeField } from "@/components/league/pick-mode-field";
 import { SectionToggles } from "@/components/league/section-toggles";
 import { useToast } from "@/components/ui/toast";
-import { generateJoinPin, normalizeJoinSlug } from "@/lib/league/join";
+import { inviteLink } from "@/lib/league/invite";
+import { generateJoinPin, normalizeJoinSlug, pinFromInvite } from "@/lib/league/join";
 import { ALL_SECTIONS_ON, withoutSections } from "@/lib/league/sections";
 import type { LeagueSection, LeagueSections, PickMode } from "@/lib/types";
 
@@ -27,12 +28,15 @@ export function HomeClient({
   accountName,
   hasLeagues,
   pendingJoinSlug,
+  pendingJoinPin = "",
   hiddenSections = [],
 }: {
   accountName: string;
   hasLeagues: boolean;
   /** Non-empty when an invite link bounced the user here to join first. */
   pendingJoinSlug: string;
+  /** The PIN from the invite link, when the admin's link carried it. */
+  pendingJoinPin?: string;
   /** Sections this screen leaves out (group bets in the iOS app). */
   hiddenSections?: LeagueSection[];
 }) {
@@ -54,13 +58,15 @@ export function HomeClient({
   const [creating, setCreating] = useState(false);
 
   const [joinSlug, setJoinSlug] = useState(pendingJoinSlug);
-  const [joinPin, setJoinPin] = useState("");
+  const [joinPin, setJoinPin] = useState(pendingJoinPin);
+  // A full invite link (code and PIN) only needs your name and a tap.
+  const [invited, setInvited] = useState(Boolean(pendingJoinSlug && pendingJoinPin));
   const [joinName, setJoinName] = useState(accountName);
   const [joining, setJoining] = useState(false);
 
   const inviteUrl = useMemo(() => {
     if (!created || typeof window === "undefined") return "";
-    return `${window.location.origin}/${created.slug}`;
+    return inviteLink(window.location.origin, created.slug, created.join_pin);
   }, [created]);
 
   async function onCreate(e: FormEvent) {
@@ -234,13 +240,44 @@ export function HomeClient({
     </form>
   );
 
-  const joinForm = (
+  const joinForm = invited ? (
+    <form onSubmit={onJoin} className="space-y-4">
+      <div className="rounded-2xl bg-ink/[0.04] px-4 py-3.5">
+        <p className="text-[13px] text-ink-muted">You’re invited to</p>
+        <p className="mt-0.5 truncate font-display text-2xl font-bold text-ink">{joinSlug}</p>
+      </div>
+      <label className="block">
+        <span className={labelClass}>Your name in the league</span>
+        <input
+          value={joinName}
+          onChange={(e) => setJoinName(e.target.value)}
+          placeholder="Alex"
+          className={inputClass}
+        />
+      </label>
+      <Button type="submit" size="lg" fullWidth disabled={joining}>
+        {joining ? "Joining…" : "Join league"}
+      </Button>
+      <button
+        type="button"
+        onClick={() => setInvited(false)}
+        className="block w-full text-center text-xs font-medium text-ink-faint"
+      >
+        Enter a code and PIN instead
+      </button>
+    </form>
+  ) : (
     <form onSubmit={onJoin} className="space-y-3">
       <label className="block">
         <span className={labelClass}>League code</span>
         <input
           value={joinSlug}
-          onChange={(e) => setJoinSlug(e.target.value)}
+          onChange={(e) => {
+            setJoinSlug(e.target.value);
+            // Pasting the whole invite link fills the PIN too.
+            const pin = pinFromInvite(e.target.value);
+            if (pin) setJoinPin(pin);
+          }}
           placeholder="sunday-crew"
           className={inputClass}
           autoCapitalize="none"

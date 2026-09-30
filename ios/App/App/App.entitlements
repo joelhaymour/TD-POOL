@@ -5,6 +5,12 @@
 	<!-- Push notifications. Xcode switches this to "production" when it signs a TestFlight or App Store build. -->
 	<key>aps-environment</key>
 	<string>development</string>
+	<!-- Pool’d links (league invites) open in the app. The site serves
+	     /.well-known/apple-app-site-association for this domain. -->
+	<key>com.apple.developer.associated-domains</key>
+	<array>
+		<string>applinks:td-pool-five.vercel.app</string>
+	</array>
 	<!-- Shared with the share extension (ShareInbox). -->
 	<key>com.apple.security.application-groups</key>
 	<array>

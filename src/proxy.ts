@@ -45,11 +45,16 @@ export async function proxy(request: NextRequest) {
   // Route handlers answer with a 401 rather than an HTML login page, so they
   // opt out of the redirect and check the session themselves.
   if (pathname.startsWith("/api/")) return response;
+  // Apple reads the app-link file signed out.
+  if (pathname.startsWith("/.well-known/")) return response;
 
   if (!user && !PUBLIC_PATHS.has(pathname)) {
     const login = request.nextUrl.clone();
     login.pathname = "/login";
-    login.search = pathname === "/" ? "" : `?next=${encodeURIComponent(pathname)}`;
+    // Keep the query too: an invite link is `/?join=…&pin=…`, and someone
+    // new should land back on it after signing up.
+    const target = pathname + request.nextUrl.search;
+    login.search = target === "/" ? "" : `?next=${encodeURIComponent(target)}`;
     return NextResponse.redirect(login);
   }
 

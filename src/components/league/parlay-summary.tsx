@@ -22,8 +22,10 @@ export type ParlaySummaryProps = {
   pickResults?: PickResult[];
   picksSubmitted: number;
   totalMembers: number;
-  /** Combined American odds estimate; null when incomplete or no money */
+  /** Combined American odds of the picks made so far; null before any priced pick. */
   estimatedAmericanOdds: number | null;
+  /** Picks left out of the odds because they have no price. */
+  unpricedPicks?: number;
   stake: number | null;
   payout: number | null;
   showMoney?: boolean;
@@ -78,6 +80,7 @@ export function ParlaySummary({
   picksSubmitted,
   totalMembers,
   estimatedAmericanOdds,
+  unpricedPicks = 0,
   stake,
   payout,
   showMoney = true,
@@ -174,16 +177,21 @@ export function ParlaySummary({
           </p>
         </div>
         <PickResults results={pickResults} />
-        {showMoney ? (
+        {picksSubmitted === 0 ? (
+          <p className="mt-2.5 text-[13px] text-ink-muted">The odds and pot build as picks come in.</p>
+        ) : showMoney ? (
           <p className="mt-2.5 text-[13px] text-ink-muted">
             {hasOdds ? (
-              <span className="font-display text-[15px] font-bold text-ink">
-                {formatAmerican(estimatedAmericanOdds)}
-              </span>
+              <>
+                <span className="font-display text-[15px] font-bold text-ink">
+                  {formatAmerican(estimatedAmericanOdds)}
+                </span>
+                {picksSubmitted < totalMembers ? " so far" : ""}
+              </>
             ) : (
-              "Odds when picks are in"
+              "No odds for these picks yet"
             )}
-            {stake != null && stake > 0 ? (
+            {hasOdds && stake != null && stake > 0 ? (
               <>
                 {" · "}
                 <span className="font-display text-[15px] font-bold text-ink">{formatMoney(stake, currency)}</span>
@@ -202,6 +210,9 @@ export function ParlaySummary({
         {oddsLabel ? (
           <p suppressHydrationWarning className="mt-1 text-[11px] text-ink-faint">
             {oddsLabel} · estimates
+            {unpricedPicks > 0
+              ? ` · ${unpricedPicks} pick${unpricedPicks === 1 ? "" : "s"} without odds left out`
+              : ""}
           </p>
         ) : null}
       </div>

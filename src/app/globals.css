@@ -204,7 +204,117 @@ body::before {
   animation: page-in 0.32s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
+/* Onboarding: the little demos play once each time their slide comes up.
+   Each piece waits for its turn with an inline animation-delay. */
+@keyframes ob-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes ob-pop {
+  0% {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+  70% {
+    opacity: 1;
+    transform: scale(1.06);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes ob-fill {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+@keyframes ob-tap {
+  0% {
+    opacity: 0;
+    transform: scale(1.6);
+  }
+  35% {
+    opacity: 0.9;
+    transform: scale(1);
+  }
+  60% {
+    opacity: 0.9;
+    transform: scale(0.85);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1);
+  }
+}
+
+@keyframes ob-drop {
+  from {
+    opacity: 0;
+    transform: translateY(-110%);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes ob-ring {
+  0%,
+  60%,
+  100% {
+    transform: rotate(0);
+  }
+  10%,
+  30% {
+    transform: rotate(14deg);
+  }
+  20%,
+  40% {
+    transform: rotate(-14deg);
+  }
+}
+
+.ob-in {
+  animation: ob-in 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.ob-pop {
+  animation: ob-pop 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.ob-fill {
+  transform-origin: left;
+  animation: ob-fill 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.ob-tap {
+  animation: ob-tap 0.9s ease-out both;
+}
+.ob-drop {
+  animation: ob-drop 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.ob-ring {
+  transform-origin: 50% 10%;
+  animation: ob-ring 1.8s ease-in-out 0.4s infinite;
+}
+
 @media (prefers-reduced-motion: reduce) {
+  .ob-in,
+  .ob-pop,
+  .ob-fill,
+  .ob-tap,
+  .ob-drop,
+  .ob-ring,
   .animate-page-in,
   .animate-sheet-up,
   .animate-toast-in {

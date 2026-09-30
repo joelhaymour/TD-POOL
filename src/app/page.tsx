@@ -7,6 +7,7 @@ import { hiddenSections } from "@/lib/native/server";
 import { Wordmark } from "@/components/brand/logo";
 import { NotificationBell } from "@/components/notify/bell";
 import { AccountMenu } from "./account-menu";
+import { Onboarding } from "@/components/onboarding/onboarding";
 import { HomeClient } from "./home-client";
 import { LeagueList } from "./league-list";
 
@@ -15,8 +16,9 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
   const accountName = accountDisplayName(user);
 
   // Set when someone opens an invite link for a league they have not joined.
-  const { join } = await searchParams;
+  const { join, pin } = await searchParams;
   const pendingJoinSlug = typeof join === "string" ? join : "";
+  const pendingJoinPin = typeof pin === "string" && /^\d{4,8}$/.test(pin) ? pin : "";
 
   const hidden = await hiddenSections();
   const leagues = (
@@ -74,8 +76,12 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
           accountName={accountName}
           hasLeagues={leagues.length > 0}
           pendingJoinSlug={pendingJoinSlug}
+          pendingJoinPin={pendingJoinSlug ? pendingJoinPin : ""}
           hiddenSections={hidden}
         />
+        {/* First open on this device: the tour, then the notifications ask.
+            An invite's join sheet waits underneath for when it's done. */}
+        <Onboarding />
       </main>
     </div>
   );

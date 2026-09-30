@@ -7,8 +7,11 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
     func scene(_ scene: UIScene, willConnectTo session: UISceneSession, options connectionOptions: UIScene.ConnectionOptions) {
         guard let windowScene = scene as? UIWindowScene else { return }
 
-        // Launched by the share extension: open the share screen once loaded.
+        // Launched by the share extension, or by tapping a Pool’d link (an
+        // invite in Messages): open that screen once the app has loaded.
         if let url = connectionOptions.urlContexts.first?.url, let path = Self.appPath(for: url) {
+            MainViewController.pendingPath = path
+        } else if let path = connectionOptions.userActivities.lazy.compactMap(Self.linkPath(for:)).first {
             MainViewController.pendingPath = path
         }
 
@@ -33,7 +36,22 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         return "/share"
     }
 
+    /// A universal link (https://td-pool-five.vercel.app/…) → its path and query,
+    /// to load in the app. The domain is listed in App.entitlements and the
+    /// site answers /.well-known/apple-app-site-association.
+    static func linkPath(for activity: NSUserActivity) -> String? {
+        guard activity.activityType == NSUserActivityTypeBrowsingWeb,
+              let url = activity.webpageURL,
+              let parts = URLComponents(url: url, resolvingAgainstBaseURL: false) else { return nil }
+        let path = parts.percentEncodedPath.isEmpty ? "/" : parts.percentEncodedPath
+        return parts.percentEncodedQuery.map { "\(path)?\($0)" } ?? path
+    }
+
     func scene(_ scene: UIScene, continue userActivity: NSUserActivity) {
+        if let path = Self.linkPath(for: userActivity) {
+            (window?.rootViewController as? MainViewController)?.open(path: path)
+            return
+        }
         SceneDelegateProxy.shared.scene(scene, continue: userActivity)
     }
 }
