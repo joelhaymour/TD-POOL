@@ -157,7 +157,7 @@ export function DashboardClient({
       pickId: m.pick?.id ?? null,
       playerId: m.player?.id ?? null,
       playerName: m.player?.name ?? null,
-      playerHref: m.player ? `/${slug}/players/${m.player.id}` : null,
+      playerHref: m.player ? `/${slug}/pool/players/${m.player.id}` : null,
       result: m.pick?.result ?? "pending",
     }));
   }, [dashboard, slug]);
