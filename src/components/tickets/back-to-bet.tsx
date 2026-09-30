@@ -26,8 +26,8 @@ export function BackToBetSteps({ link, slug }: { link: string; slug?: string }) 
           right along the bottom edge.
         </li>
         <li>Screenshot the bet.</li>
-        <li>Tap the screenshot, tap Share, and pick Pool’d.</li>
-        <li>It comes back with this link, read and ready to post. (Or copy the screenshot and tap the box above.)</li>
+        <li>Tap the screenshot preview, tap Share, and pick Pool’d.</li>
+        <li>Pool’d opens with the picture read and this link already filled in. Check it and tap Post.</li>
       </ol>
     </div>
   );

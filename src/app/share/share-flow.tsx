@@ -447,8 +447,8 @@ function ScreenshotSteps({
           swipe right along the bottom edge.
         </>,
         "Screenshot the bet.",
-        "Tap the screenshot, tap Share, and pick Pool’d.",
-        "It comes back here with your link, read and ready to post. (Or copy the screenshot, come back, and tap Paste screenshot.)",
+        "Tap the screenshot preview, tap Share, and pick Pool’d.",
+        "Pool’d opens with the picture read and your link already filled in. Check it and tap Post.",
       ]
     : [
         `Go back to your bet in ${book}.`,
