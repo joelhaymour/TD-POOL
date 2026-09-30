@@ -166,7 +166,7 @@ function userPrompt(games: NflGame[], bookHint: string | null): string {
     "- Prices: fill american_odds when the slip prints +140 / -110, decimal_odds when it prints 2.40 / 1.91. Never both, never converted.",
     "- Each selection's game is the matchup printed with it on the slip (e.g. \"PIT @ CLE\"). Trust the slip, not what you remember about which team a player is on: players change teams and your memory may be out of date. Never leave a game blank or lower confidence because a player seems to be on another team.",
     "- If a selection's game is not in the list, keep the selection with game_id null and confidence low.",
-    "- notes: one short plain-English sentence for the person posting, only when they need to do something (a leg cut off, a second page). Never mention ids, confidence, or the games list.",
+    "- notes: one short plain-English sentence for the person posting, only when they need to do something (a leg cut off, a second page). Never mention ids, confidence, or the games list, and never comment on which team a player plays for. Usually null.",
   ]
     .filter((line) => line !== null)
     .join("\n");

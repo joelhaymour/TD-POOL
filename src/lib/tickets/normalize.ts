@@ -201,6 +201,7 @@ export function normalizeTicket(
   gameForPlayer?: PlayerGameLookup,
 ): TicketDraft {
   const book = raw.sportsbook ? sportsbook(raw.sportsbook)?.key ?? null : null;
+  const legs = raw.legs.map((leg, i) => normalizeLeg(leg, games, i, gameForPlayer));
   return {
     sportsbook: bookHint ?? book,
     bet_type: raw.bet_type,
@@ -208,11 +209,28 @@ export function normalizeTicket(
     currency: raw.currency,
     book_odds: priceOf(raw),
     book_payout: raw.potential_payout,
-    legs: raw.legs.map((leg, i) => normalizeLeg(leg, games, i, gameForPlayer)),
-    // A note that talks about ids or confidence is the model thinking aloud,
-    // not something the person posting can act on.
-    notes: raw.notes && !/game_id|confidence|provided list/i.test(raw.notes) ? raw.notes : null,
+    legs,
+    notes: usefulNote(raw.notes, legs),
   };
+}
+
+/**
+ * The model's note, when it still tells the person something. A note about
+ * one leg is dropped once that leg checks out: each leg carries its own flags,
+ * and a leg we placed ourselves (from this week's players) needs no warning.
+ * Notes about ids or confidence are the model thinking aloud.
+ */
+function usefulNote(note: string | null, legs: TicketLegDraft[]): string | null {
+  if (!note?.trim()) return null;
+  if (/game_id|confidence|provided list/i.test(note)) return null;
+  const text = note.toLowerCase();
+  const aboutCleanLeg = legs.some(
+    (leg) =>
+      leg.issues.length === 0 &&
+      leg.player_name != null &&
+      text.includes(playerKey(leg.player_name).split(" ").slice(-1)[0]),
+  );
+  return aboutCleanLeg ? null : note;
 }
 
 /** Decimal for a stored leg; null when the slip showed no price for it. */
