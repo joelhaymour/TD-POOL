@@ -21,6 +21,8 @@ import type { TicketReaderStatus } from "@/lib/tickets/reader";
 import { shrinkImage, type ShrunkImage } from "@/lib/tickets/shrink-image";
 import { cn } from "@/lib/utils/cn";
 import type { Currency, NflGame } from "@/lib/types";
+import { isNativeApp } from "@/lib/push/client";
+import { rememberPendingShare } from "@/lib/tickets/pending-share";
 
 const inputClass =
   "h-11 w-full rounded-xl border border-transparent bg-ink/[0.05] px-3 focus:bg-chalk text-sm font-semibold text-ink outline-none focus:border-turf focus:ring-2 focus:ring-turf/20";
@@ -84,6 +86,8 @@ export function PostTicketSheet({
   const [notes, setNotes] = useState<string | null>(null);
 
   const fileInput = useRef<HTMLInputElement>(null);
+  // Only the app has Pool'd in the share sheet; only rendered once open.
+  const inApp = open && isNativeApp();
   const legSeq = useRef(0);
 
   // Whether this site can read a picture at all, so the sheet says so up
@@ -468,6 +472,29 @@ export function PostTicketSheet({
             )}
           </button>
           {hint ? <p className="text-[11px] text-warning">{hint}</p> : null}
+
+          {/* A link but no picture, in the app: back to the bet, screenshot,
+              share it to Pool'd. That reopens Post a ticket from the home
+              screen, which picks this link and league back up. */}
+          {inApp && !picture && parseShareLink(shareText).ok ? (
+            <ol className="space-y-1.5 rounded-2xl bg-ink/[0.04] px-3.5 py-3 text-[13px] leading-snug text-ink">
+              <li>
+                1.{" "}
+                <a
+                  href={parseShareLink(shareText).ok ? shareText.trim() : undefined}
+                  target="_blank"
+                  rel="noreferrer"
+                  onClick={() => rememberPendingShare(shareText.trim(), slug)}
+                  className="font-semibold text-turf underline underline-offset-2"
+                >
+                  Open your bet
+                </a>
+              </li>
+              <li>2. Screenshot it.</li>
+              <li>3. Tap the screenshot, tap Share, and pick Pool’d.</li>
+              <li>4. It comes back with this link, read and ready to post.</li>
+            </ol>
+          ) : null}
 
           {/* Only after the clipboard failed to deliver a picture. Any link
               is already in the box below, so nothing is lost this way. */}

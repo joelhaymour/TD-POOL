@@ -12,6 +12,8 @@ import { blankLeg } from "@/components/tickets/leg-editor";
 import { TicketFields, ticketPayload, type TicketMoney } from "@/components/tickets/ticket-fields";
 import { apiError, apiForm, apiJson } from "@/lib/api/client";
 import { readNativeClipboard } from "@/lib/native/clipboard";
+import { isNativeApp } from "@/lib/push/client";
+import { rememberPendingShare, takePendingShare } from "@/lib/tickets/pending-share";
 import { takeSharedTicket, type SharedTicket } from "@/lib/native/share-inbox";
 import { parseShareLink } from "@/lib/props/sportsbooks";
 import type { TicketDraft, TicketLegDraft } from "@/lib/tickets/normalize";
@@ -72,7 +74,19 @@ export function ShareFlow({ leagues }: { leagues: ShareLeague[] }) {
       if (!readSlug) return;
       started.current = true;
       setError(null);
-      const link = parseShareLink(shared.text);
+      let text = shared.text;
+      if (shared.image && !parseShareLink(text).ok) {
+        // The screenshot for a link shared a moment ago (see pending-share).
+        const pending = takePendingShare();
+        if (pending) {
+          text = pending.url;
+          const slug = pending.slug;
+          if (slug && leagues.some((l) => l.slug === slug)) {
+            setSelected((cur) => (cur.includes(slug) ? cur : [...cur, slug]));
+          }
+        }
+      }
+      const link = parseShareLink(text);
       const shareText = link.ok ? link.url : "";
       setMoney({ ...EMPTY_MONEY, shareText });
       let shrunk: ShrunkImage | null = null;
@@ -86,7 +100,9 @@ export function ShareFlow({ leagues }: { leagues: ShareLeague[] }) {
       }
 
       if (!shrunk) {
-        // A link-only share (Stake): the legs go in by hand.
+        // A link-only share: keep the link for the screenshot that should
+        // follow (the card below walks through it); legs by hand meanwhile.
+        if (shareText) rememberPendingShare(shareText);
         const r = await apiJson<{ games: NflGame[] }>(`/api/leagues/${readSlug}/tickets/read`);
         if (r.ok) setGames(r.data.games);
         setReader("off");
@@ -98,7 +114,7 @@ export function ShareFlow({ leagues }: { leagues: ShareLeague[] }) {
       setPhase("reading");
       const form = new FormData();
       form.append("image", shrunk.blob, "ticket.jpg");
-      if (shared.text) form.append("text", shared.text);
+      if (text) form.append("text", text);
       const r = await apiForm<ReadResponse & { games?: NflGame[] }>(`/api/leagues/${readSlug}/tickets/read`, form).catch(
         () => null,
       );
@@ -124,7 +140,7 @@ export function ShareFlow({ leagues }: { leagues: ShareLeague[] }) {
       setNotes(draft.notes);
       setPhase("review");
     },
-    [readSlug],
+    [readSlug, leagues],
   );
 
   // Pick up what the share extension left, once.
@@ -197,7 +213,6 @@ export function ShareFlow({ leagues }: { leagues: ShareLeague[] }) {
     void start(shared);
   }
 
-  const photoInput = useRef<HTMLInputElement>(null);
 
   function toggle(slug: string) {
     setSelected((cur) => {
@@ -285,43 +300,12 @@ export function ShareFlow({ leagues }: { leagues: ShareLeague[] }) {
               ) : null}
               <div className="min-w-0 flex-1">
                 {phase === "review" && !picture ? (
-                  // A link-only share (Stake, some bet365 shares): add the
-                  // screenshot and the legs are read for you; the link stays.
-                  <div>
-                    <p className="text-[15px] font-semibold text-ink">Add a screenshot of the bet</p>
-                    <p className="mt-1 text-[13px] leading-snug text-ink-muted">
-                      This link came without a picture. Screenshot the bet in your book, then copy it and tap{" "}
-                      <span className="font-semibold text-ink">Paste screenshot</span>, or share the screenshot to
-                      Pool’d. The legs are read for you and the link stays.
-                    </p>
-                    <div className="mt-3 grid grid-cols-2 gap-2">
-                      <Button type="button" size="sm" onClick={() => void pasteInstead()}>
-                        <ClipboardPaste className="h-3.5 w-3.5" /> Paste screenshot
-                      </Button>
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="secondary"
-                        className="bg-ink/[0.06] shadow-none hover:bg-ink/10"
-                        onClick={() => photoInput.current?.click()}
-                      >
-                        <ImagePlus className="h-3.5 w-3.5" /> From photos
-                      </Button>
-                    </div>
-                    <input
-                      ref={photoInput}
-                      type="file"
-                      accept="image/*"
-                      className="hidden"
-                      onChange={(e) => {
-                        const file = e.target.files?.[0];
-                        e.target.value = "";
-                        if (file) void start({ image: file, text: money.shareText });
-                      }}
-                    />
-                    <p className="mt-2 text-[11px] text-ink-faint">Or fill in the legs below by hand.</p>
-                  </div>
-                ) : phase === "reading" ? (
+                  <ScreenshotSteps
+                    link={money.shareText}
+                    inApp={isNativeApp()}
+                    onPaste={() => void pasteInstead()}
+                    onPhoto={(file) => void start({ image: file, text: money.shareText })}
+                  />                ) : phase === "reading" ? (
                   <p className="flex items-center gap-2 text-sm font-semibold text-ink">
                     <Loader2 className="h-4 w-4 animate-spin text-ink-muted" aria-hidden /> Reading your ticket…
                   </p>
@@ -432,6 +416,90 @@ export function ShareFlow({ leagues }: { leagues: ShareLeague[] }) {
           </div>
         </div>
       ) : null}
+    </div>
+  );
+}
+
+/**
+ * A link came without a picture. The quickest way to one: back to the bet
+ * through the link, screenshot it, share the screenshot to Pool'd — which
+ * reopens this screen and picks the link back up. Pasting or choosing a
+ * screenshot also works (and is the way in a browser).
+ */
+function ScreenshotSteps({
+  link,
+  inApp,
+  onPaste,
+  onPhoto,
+}: {
+  link: string;
+  inApp: boolean;
+  onPaste: () => void;
+  onPhoto: (file: File) => void;
+}) {
+  const photoInput = useRef<HTMLInputElement>(null);
+  const steps = inApp
+    ? ["Screenshot the bet.", "Tap the screenshot, tap Share, and pick Pool’d.", "It comes back here with your link, read and ready to post."]
+    : ["Screenshot the bet, then copy the screenshot.", "Come back and tap Paste screenshot below.", "It’s read and ready to post, with your link."];
+  return (
+    <div>
+      <p className="text-[15px] font-semibold text-ink">Add a picture of the bet</p>
+      <p className="mt-0.5 text-[13px] text-ink-muted">This link came without one. It takes a few seconds:</p>
+      <ol className="mt-3 space-y-2.5">
+        <li className="flex gap-2.5">
+          <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-ink text-[11px] font-bold text-on-ink">1</span>
+          <span className="text-[13px] leading-snug text-ink">
+            {link ? (
+              <a
+                href={link}
+                target="_blank"
+                rel="noreferrer"
+                onClick={() => rememberPendingShare(link)}
+                className="font-semibold text-turf underline underline-offset-2"
+              >
+                Open your bet
+              </a>
+            ) : (
+              "Open the bet in your sportsbook"
+            )}
+            {link ? " to go back to it." : "."}
+          </span>
+        </li>
+        {steps.map((step, i) => (
+          <li key={step} className="flex gap-2.5">
+            <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-ink text-[11px] font-bold text-on-ink">
+              {i + 2}
+            </span>
+            <span className="text-[13px] leading-snug text-ink">{step}</span>
+          </li>
+        ))}
+      </ol>
+      <div className="mt-3 flex flex-wrap gap-2">
+        <Button type="button" size="sm" variant={inApp ? "secondary" : "primary"} className={inApp ? "bg-ink/[0.06] shadow-none" : undefined} onClick={onPaste}>
+          <ClipboardPaste className="h-3.5 w-3.5" /> Paste screenshot
+        </Button>
+        <Button
+          type="button"
+          size="sm"
+          variant="secondary"
+          className="bg-ink/[0.06] shadow-none hover:bg-ink/10"
+          onClick={() => photoInput.current?.click()}
+        >
+          <ImagePlus className="h-3.5 w-3.5" /> From photos
+        </Button>
+        <input
+          ref={photoInput}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            e.target.value = "";
+            if (file) onPhoto(file);
+          }}
+        />
+      </div>
+      <p className="mt-2 text-[11px] text-ink-faint">Or fill in the legs below by hand.</p>
     </div>
   );
 }
