@@ -140,7 +140,7 @@ const SCHEMA = {
     },
     notes: {
       type: ["string", "null"],
-      description: "Anything you could not place: a cut-off leg, a market not in the list, a second page.",
+      description: "For the person posting, in plain words: only what they need to fix, like a cut-off leg or a second page. Never ids or confidence.",
     },
   },
 } as const;
@@ -164,7 +164,9 @@ function userPrompt(games: NflGame[], bookHint: string | null): string {
     "- Moneyline: outcome is the team's full name, line null. Spread: outcome is the team's full name, line is the signed number next to it.",
     "- Totals: outcome over/under, line the number. Team total: team's full name in player_name.",
     "- Prices: fill american_odds when the slip prints +140 / -110, decimal_odds when it prints 2.40 / 1.91. Never both, never converted.",
+    "- Each selection's game is the matchup printed with it on the slip (e.g. \"PIT @ CLE\"). Trust the slip, not what you remember about which team a player is on: players change teams and your memory may be out of date. Never leave a game blank or lower confidence because a player seems to be on another team.",
     "- If a selection's game is not in the list, keep the selection with game_id null and confidence low.",
+    "- notes: one short plain-English sentence for the person posting, only when they need to do something (a leg cut off, a second page). Never mention ids, confidence, or the games list.",
   ]
     .filter((line) => line !== null)
     .join("\n");

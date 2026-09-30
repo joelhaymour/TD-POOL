@@ -69,6 +69,24 @@ export function resolveTeamFull(text: string | null | undefined): string | null 
   return null;
 }
 
+/**
+ * "Michael Pittman Jr." and "Michael Pittman" are the same player: lowercase,
+ * no punctuation, no generational suffix.
+ */
+export function playerKey(name: string): string {
+  return name
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[.'’]/g, "")
+    .replace(/\s+(jr|sr|ii|iii|iv|v)$/, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+/** Which of these games a player is in this week, from our own data; null when unknown or ambiguous. */
+export type PlayerGameLookup = (playerName: string) => string | null;
+
 /** A leg's game, when the model left it blank but named the teams. */
 function guessGame(leg: ReadLegRaw, games: NflGame[]): string | null {
   const text = `${leg.raw_text} ${leg.outcome ?? ""} ${leg.player_name ?? ""}`.toLowerCase();
@@ -113,11 +131,16 @@ export function normalizeLeg(
   leg: ReadLegRaw,
   games: NflGame[],
   index: number,
+  gameForPlayer?: PlayerGameLookup,
 ): TicketLegDraft {
   const issues: string[] = [];
   const gameIds = new Set(games.map((g) => g.id));
+  // This week's player data knows which game each player is in, and it
+  // follows trades, which a model's memory may not. It wins over the read.
+  const known = leg.player_name && gameForPlayer ? gameForPlayer(leg.player_name) : null;
   const game_id =
-    leg.game_id && gameIds.has(leg.game_id) ? leg.game_id : guessGame(leg, games);
+    (known && gameIds.has(known) ? known : null) ??
+    (leg.game_id && gameIds.has(leg.game_id) ? leg.game_id : guessGame(leg, games));
   if (!game_id) issues.push("Pick the game");
 
   const def = leg.market_key ? propMarketDef(leg.market_key) : null;
@@ -175,6 +198,7 @@ export function normalizeTicket(
   raw: ReadTicketRaw,
   games: NflGame[],
   bookHint: string | null,
+  gameForPlayer?: PlayerGameLookup,
 ): TicketDraft {
   const book = raw.sportsbook ? sportsbook(raw.sportsbook)?.key ?? null : null;
   return {
@@ -184,8 +208,10 @@ export function normalizeTicket(
     currency: raw.currency,
     book_odds: priceOf(raw),
     book_payout: raw.potential_payout,
-    legs: raw.legs.map((leg, i) => normalizeLeg(leg, games, i)),
-    notes: raw.notes,
+    legs: raw.legs.map((leg, i) => normalizeLeg(leg, games, i, gameForPlayer)),
+    // A note that talks about ids or confidence is the model thinking aloud,
+    // not something the person posting can act on.
+    notes: raw.notes && !/game_id|confidence|provided list/i.test(raw.notes) ? raw.notes : null,
   };
 }
 

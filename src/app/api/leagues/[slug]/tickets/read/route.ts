@@ -4,7 +4,14 @@ import { storeErrorResponse } from "@/lib/api/store-error";
 import { requireApiMembership } from "@/lib/auth/api";
 import { parseShareLink } from "@/lib/props/sportsbooks";
 import { candidateGames } from "@/lib/tickets/load";
-import { normalizeTicket, type TicketDraft } from "@/lib/tickets/normalize";
+import {
+  normalizeTicket,
+  playerKey,
+  type PlayerGameLookup,
+  type TicketDraft,
+} from "@/lib/tickets/normalize";
+import type { NflGame } from "@/lib/types";
+import type { Store } from "@/lib/store/types";
 import {
   readTicketImage,
   TicketReaderError,
@@ -27,6 +34,36 @@ function emptyDraft(book: TicketDraft["sportsbook"]): TicketDraft {
     legs: [],
     notes: null,
   };
+}
+
+/**
+ * Which game each player is in, from the week's player data (the same rows
+ * the TD board is built from). A name found in two of these games is left
+ * alone. Failing to load it only means no backup for the read.
+ */
+async function playerGames(store: Store, games: NflGame[]): Promise<PlayerGameLookup> {
+  try {
+    const gameIds = new Set(games.map((g) => g.id));
+    const weekIds = [...new Set(games.map((g) => g.week_id))];
+    const [players, ...weeks] = await Promise.all([
+      store.listPlayers(),
+      ...weekIds.map((id) => store.getPlayerWeekData(id)),
+    ]);
+    const nameById = new Map(players.map((p) => [p.id, p.name]));
+    const byName = new Map<string, Set<string>>();
+    for (const row of weeks.flat()) {
+      const name = nameById.get(row.player_id);
+      if (!name || !gameIds.has(row.game_id)) continue;
+      const key = playerKey(name);
+      byName.set(key, (byName.get(key) ?? new Set()).add(row.game_id));
+    }
+    return (name) => {
+      const found = byName.get(playerKey(name));
+      return found && found.size === 1 ? [...found][0] : null;
+    };
+  } catch {
+    return () => null;
+  }
 }
 
 /** Member: what a ticket could be about — the games — and whether the reader is on. */
@@ -108,16 +145,19 @@ export async function POST(
     }
 
     try {
-      const { raw, reader, usage } = await readTicketImage({
-        image: { bytes: Buffer.from(await image.arrayBuffer()), mediaType: image.type },
-        games,
-        bookHint: share?.sportsbook ?? null,
-      });
+      const [{ raw, reader, usage }, gameForPlayer] = await Promise.all([
+        readTicketImage({
+          image: { bytes: Buffer.from(await image.arrayBuffer()), mediaType: image.type },
+          games,
+          bookHint: share?.sportsbook ?? null,
+        }),
+        playerGames(store, games),
+      ]);
       if (usage) {
         console.log("ticket read", slug, `${usage.input} in / ${usage.output} out`);
       }
       return NextResponse.json({
-        draft: normalizeTicket(raw, games, share?.sportsbook ?? null),
+        draft: normalizeTicket(raw, games, share?.sportsbook ?? null, gameForPlayer),
         reader,
         games,
         share,
