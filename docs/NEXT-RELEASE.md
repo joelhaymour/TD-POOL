@@ -75,14 +75,36 @@ device. What could look hidden:
   `CAP_SERVER_URL`); `npm run ios:sync:staging` is the only way to point a
   build at the test site. Never archive a staging build.
 
-### Not changed (decision pending)
+### Not changed (decided 2026-10-08)
 
 The app still loads the frontend from `td-pool-five.vercel.app`. Bundling it
 into the app would need a rewrite (static export can't do server components,
-cookie auth, server actions or the proxy). Options are written up in the
-2026-10-08 conversation: keep the remote shell with a review freeze (current
-plan), or point the app at a separate, pinned Vercel deployment that only
-changes with an App Store release.
+cookie auth, server actions or the proxy). **Decision: keep the remote shell**,
+say so in the review notes, and freeze `main` while a build is in review.
+Fallback if Apple objects to the architecture itself (4.2 / 2.5.2): point the
+app at a separate, pinned Vercel deployment that only changes with an App
+Store release.
+
+## After approval: 1.1 — post from the share sheet
+
+The old "Share → Pool’d opens on its own" used a workaround Apple doesn't
+allow, so build 2 saves the bet and posts a "ready to post" notification
+instead (one extra tap). The approved way to get the feel back, and better:
+**post inside the share sheet** — Share → Pool’d → the post screen slides up
+over the sportsbook → pick leagues → Post, never leaving the book.
+
+- The extension hosts a WKWebView on `/share` and hands it the shared picture
+  and link (inject them as a global the page reads when the Capacitor share
+  inbox isn't there).
+- Sign-in: the extension's web view has its own cookie store. The app copies
+  its Supabase auth cookies into the App Group on each foreground; the
+  extension loads them, and writes back any refreshed cookies when it closes
+  (Supabase rotates refresh tokens — reusing a stale one can sign the app
+  out, so the app must take the newer pair on its next foreground).
+- Keep the save-then-open path as the fallback when the extension isn't
+  signed in.
+- Needs a new build and review (version 1.1, build 3). About a day plus
+  testing on a real phone.
 
 ## Release steps
 
