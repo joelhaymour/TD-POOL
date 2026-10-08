@@ -152,17 +152,8 @@ export function ShareFlow({ leagues }: { leagues: ShareLeague[] }) {
         if (shared) void start(shared);
         else setPhase("empty");
       });
-    // Local testing: dispatch a "poold:share" event with { image: dataURL, text }.
-    const onTest = async (e: Event) => {
-      if (process.env.NODE_ENV === "production") return;
-      const detail = (e as CustomEvent<{ image?: string; text?: string }>).detail ?? {};
-      const image = detail.image ? await (await fetch(detail.image)).blob() : null;
-      void start({ image, text: detail.text ?? "" });
-    };
-    window.addEventListener("poold:share", onTest);
     return () => {
       cancelled = true;
-      window.removeEventListener("poold:share", onTest);
     };
   }, [leagues, start]);
 
@@ -423,8 +414,8 @@ export function ShareFlow({ leagues }: { leagues: ShareLeague[] }) {
  * A link came without a picture. The quickest way to one: back to the bet
  * (iOS's own "◀ bet365" in the corner — an app can't send you back itself,
  * and the link opens the book's bet builder, not the placed bet), screenshot
- * it, share the screenshot to Pool'd — which reopens this screen and picks
- * the link back up. Pasting or choosing a screenshot also works.
+ * it, share the screenshot to Pool'd — and back in Pool'd this screen opens
+ * again and picks the link back up. Pasting or choosing a screenshot also works.
  */
 function ScreenshotSteps({
   link,
@@ -448,7 +439,7 @@ function ScreenshotSteps({
         </>,
         "Screenshot the bet.",
         "Tap the screenshot preview, tap Share, and pick Pool’d.",
-        "Pool’d opens with the picture read and your link already filled in. Check it and tap Post.",
+        "Come back to Pool’d (or tap its notification): the picture is read and your link is filled in. Check it and tap Post.",
       ]
     : [
         `Go back to your bet in ${book}.`,
@@ -456,7 +447,7 @@ function ScreenshotSteps({
         "Come back and tap Paste screenshot below.",
         "It’s read and ready to post, with your link.",
       ];
-  // Sharing the screenshot reopens this screen: keep the link for it.
+  // Coming back after sharing the screenshot reopens this screen: keep the link for it.
   const url = parsed.ok ? parsed.url : null;
   useEffect(() => {
     if (url) rememberPendingShare(url);

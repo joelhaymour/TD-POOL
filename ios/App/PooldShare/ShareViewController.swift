@@ -1,26 +1,59 @@
 import UIKit
 import UniformTypeIdentifiers
+import UserNotifications
 
 /**
  "Pool’d" in a sportsbook's share sheet. Collects the slip picture and the
- link, leaves them in the ShareInbox, and opens the app on its /share
- screen, where you pick the league(s) and post.
+ link and leaves them in the ShareInbox. Share extensions can't open their
+ app, so this says where to finish: open Pool’d (it goes straight to the post
+ screen, where you pick the league(s) and post). With notifications on, a
+ "tap to post" notification does the opening.
  */
 final class ShareViewController: UIViewController {
     private var handedOff = false
+    private let titleLabel = UILabel()
+    private let detailLabel = UILabel()
+    private let doneButton = UIButton(type: .system)
+
+    private static let field = UIColor(red: 0xf2 / 255, green: 0xf3 / 255, blue: 0xee / 255, alpha: 1)
+    private static let ink = UIColor(red: 0x12 / 255, green: 0x17 / 255, blue: 0x0f / 255, alpha: 1)
+    private static let muted = UIColor(red: 0x54 / 255, green: 0x5b / 255, blue: 0x53 / 255, alpha: 1)
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        view.backgroundColor = UIColor(red: 0xf2 / 255, green: 0xf3 / 255, blue: 0xee / 255, alpha: 1)
-        let label = UILabel()
-        label.text = "Opening Pool’d…"
-        label.font = .systemFont(ofSize: 17, weight: .semibold)
-        label.textColor = UIColor(red: 0x12 / 255, green: 0x17 / 255, blue: 0x0f / 255, alpha: 1)
-        label.translatesAutoresizingMaskIntoConstraints = false
-        view.addSubview(label)
+        view.backgroundColor = Self.field
+
+        titleLabel.text = "Saving to Pool’d…"
+        titleLabel.font = .systemFont(ofSize: 20, weight: .semibold)
+        titleLabel.textColor = Self.ink
+        titleLabel.textAlignment = .center
+
+        detailLabel.font = .systemFont(ofSize: 15)
+        detailLabel.textColor = Self.muted
+        detailLabel.textAlignment = .center
+        detailLabel.numberOfLines = 0
+
+        var config = UIButton.Configuration.filled()
+        config.title = "Done"
+        config.cornerStyle = .capsule
+        config.baseBackgroundColor = Self.ink
+        config.baseForegroundColor = .white
+        config.contentInsets = NSDirectionalEdgeInsets(top: 14, leading: 40, bottom: 14, trailing: 40)
+        doneButton.configuration = config
+        doneButton.isHidden = true
+        doneButton.addTarget(self, action: #selector(done), for: .touchUpInside)
+
+        let stack = UIStackView(arrangedSubviews: [titleLabel, detailLabel, doneButton])
+        stack.axis = .vertical
+        stack.alignment = .center
+        stack.spacing = 12
+        stack.setCustomSpacing(24, after: detailLabel)
+        stack.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(stack)
         NSLayoutConstraint.activate([
-            label.centerXAnchor.constraint(equalTo: view.centerXAnchor),
-            label.centerYAnchor.constraint(equalTo: view.centerYAnchor),
+            stack.centerYAnchor.constraint(equalTo: view.centerYAnchor),
+            stack.leadingAnchor.constraint(equalTo: view.layoutMarginsGuide.leadingAnchor, constant: 16),
+            stack.trailingAnchor.constraint(equalTo: view.layoutMarginsGuide.trailingAnchor, constant: -16),
         ])
     }
 
@@ -52,13 +85,37 @@ final class ShareViewController: UIViewController {
             }
         }
         ShareInbox.save(image: image, text: texts.joined(separator: "\n"))
+        let notified = await postReadyNotification()
         await MainActor.run {
-            openApp(URL(string: "poold://share")!)
-            // Give the system a beat to start the app before this sheet goes away.
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
-                self.extensionContext?.completeRequest(returningItems: nil)
-            }
+            titleLabel.text = "Saved to Pool’d"
+            detailLabel.text = notified
+                ? "Tap the Pool’d notification, or open Pool’d, to choose your leagues and post it."
+                : "Open Pool’d to choose your leagues and post it."
+            doneButton.isHidden = false
         }
+    }
+
+    /// "Tap to post" — only when notifications are already allowed for Pool’d.
+    private func postReadyNotification() async -> Bool {
+        let center = UNUserNotificationCenter.current()
+        let settings = await center.notificationSettings()
+        guard settings.authorizationStatus == .authorized || settings.authorizationStatus == .provisional else {
+            return false
+        }
+        let content = UNMutableNotificationContent()
+        content.title = "Your bet is ready to post"
+        content.body = "Tap to choose your leagues and post it in Pool’d."
+        let request = UNNotificationRequest(identifier: ShareInbox.notificationId, content: content, trigger: nil)
+        do {
+            try await center.add(request)
+            return true
+        } catch {
+            return false
+        }
+    }
+
+    @objc private func done() {
+        extensionContext?.completeRequest(returningItems: nil)
     }
 
     /// The picture as JPEG bytes, whatever form the sharing app handed it over in.
@@ -69,21 +126,5 @@ final class ShareViewController: UIViewController {
         else if let data = item as? Data { picture = UIImage(data: data) }
         else if let img = item as? UIImage { picture = img }
         return picture?.jpegData(compressionQuality: 0.9)
-    }
-
-    /// Extensions may not call UIApplication.shared, but the app object is in
-    /// the responder chain; ask it to open our URL scheme.
-    private func openApp(_ url: URL) {
-        let selector = NSSelectorFromString("openURL:options:completionHandler:")
-        var responder: UIResponder? = self
-        while let current = responder {
-            if let app = current as? UIApplication, app.responds(to: selector) {
-                typealias Open = @convention(c) (AnyObject, Selector, NSURL, NSDictionary, (@convention(block) (Bool) -> Void)?) -> Void
-                let open = unsafeBitCast(app.method(for: selector), to: Open.self)
-                open(app, selector, url as NSURL, NSDictionary(), nil)
-                return
-            }
-            responder = current.next
-        }
     }
 }

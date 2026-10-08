@@ -1,6 +1,5 @@
 import type {
   CreateLeagueInput,
-  GameProp,
   GameStatus,
   League,
   LegResult,
@@ -230,32 +229,15 @@ export interface Store {
    */
   countPlayerWeekRows(weekId: string): Promise<number>;
 
-  // --- Group betting -------------------------------------------------------
+  // --- Parlays (tickets) --------------------------------------------------
 
   /** One game row by id (props sync + slip building need kickoff/teams). */
   getGameById(gameId: string): Promise<NflGame | null>;
 
-  /**
-   * Replace the given markets on one game's board. Lines move and markets
-   * appear and disappear between refreshes, so the listed markets are cleared
-   * before the new rows land; markets outside `marketKeys` (another tier) are
-   * left alone. Legs are unaffected — they snapshot their prop at add time.
-   */
-  replaceGameProps(
-    weekId: string,
-    gameId: string,
-    sportsbook: string,
-    rows: Array<Omit<GameProp, "id" | "week_id" | "game_id" | "sportsbook" | "fetched_at">>,
-    marketKeys: string[],
-  ): Promise<number>;
-
-  listGameProps(gameId: string): Promise<GameProp[]>;
-  getGameProp(id: string): Promise<GameProp | null>;
-
   createParlay(input: NewParlay): Promise<Parlay>;
   /**
-   * Every slip the league has, newest first, with legs. Group screens ask for
-   * `group` and ticket screens for `ticket`; settlement reads both.
+   * Every slip the league has, newest first, with legs. Ticket screens ask for
+   * `ticket`; settlement reads every kind.
    */
   listParlaysForLeague(
     leagueId: string,
@@ -265,7 +247,6 @@ export interface Store {
   updateParlay(parlayId: string, patch: ParlayPatch): Promise<Parlay>;
   deleteParlay(parlayId: string): Promise<void>;
 
-  /** Insert a leg snapshot. Duplicate selections in one slip are CONFLICT. */
   /** Save (or replace) one member's share link for a slip at one book. */
   saveParlayShareLink(input: {
     parlay_id: string;
@@ -276,10 +257,8 @@ export interface Store {
     note?: string | null;
   }): Promise<ParlayShareLink>;
   removeParlayShareLink(shareId: string): Promise<ParlayShareLink | null>;
-  addParlayLeg(input: NewParlayLeg): Promise<ParlayLeg>;
   /** A ticket's legs land together, in slip order. */
   addParlayLegs(inputs: NewParlayLeg[]): Promise<ParlayLeg[]>;
-  removeParlayLeg(parlayId: string, legId: string): Promise<ParlayLeg | null>;
   /** "I'm riding" on a ticket, on or off. */
   setParlayRide(
     input: { parlay_id: string; league_id: string; member_id: string },

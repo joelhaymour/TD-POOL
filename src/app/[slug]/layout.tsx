@@ -1,8 +1,6 @@
 import { LeagueShell } from "@/components/layout/league-shell";
 import { requireViewerMembership } from "@/lib/auth/league";
-import { countParlaysNeedingPicks } from "@/lib/props/load-group-home";
 import { getStore } from "@/lib/store";
-import { visibleLeague } from "@/lib/native/server";
 
 /**
  * The frame every league page sits in: name, week, section switcher and the
@@ -17,24 +15,18 @@ export default async function LeagueLayout({
   const { slug } = await params;
   const member = await requireViewerMembership(slug);
   const store = getStore();
-  const stored = await store.getLeagueBySlug(slug);
-  const league = stored ? await visibleLeague(stored) : null;
+  const league = await store.getLeagueBySlug(slug);
 
   const week = league?.active_week_id
     ? (await store.listWeeks()).find((w) => w.id === league.active_week_id)
     : undefined;
-  const picksNeeded =
-    league?.sections.group_bets
-      ? await countParlaysNeedingPicks(store, league, member.id)
-      : 0;
 
   return (
     <LeagueShell
       slug={slug}
-      league={league ?? { name: "TD Pool", sections: { td_pool: true, group_bets: false, tickets: false } }}
+      league={league ?? { name: "TD Pool", sections: { td_pool: true, tickets: false } }}
       weekNumber={week?.week ?? 0}
       viewerName={member.display_name}
-      picksNeeded={picksNeeded}
     >
       {children}
     </LeagueShell>

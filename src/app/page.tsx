@@ -2,8 +2,7 @@ import Link from "next/link";
 import { Plus } from "lucide-react";
 import { getStore } from "@/lib/store";
 import { accountDisplayName, requireUser } from "@/lib/auth/session";
-import { enabledSections, withoutSections } from "@/lib/league/sections";
-import { hiddenSections } from "@/lib/native/server";
+import { enabledSections } from "@/lib/league/sections";
 import { Wordmark } from "@/components/brand/logo";
 import { NotificationBell } from "@/components/notify/bell";
 import { AccountMenu } from "./account-menu";
@@ -20,18 +19,16 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
   const pendingJoinSlug = typeof join === "string" ? join : "";
   const pendingJoinPin = typeof pin === "string" && /^\d{4,8}$/.test(pin) ? pin : "";
 
-  const hidden = await hiddenSections();
   const leagues = (
     await getStore()
       .listLeaguesForUser(user.id)
       .catch(() => [])
   ).map(({ league, member }) => {
-    const visible = withoutSections(league, hidden);
     return {
       id: league.id,
       slug: league.slug,
       name: league.name,
-      sections: enabledSections(visible).map((s) => s.label).join(" · ") || "Open on the website",
+      sections: enabledSections(league).map((s) => s.label).join(" · ") || "No sections on",
       memberCount: league.member_count,
       isAdmin: member.role === "admin",
       pinnedAt: member.pinned_at ?? null,
@@ -77,7 +74,6 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
           hasLeagues={leagues.length > 0}
           pendingJoinSlug={pendingJoinSlug}
           pendingJoinPin={pendingJoinSlug ? pendingJoinPin : ""}
-          hiddenSections={hidden}
         />
         {/* First open on this device: the tour, then the notifications ask.
             An invite's join sheet waits underneath for when it's done. */}

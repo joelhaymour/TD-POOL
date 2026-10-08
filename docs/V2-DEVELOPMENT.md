@@ -114,16 +114,18 @@ Sources: [Supabase environment guidance](https://supabase.com/docs/guides/deploy
 
 ## League sections
 
-A league runs any combination of three sections (`enable_td_pool`,
-`enable_group_bets`, `enable_tickets` on `leagues`; `league.sections` in code):
+A league runs the TD Pool, Tickets, or both (`enable_td_pool`,
+`enable_tickets` on `leagues`; `league.sections` in code):
 
 - **TD Pool** — `/<slug>/pool` (Picks · Slip · History · Board)
-- **Group Bets** — `/<slug>/group` (Create · Parlays · History · Board)
 - **Tickets** — `/<slug>/tickets` (Tickets · History · Board)
 
+A third section, Group Bets, was retired on 2026-09-25 and its code deleted on
+2026-10-08; `enable_group_bets` and old `kind = 'group'` rows stay in the
+database, unread (saving a league's sections writes the flag `false`).
+
 `/<slug>` redirects to the section the member was last in (cookie
-`tdp_section_<slug>`) or the first one that is on, carrying `?slip=` / `?game=`
-across. The header shows a pill per section when more than one is on; the
+`tdp_section_<slug>`) or the first one that is on, carrying `?game=` across. The header shows a pill per section when more than one is on; the
 bottom bar is picked client-side from the second path segment
 (`LeagueNav`), so league-level pages (settings, admin) keep the last bar.
 Admins toggle sections in Settings; at least one stays on (DB check +
@@ -134,15 +136,15 @@ exactly what they were, plus tickets.
 
 The week roll follows the sections: a league with a TD pool waits for every
 game to go final (picks grade at the whistle); one without moves on at the
-last kickoff. The settle ticker and the daily cron grade any league with group
-bets or tickets on.
+last kickoff. The settle ticker and the daily cron grade any league with
+tickets on.
 
 ## Tickets
 
 A ticket is a bet a member placed at their own book, posted for the league to
 follow live and ride. It reuses the parlay tables (`parlays.kind = 'ticket'`,
 `status = 'locked'`), so grading, live progress, share links, realtime and
-admin overrides are the same code as group bets. A ticket keeps the numbers
+admin overrides are the same code the retired group bets used. A ticket keeps the numbers
 its slip printed — `stake`, `book_odds`, `book_payout` — because a same-game
 parlay is priced by the book, not by multiplying its legs; `settleSlip` pays
 `book_payout` on a win. Leg prices are nullable (a slip may only print the
@@ -253,8 +255,9 @@ cascade in the database.
   in `src/lib/brand.ts`; the wordmark (`Wordmark` in
   `src/components/brand/logo.tsx`) draws POOL’D with the ticket mark as the
   apostrophe, from the path `native/make-artwork.swift` generates. The iOS
-  bundle id is `com.joelhaymour.poold`. The URL and the internal `TDPoolApp`
-  user-agent tag did not change.
+  bundle id is `com.joelhaymour.poold`. The URL did not change. (The
+  `TDPoolApp` user-agent tag was removed on 2026-10-08; the site no longer
+  tells the app and a browser apart on the server.)
 - **Daylight is the whole app** (since 2026-09-24; it replaced the dark
   "Night Ticket" look). `globals.css` holds one palette: a warm off-white
   field (`field`), solid white cards (`chalk`) with a hairline `border`,

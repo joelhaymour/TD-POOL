@@ -25,11 +25,9 @@ export async function alignLeagueActiveWeek(
     const active = weeks.find((w) => w.id === league.active_week_id);
     if (active) {
       const games = await store.listGamesForWeek(active.id);
-      // A group slip cannot take a leg from a game in progress, so once the
-      // last game kicks off there is nothing left to build this week. Slips
-      // still in play stay on Home and keep grading after the move. A TD
-      // pool's picks are only graded at the final whistle, so a league that
-      // runs one waits for it.
+      // A tickets-only league moves on once the last game kicks off; tickets
+      // still in play keep grading after the move. A TD pool's picks are only
+      // graded at the final whistle, so a league that runs one waits for it.
       const weekDone =
         games.length > 0 &&
         (league.sections.td_pool

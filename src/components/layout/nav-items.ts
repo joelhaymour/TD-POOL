@@ -30,18 +30,6 @@ export function poolNavItems(basePath: string): BottomNavItem[] {
   ];
 }
 
-export function groupNavItems(
-  basePath: string,
-  badges: { create?: number } = {},
-): BottomNavItem[] {
-  return [
-    { href: basePath, label: "Create", icon: "create", badge: badges.create },
-    { href: `${basePath}/parlays`, label: "Parlays", icon: "slip" },
-    { href: `${basePath}/history`, label: "History", icon: "history" },
-    { href: `${basePath}/board`, label: "Board", icon: "board" },
-  ];
-}
-
 export function ticketsNavItems(basePath: string): BottomNavItem[] {
   return [
     { href: basePath, label: "Tickets", icon: "ticket" },
@@ -54,16 +42,11 @@ export function ticketsNavItems(basePath: string): BottomNavItem[] {
 export function leagueSectionNavs(
   slug: string,
   league: Pick<League, "sections">,
-  badges: { create?: number } = {},
 ): SectionNav[] {
   return enabledSections(league).map((section) => {
     const basePath = `/${slug}/${section.path}`;
     const items =
-      section.key === "td_pool"
-        ? poolNavItems(basePath)
-        : section.key === "group_bets"
-          ? groupNavItems(basePath, badges)
-          : ticketsNavItems(basePath);
+      section.key === "td_pool" ? poolNavItems(basePath) : ticketsNavItems(basePath);
     return { key: section.key, path: section.path, basePath, items };
   });
 }

@@ -2,8 +2,9 @@ import UIKit
 
 /**
  The hand-off between the share extension and the app. The extension drops
- what a sportsbook shared (the slip picture and the link text) here, opens
- poold://share, and the app's /share screen takes it.
+ what a sportsbook shared (the slip picture and the link text) here; the next
+ time Pool’d comes to the front it sees the waiting share, opens /share, and
+ that screen takes it.
 
  Normally an App Group folder both targets can see. A build without the App
  Group entitlement (an unsigned simulator build) falls back to a private named
@@ -13,6 +14,10 @@ enum ShareInbox {
     static let appGroup = "group.com.joelhaymour.poold"
     static let pasteboardName = UIPasteboard.Name("com.joelhaymour.poold.share")
     private static let metaType = "com.joelhaymour.poold.share-meta"
+    /// The extension's "ready to post" notification; the app clears it once it opens the share.
+    static let notificationId = "poold-share"
+    /// A share older than this is stale (the web side keeps a pending link as long).
+    static let freshFor: TimeInterval = 30 * 60
 
     private static var folder: URL? {
         FileManager.default
@@ -42,6 +47,30 @@ enum ShareInbox {
         var item: [String: Any] = [metaType: metaData]
         if let image { item["public.jpeg"] = image }
         board.items = [item]
+    }
+
+    /// When the waiting share was made, if one is waiting and still fresh. A
+    /// stale one is cleared. Reading this does not take the share.
+    static func pendingSince() -> Date? {
+        guard let at = peekDate() else { return nil }
+        if Date().timeIntervalSince(at) > freshFor {
+            _ = take()
+            return nil
+        }
+        return at
+    }
+
+    private static func peekDate() -> Date? {
+        let metaData: Data?
+        if let dir = folder {
+            metaData = try? Data(contentsOf: dir.appendingPathComponent("payload.json"))
+        } else {
+            metaData = UIPasteboard(name: pasteboardName, create: false)?.items.first?[metaType] as? Data
+        }
+        guard let data = metaData,
+              let meta = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let at = meta["at"] as? Double else { return nil }
+        return Date(timeIntervalSince1970: at)
     }
 
     /// What was shared, once: taking it clears it.

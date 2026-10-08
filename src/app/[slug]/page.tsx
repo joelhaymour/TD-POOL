@@ -8,13 +8,12 @@ import {
 } from "@/lib/league/sections";
 import { getStore } from "@/lib/store";
 import { enabledSections } from "@/lib/league/sections";
-import { visibleLeague } from "@/lib/native/server";
 
 /**
  * `/<slug>` is the invite link and the home-screen icon, so it has to land
  * somewhere useful: the section the member was last in, or the first one the
  * league runs. Query strings are carried across for links that predate the
- * sections (`?slip=` from a parlay tile, `?game=` from a player page).
+ * sections (`?game=` from a player page).
  */
 export default async function LeagueEntryPage({
   params,
@@ -22,10 +21,9 @@ export default async function LeagueEntryPage({
 }: PageProps<"/[slug]">) {
   const { slug } = await params;
   await requireViewerMembership(slug);
-  const stored = await getStore().getLeagueBySlug(slug);
-  if (!stored) redirect("/");
-  const league = await visibleLeague(stored);
-  // A league that only runs sections the app hides has nothing to show here.
+  const league = await getStore().getLeagueBySlug(slug);
+  if (!league) redirect("/");
+  // A league with no section switched on has nothing to show here.
   if (enabledSections(league).length === 0) redirect("/");
 
   const remembered = sectionByPath(

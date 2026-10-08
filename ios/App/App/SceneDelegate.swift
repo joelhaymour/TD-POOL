@@ -1,18 +1,24 @@
 import UIKit
 import Capacitor
+import UserNotifications
 
 class SceneDelegate: UIResponder, UIWindowSceneDelegate {
     var window: UIWindow?
+    /// The share the app last opened /share for, so each share opens it once.
+    private var openedShare: Date?
 
     func scene(_ scene: UIScene, willConnectTo session: UISceneSession, options connectionOptions: UIScene.ConnectionOptions) {
         guard let windowScene = scene as? UIWindowScene else { return }
 
-        // Launched by the share extension, or by tapping a Pool’d link (an
-        // invite in Messages): open that screen once the app has loaded.
-        if let url = connectionOptions.urlContexts.first?.url, let path = Self.appPath(for: url) {
+        // Opened by tapping a Pool’d link (an invite in Messages), or with a
+        // bet waiting from the share extension: open that screen once the app
+        // has loaded.
+        if let path = connectionOptions.userActivities.lazy.compactMap(Self.linkPath(for:)).first {
             MainViewController.pendingPath = path
-        } else if let path = connectionOptions.userActivities.lazy.compactMap(Self.linkPath(for:)).first {
-            MainViewController.pendingPath = path
+        } else if let at = ShareInbox.pendingSince() {
+            openedShare = at
+            clearShareNotification()
+            MainViewController.pendingPath = "/share"
         }
 
         window = UIWindow(windowScene: windowScene)
@@ -22,18 +28,22 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         SceneDelegateProxy.shared.scene(scene, willConnectTo: session, options: connectionOptions)
     }
 
-    func scene(_ scene: UIScene, openURLContexts URLContexts: Set<UIOpenURLContext>) {
-        if let url = URLContexts.first?.url, let path = Self.appPath(for: url) {
-            (window?.rootViewController as? MainViewController)?.open(path: path)
-            return
-        }
-        SceneDelegateProxy.shared.scene(scene, openURLContexts: URLContexts)
+    /// Back from a sportsbook after sharing a bet to Pool’d (by its
+    /// notification or the app switcher): go to the post screen with it.
+    func sceneDidBecomeActive(_ scene: UIScene) {
+        guard let at = ShareInbox.pendingSince(), at != openedShare else { return }
+        openedShare = at
+        clearShareNotification()
+        (window?.rootViewController as? MainViewController)?.open(path: "/share")
     }
 
-    /// poold://share → "/share". Anything else is not ours to route.
-    static func appPath(for url: URL) -> String? {
-        guard url.scheme == "poold", url.host == "share" else { return nil }
-        return "/share"
+    private func clearShareNotification() {
+        UNUserNotificationCenter.current()
+            .removeDeliveredNotifications(withIdentifiers: [ShareInbox.notificationId])
+    }
+
+    func scene(_ scene: UIScene, openURLContexts URLContexts: Set<UIOpenURLContext>) {
+        SceneDelegateProxy.shared.scene(scene, openURLContexts: URLContexts)
     }
 
     /// A universal link (https://td-pool-five.vercel.app/…) → its path and query,

@@ -28,7 +28,6 @@ import { resolvePoolWeek, weekWindow } from "@/lib/nfl/calendar";
 import { playerWeekRankKey } from "@/lib/scoring/rank";
 import type {
   CreateLeagueInput,
-  GameProp,
   InjuryStatus,
   League,
   NewParlay,
@@ -121,13 +120,10 @@ function mapLeague(row: DbLeague): League {
     // The section flags arrived with tickets; a row from before that reads
     // its old single type so nothing changes for it until an admin saves.
     sections: {
+      // Group Bets were retired on 2026-09-25: enable_group_bets is ignored.
       td_pool: Boolean(row.enable_td_pool ?? row.league_type !== "group_betting"),
-      group_bets: Boolean(
-        row.enable_group_bets ?? row.league_type === "group_betting",
-      ),
       tickets: Boolean(row.enable_tickets ?? false),
     },
-    pick_mode: row.pick_mode === "one_each" ? "one_each" : "open",
     currency: (row.currency as League["currency"]) ?? "USD",
     // Legacy "individual" leagues read as fixed at the amount they were
     // already wagering, so nothing changes for them and no migration is
@@ -150,29 +146,6 @@ function mapLeague(row: DbLeague): League {
     member_count: num(row.member_count_setting, 0),
     created_at: String(row.created_at),
     updated_at: String(row.updated_at),
-  };
-}
-
-function mapGameProp(row: Record<string, unknown>): GameProp {
-  return {
-    id: String(row.id),
-    week_id: String(row.week_id),
-    game_id: String(row.game_id),
-    sportsbook: String(row.sportsbook ?? "fanduel"),
-    market_key: String(row.market_key),
-    market_label: String(row.market_label),
-    market_group: (row.market_group as GameProp["market_group"]) ?? "game_lines",
-    player_id: row.player_id ? String(row.player_id) : null,
-    player_name: row.player_name != null ? String(row.player_name) : null,
-    outcome_label: String(row.outcome_label),
-    line: numOrNull(row.line),
-    american_odds: num(row.american_odds),
-    decimal_odds: num(row.decimal_odds),
-    fd_market_id: row.fd_market_id != null ? String(row.fd_market_id) : null,
-    fd_selection_id:
-      row.fd_selection_id != null ? String(row.fd_selection_id) : null,
-    deep_link: row.deep_link != null ? String(row.deep_link) : null,
-    fetched_at: String(row.fetched_at),
   };
 }
 
@@ -385,15 +358,11 @@ function leagueToDbPatch(settings: UpdateLeagueSettingsInput): Record<string, un
   if (settings.sections !== undefined) {
     const s = settings.sections;
     if (s.td_pool !== undefined) patch.enable_td_pool = s.td_pool;
-    if (s.group_bets !== undefined) patch.enable_group_bets = s.group_bets;
     if (s.tickets !== undefined) patch.enable_tickets = s.tickets;
+    // Retired: saving a league's sections switches the old flag off for good.
+    patch.enable_group_bets = false;
   }
   if (settings.currency !== undefined) patch.currency = settings.currency;
-  if (settings.pick_mode !== undefined) {
-    patch.pick_mode = settings.pick_mode;
-    // The pre-pick-mode column is still constrained; keep it honest.
-    patch.max_props_per_member = settings.pick_mode === "one_each" ? 1 : 25;
-  }
   if (settings.betting_mode !== undefined) patch.betting_mode = settings.betting_mode;
   if (settings.contribution_per_member !== undefined) {
     patch.contribution_per_member = settings.contribution_per_member;
@@ -498,14 +467,10 @@ export class SupabaseStore implements Store {
         slug,
         admin_user_id: input.admin_user_id ?? null,
         enable_td_pool: sections.td_pool,
-        enable_group_bets: sections.group_bets,
+        enable_group_bets: false,
         enable_tickets: sections.tickets,
-        // The pre-sections column is still there and constrained; keep it
-        // honest for anything that reads it.
-        league_type:
-          sections.group_bets && !sections.td_pool ? "group_betting" : "td_pool",
-        pick_mode: input.pick_mode ?? "open",
-        max_props_per_member: input.pick_mode === "one_each" ? 1 : 25,
+        // The pre-sections column is still there and constrained.
+        league_type: "td_pool",
         currency: input.currency ?? "USD",
         betting_mode: input.betting_mode ?? "fixed",
         contribution_per_member: input.contribution_per_member ?? 10,
@@ -1565,7 +1530,7 @@ export class SupabaseStore implements Store {
     return count ?? 0;
   }
 
-  // --- Group betting -------------------------------------------------------
+  // --- Parlays (tickets) --------------------------------------------------
 
   async getGameById(gameId: string): Promise<NflGame | null> {
     const { data, error } = await this.client
@@ -1575,73 +1540,6 @@ export class SupabaseStore implements Store {
       .maybeSingle();
     if (error) throw error;
     return data ? mapGame(data) : null;
-  }
-
-  async replaceGameProps(
-    weekId: string,
-    gameId: string,
-    sportsbook: string,
-    rows: Array<
-      Omit<GameProp, "id" | "week_id" | "game_id" | "sportsbook" | "fetched_at">
-    >,
-    marketKeys: string[],
-  ): Promise<number> {
-    const { error: delErr } = await this.client
-      .from("game_props")
-      .delete()
-      .eq("game_id", gameId)
-      .eq("sportsbook", sportsbook)
-      .in("market_key", marketKeys);
-    if (delErr) throw delErr;
-    if (rows.length === 0) return 0;
-
-    const fetchedAt = nowIso();
-    const inserts = rows.map((row) => ({
-      id: randomUUID(),
-      week_id: weekId,
-      game_id: gameId,
-      sportsbook,
-      market_key: row.market_key,
-      market_label: row.market_label,
-      market_group: row.market_group,
-      player_id: row.player_id,
-      player_name: row.player_name,
-      outcome_label: row.outcome_label,
-      line: row.line,
-      american_odds: row.american_odds,
-      decimal_odds: row.decimal_odds,
-      fd_market_id: row.fd_market_id,
-      fd_selection_id: row.fd_selection_id,
-      deep_link: row.deep_link,
-      fetched_at: fetchedAt,
-    }));
-    for (const batch of chunk(inserts, 500)) {
-      const { error } = await this.client.from("game_props").insert(batch);
-      if (error) throw error;
-    }
-    return inserts.length;
-  }
-
-  async listGameProps(gameId: string): Promise<GameProp[]> {
-    const { data, error } = await this.client
-      .from("game_props")
-      .select("*")
-      .eq("game_id", gameId)
-      .order("market_key")
-      .order("line", { ascending: true, nullsFirst: true })
-      .order("american_odds");
-    if (error) throw error;
-    return (data ?? []).map(mapGameProp);
-  }
-
-  async getGameProp(id: string): Promise<GameProp | null> {
-    const { data, error } = await this.client
-      .from("game_props")
-      .select("*")
-      .eq("id", id)
-      .maybeSingle();
-    if (error) throw error;
-    return data ? mapGameProp(data) : null;
   }
 
   async createParlay(input: NewParlay): Promise<Parlay> {
@@ -1799,43 +1697,6 @@ export class SupabaseStore implements Store {
     return data ? mapShareLink(data) : null;
   }
 
-  async addParlayLeg(input: NewParlayLeg): Promise<ParlayLeg> {
-    const { data, error } = await this.client
-      .from("parlay_legs")
-      .insert({
-        id: randomUUID(),
-        parlay_id: input.parlay_id,
-        league_id: input.league_id,
-        member_id: input.member_id,
-        game_prop_id: input.game_prop_id,
-        game_id: input.game_id,
-        sportsbook: input.sportsbook,
-        market_key: input.market_key,
-        market_label: input.market_label,
-        player_name: input.player_name,
-        outcome_label: input.outcome_label,
-        line: input.line,
-        american_odds: input.american_odds,
-        decimal_odds: input.decimal_odds,
-        fd_market_id: input.fd_market_id,
-        fd_selection_id: input.fd_selection_id,
-        deep_link: input.deep_link,
-        added_at: nowIso(),
-      })
-      .select("*")
-      .single();
-    if (error) {
-      if (isUniqueViolation(error)) {
-        throw new StoreError(
-          "That selection is already on this slip",
-          "CONFLICT",
-        );
-      }
-      throw error;
-    }
-    return mapParlayLeg(data);
-  }
-
   async addParlayLegs(inputs: NewParlayLeg[]): Promise<ParlayLeg[]> {
     if (inputs.length === 0) return [];
     // Spaced timestamps keep the slip's printed order on read-back.
@@ -1896,21 +1757,6 @@ export class SupabaseStore implements Store {
       .eq("parlay_id", input.parlay_id)
       .eq("member_id", input.member_id);
     if (error) throw error;
-  }
-
-  async removeParlayLeg(
-    parlayId: string,
-    legId: string,
-  ): Promise<ParlayLeg | null> {
-    const { data, error } = await this.client
-      .from("parlay_legs")
-      .delete()
-      .eq("id", legId)
-      .eq("parlay_id", parlayId)
-      .select("*")
-      .maybeSingle();
-    if (error) throw error;
-    return data ? mapParlayLeg(data) : null;
   }
 
   async gradeParlayLegs(updates: LegGradeUpdate[]): Promise<number> {

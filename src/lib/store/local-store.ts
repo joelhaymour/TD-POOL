@@ -198,7 +198,6 @@ export class LocalFileStore implements Store {
         slug,
         admin_user_id: input.admin_user_id ?? null,
         sections: mergeSections(ALL_SECTIONS_ON, input.sections),
-        pick_mode: input.pick_mode ?? "open",
         currency: input.currency ?? "USD",
         betting_mode: input.betting_mode ?? "fixed",
         contribution_per_member: input.contribution_per_member ?? 10,
@@ -1034,11 +1033,11 @@ export class LocalFileStore implements Store {
     );
   }
 
-  // --- Group betting: hosted-DB only. USE_SUPABASE=true is required. -------
+  // --- Tickets: hosted-DB only. USE_SUPABASE=true is required. -------------
 
-  private groupBettingUnavailable(): never {
+  private ticketsUnavailable(): never {
     throw new StoreError(
-      "Group betting requires the hosted database (set USE_SUPABASE=true)",
+      "Tickets require the hosted database (set USE_SUPABASE=true)",
       "VALIDATION",
     );
   }
@@ -1048,54 +1047,39 @@ export class LocalFileStore implements Store {
     return db.games.find((g) => g.id === gameId) ?? null;
   }
 
-  async replaceGameProps(): Promise<number> {
-    this.groupBettingUnavailable();
-  }
-  async listGameProps(): Promise<import("@/lib/types").GameProp[]> {
-    this.groupBettingUnavailable();
-  }
-  async getGameProp(): Promise<import("@/lib/types").GameProp | null> {
-    this.groupBettingUnavailable();
-  }
   async createParlay(): Promise<import("@/lib/types").Parlay> {
-    this.groupBettingUnavailable();
+    this.ticketsUnavailable();
   }
   async listParlaysForLeague(): Promise<import("@/lib/types").ParlayWithLegs[]> {
-    this.groupBettingUnavailable();
+    this.ticketsUnavailable();
   }
   async getParlay(): Promise<import("@/lib/types").ParlayWithLegs | null> {
-    this.groupBettingUnavailable();
+    this.ticketsUnavailable();
   }
   async updateParlay(): Promise<import("@/lib/types").Parlay> {
-    this.groupBettingUnavailable();
+    this.ticketsUnavailable();
   }
   async gradeParlayLegs(): Promise<number> {
-    this.groupBettingUnavailable();
+    this.ticketsUnavailable();
   }
   async listGamesByIds(ids: string[]) {
     const db = await this.read();
     return db.games.filter((g) => ids.includes(g.id));
   }
   async deleteParlay(): Promise<void> {
-    this.groupBettingUnavailable();
+    this.ticketsUnavailable();
   }
   async saveParlayShareLink(): Promise<import("@/lib/types").ParlayShareLink> {
-    this.groupBettingUnavailable();
+    this.ticketsUnavailable();
   }
   async removeParlayShareLink(): Promise<import("@/lib/types").ParlayShareLink | null> {
-    this.groupBettingUnavailable();
-  }
-  async addParlayLeg(): Promise<import("@/lib/types").ParlayLeg> {
-    this.groupBettingUnavailable();
-  }
-  async removeParlayLeg(): Promise<import("@/lib/types").ParlayLeg | null> {
-    this.groupBettingUnavailable();
+    this.ticketsUnavailable();
   }
   async addParlayLegs(): Promise<import("@/lib/types").ParlayLeg[]> {
-    this.groupBettingUnavailable();
+    this.ticketsUnavailable();
   }
   async setParlayRide(): Promise<void> {
-    this.groupBettingUnavailable();
+    this.ticketsUnavailable();
   }
 
   async getSyncState(key: string): Promise<SyncStateRow | null> {

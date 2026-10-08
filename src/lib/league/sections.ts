@@ -1,7 +1,7 @@
 import type { League, LeagueSection, LeagueSections } from "@/lib/types";
 
 /**
- * The three things a league can be, in the order they appear in the header.
+ * The things a league can run, in the order they appear in the header.
  * `path` is the URL segment under the league slug.
  */
 export type SectionDef = {
@@ -17,12 +17,6 @@ export const SECTIONS: SectionDef[] = [
     path: "pool",
     label: "TD Pool",
     blurb: "Everyone picks one player to score a TD each week. The classic.",
-  },
-  {
-    key: "group_bets",
-    path: "group",
-    label: "Group Bets",
-    blurb: "Build shared parlays from every prop, then ride the placed bet.",
   },
   {
     key: "tickets",
@@ -56,17 +50,6 @@ export function sectionEnabled(
   return Boolean(league.sections[key]);
 }
 
-/** A copy of the league with the given sections switched off (display only). */
-export function withoutSections<T extends Pick<League, "sections">>(
-  league: T,
-  hidden: readonly LeagueSection[],
-): T {
-  if (hidden.length === 0) return league;
-  const sections = { ...league.sections };
-  for (const key of hidden) sections[key] = false;
-  return { ...league, sections };
-}
-
 /** Where `/<slug>` lands: the first section that is on. */
 export function defaultSection(league: Pick<League, "sections">): SectionDef {
   return enabledSections(league)[0] ?? SECTIONS[0];
@@ -83,7 +66,6 @@ export function sectionCookieName(slug: string): string {
 
 export const ALL_SECTIONS_ON: LeagueSections = {
   td_pool: true,
-  group_bets: true,
   tickets: true,
 };
 
@@ -93,7 +75,7 @@ export function sectionsFromBody(
 ): Partial<LeagueSections> | undefined {
   if (!raw || typeof raw !== "object") return undefined;
   const out: Partial<LeagueSections> = {};
-  for (const key of ["td_pool", "group_bets", "tickets"] as const) {
+  for (const key of ["td_pool", "tickets"] as const) {
     const v = (raw as Record<string, unknown>)[key];
     if (typeof v === "boolean") out[key] = v;
   }
@@ -106,6 +88,6 @@ export function mergeSections(
   patch: Partial<LeagueSections> | undefined,
 ): LeagueSections {
   const next = { ...current, ...(patch ?? {}) };
-  if (!next.td_pool && !next.group_bets && !next.tickets) return current;
+  if (!next.td_pool && !next.tickets) return current;
   return next;
 }

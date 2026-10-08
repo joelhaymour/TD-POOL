@@ -15,19 +15,16 @@ export function LeagueShell({
   league,
   weekNumber,
   viewerName,
-  picksNeeded = 0,
   children,
 }: {
   slug: string;
   league: Pick<League, "name" | "sections">;
   weekNumber: number;
   viewerName: string;
-  /** Group parlays waiting on this viewer — badges the Create tab. */
-  picksNeeded?: number;
   children: ReactNode;
 }) {
   const basePath = `/${slug}`;
-  const navs = leagueSectionNavs(slug, league, { create: picksNeeded });
+  const navs = leagueSectionNavs(slug, league);
 
   return (
     <AppShell

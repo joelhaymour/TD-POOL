@@ -7,14 +7,13 @@ import {
   MoneySettingsForm,
   type MoneySettingsValue,
 } from "@/components/league/money-settings-form";
-import { PickModeField } from "@/components/league/pick-mode-field";
 import { SectionToggles } from "@/components/league/section-toggles";
 import { Button } from "@/components/ui/button";
 import { Sheet } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/components/ui/toast";
 import { ALL_SECTIONS_ON } from "@/lib/league/sections";
-import type { League, LeagueSection, LeagueSections, PickLockType, PickMode } from "@/lib/types";
+import type { League, LeagueSections, PickLockType } from "@/lib/types";
 import { inviteLink } from "@/lib/league/invite";
 
 const inputClass =
@@ -26,12 +25,9 @@ const labelClass =
 export function SettingsForm({
   slug,
   isAdmin,
-  hiddenSections = [],
 }: {
   slug: string;
   isAdmin: boolean;
-  /** Sections this screen leaves out (group bets in the iOS app); their saved value is kept. */
-  hiddenSections?: LeagueSection[];
 }) {
   const { toast } = useToast();
   const router = useRouter();
@@ -49,7 +45,6 @@ export function SettingsForm({
 
   const [joinPin, setJoinPin] = useState<string | null>(null);
   const [sections, setSections] = useState<LeagueSections>(ALL_SECTIONS_ON);
-  const [pickMode, setPickMode] = useState<PickMode>("open");
   const [inviteLoading, setInviteLoading] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleteName, setDeleteName] = useState("");
@@ -74,7 +69,6 @@ export function SettingsForm({
         setAllowPickChanges(l.allow_pick_changes);
         setLockType(l.pick_lock_type);
         setSections(l.sections);
-        setPickMode(l.pick_mode);
         setMoney({
           betting_mode: l.betting_mode,
           // A league that was on the old per-member mode reads back as fixed
@@ -181,7 +175,6 @@ export function SettingsForm({
           sections,
           allow_pick_changes: allowPickChanges,
           pick_lock_type: lockType,
-          ...(sections.group_bets ? { pick_mode: pickMode } : {}),
           betting_mode: money.betting_mode,
           fixed_weekly_stake: money.fixed_weekly_stake,
           currency: money.currency,
@@ -357,16 +350,8 @@ export function SettingsForm({
             value={sections}
             onChange={setSections}
             disabled={!isAdmin}
-            hidden={hiddenSections}
           />
         </div>
-
-        {sections.group_bets && !hiddenSections.includes("group_bets") ? (
-          <div>
-            <span className={labelClass}>Group bets</span>
-            <PickModeField value={pickMode} onChange={setPickMode} disabled={!isAdmin} />
-          </div>
-        ) : null}
 
         <MoneySettingsForm value={money} onChange={setMoney} />
 

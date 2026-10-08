@@ -15,13 +15,13 @@ const LIVE_REFRESH_MS = 20_000;
 const LIVE_SCORE_TTL_MS = 25_000;
 
 /**
- * Background refresh for a group betting league: advance the week, pull
- * scores, then grade legs. The TD board's odds sync is skipped — group
- * betting prices come from the per-game prop board instead.
+ * Background refresh for a league's tickets: advance the week, pull scores,
+ * then grade legs. (The name predates the retired Group Bets section.) The
+ * TD board's odds sync is skipped — tickets carry the book's own prices.
  *
  * Safe to call on every request. While a game on the board is being played
  * the shared slot opens every 20 seconds and scores are pulled every 25, so
- * the parlay cards keep pace with the broadcast; the rest of the week it
+ * the ticket cards keep pace with the broadcast; the rest of the week it
  * settles back to a minute.
  */
 export async function refreshGroupLeague(slug: string): Promise<void> {

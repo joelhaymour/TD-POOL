@@ -16,12 +16,15 @@ a web change. What the shell adds on top of Safari:
 - an offline page (`native/www/error.html`) with a retry when the site can't
   be reached.
 
-**Group bets are retired** (2026-09-25), in the app and on the website:
-the section is hidden everywhere — league header, bottom bars, create-league
-and settings toggles, and the `/<slug>/group` routes (they redirect to the
-league's first other section). A league's saved switch and its old group
-bets stay in the database. The switch is `RETIRED_SECTIONS` in
-`src/lib/native/server.ts`.
+**Group bets are gone** — retired 2026-09-25 and their code deleted
+2026-10-08 (App Review 5.6 clean-up, see `docs/NEXT-RELEASE.md`). A league
+runs the TD Pool, Tickets, or both. Old group slips and the
+`enable_group_bets` column stay in the database; nothing reads them.
+
+**The app and the website are the same product.** Nothing on the site checks
+whether it is running inside the app to show or hide features; the only
+app-specific code is native plumbing (push registration, clipboard, haptics,
+share inbox) and instructions that only make sense on a phone.
 
 The same web changes also make the site a better **home-screen app**: on any
 iPhone, open the site in Safari → Share → *Add to Home Screen*. That needs no
@@ -31,8 +34,12 @@ Apple account and works today.
 so **Pool’d appears in the iPhone share sheet**. In bet365 (or any app) tap
 Share → Pool’d: the extension saves the slip picture and the link into the
 App Group `group.com.joelhaymour.poold` (`ios/App/Shared/ShareInbox.swift`)
-and opens `poold://share`; the app loads `/share`, where you tick one or more
-leagues, the slip is read automatically, and one button posts it to each.
+and says "Saved to Pool’d — open Pool’d to post it" (plus a "ready to post"
+notification when notifications are allowed). Share extensions can't open
+their app, so the app does the rest: the next time it comes to the front
+(`SceneDelegate`) it sees the waiting share and loads `/share`, where you tick
+one or more leagues, the slip is read automatically, and one button posts it
+to each.
 The same screen is "Post a ticket" on the home page (paste instead of share).
 
 ## Layout
@@ -46,7 +53,7 @@ The same screen is "Post a ticket" on the home page (paste instead of share).
 | `ios/App/Shared/ShareInbox.swift` | The hand-off between the extension and the app (App Group folder). |
 | `ios/App/App/PooldShareInboxPlugin.swift` | Lets `/share` collect what the extension left. Web side: `src/lib/native/share-inbox.ts`. |
 | `ios/App/App/TDPoolClipboardPlugin.swift` | Native pasteboard read (picture + text). Web side: `src/lib/native/clipboard.ts`. |
-| `ios/App/App/Info.plist` | Portrait only, light UI (dark status-bar text), photo/camera usage strings, no-encryption flag. |
+| `ios/App/App/Info.plist` | Portrait only, follows light/dark, photo/camera usage strings, no-encryption flag. No URL schemes, no ATS exceptions. |
 | `ios/App/App/Assets.xcassets` | App icon + launch image, generated. |
 | `ios/App/CapApp-SPM` | Swift package pulling Capacitor and the keyboard plugin (no CocoaPods). |
 | `native/make-artwork.swift` | Draws every icon, the launch screen and the SVG logo files from one vector copy of the logo (`native/brand/logo-source.jpg`). |
@@ -59,20 +66,22 @@ The same screen is "Post a ticket" on the home page (paste instead of share).
 
 ```bash
 npm install                      # once per clone: the Swift package points at node_modules/@capacitor/keyboard
-npm run ios:sync                 # writes ios/App/App/capacitor.config.json + copies native/www (run after changing capacitor.config.ts)
+npm run ios:sync                 # writes ios/App/App/capacitor.config.json (always the production URL) + copies native/www
 npm run ios:open                 # opens the project in Xcode
 npm run ios:artwork              # re-draw the PNGs after editing native/make-artwork.swift
 npm run ios:assets               # push native/assets into the Xcode asset catalog
 ```
 
-To point a build at **staging** instead of production:
+To point a test build at **staging** instead of production:
 
 ```bash
-CAP_SERVER_URL=https://td-pool-v2.vercel.app npm run ios:sync
+npm run ios:sync:staging
 ```
 
-Run `npm run ios:sync` again (no variable) before committing — the committed
-`ios/App/App/capacitor.config.json` must carry the production address.
+Run `npm run ios:sync` again before committing or archiving — the committed
+`ios/App/App/capacitor.config.json` must carry the production address. Local
+`next dev` is not reachable from the simulator (no ATS exception); test the
+site in a browser, or the app against staging.
 
 Command-line build for the simulator (what CI or a quick check would run):
 
@@ -174,7 +183,9 @@ The App Store adds full App Review. Two guidelines matter for this app:
 
 ### App Store listing (copy/paste)
 
-Every App Store Connect field, filled in, as submitted for 1.0. The four
+Every App Store Connect field, filled in, as submitted for 1.0 (1). For the
+resubmission (build 2) the App Review notes and the reply to Apple are in
+`docs/NEXT-RELEASE.md`. The four
 screenshots (1320×2868, iPhone 6.9") were rendered from the real components
 with sample data at 440×956 CSS px and 3× scale in headless Chrome.
 
@@ -289,8 +300,10 @@ Version release: "Manually release this version" (you choose the day it goes liv
   anyway.
 - **Errors**: `src/app/not-found.tsx`, `error.tsx` and `global-error.tsx`
   render the dark field with a way home, since there is no address bar.
-- **Detecting the shell** from the site: the user agent ends in `TDPoolApp`
-  (`appendUserAgent`) and `window.Capacitor.isNativePlatform()` is true.
+- **Detecting the shell** from the site: `window.Capacitor.isNativePlatform()`
+  is true (client side only). There is no user-agent marker, and the server
+  renders the same thing for the app and a browser — keep it that way (App
+  Review 5.6).
 
 ## Updating Capacitor
 

@@ -9,6 +9,7 @@ import {
 import { resolvePoolWeek } from "@/lib/nfl/calendar";
 import { settleLeagueParlays } from "@/lib/services/settle-parlays";
 import { syncNflWeek } from "@/lib/services/sync-nfl-week";
+import { cronAuthorized } from "@/lib/auth/cron";
 
 /** Full board rebuild — the slowest job in the app. */
 export const maxDuration = 300;
@@ -33,19 +34,14 @@ function isOddsSyncDay(now: Date): boolean {
 }
 
 /**
- * Vercel Cron / manual refresh endpoint.
- * Secure with CRON_SECRET bearer token when deployed.
+ * Vercel Cron endpoint (CRON_SECRET bearer token).
  */
 export async function GET(request: Request) {
   if (process.env.ENABLE_CRON_JOBS === "false") {
     return NextResponse.json({ skipped: "Scheduled jobs disabled in this environment" });
   }
-  const secret = process.env.CRON_SECRET?.trim();
-  if (secret) {
-    const auth = request.headers.get("authorization") ?? "";
-    if (auth !== `Bearer ${secret}`) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+  if (!cronAuthorized(request)) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   const store = getStore();
@@ -100,14 +96,14 @@ export async function GET(request: Request) {
     }).catch(() => {});
   }
 
-  // Group parlays and tickets settle here as well. Without it a slip stays
-  // pending until somebody opens the app, which is how legs sat overnight.
+  // Tickets settle here as well. Without it a slip stays pending until
+  // somebody opens the app, which is how legs sat overnight.
   let parlaysSettled = 0;
   try {
     await syncNflWeek(store, { season, week, scoresOnly: true });
     const leagues = await store.listLeagues();
     for (const league of leagues.filter(
-      (l) => l.sections.group_bets || l.sections.tickets,
+      (l) => l.sections.tickets,
     )) {
       const summary = await settleLeagueParlays(store, league);
       parlaysSettled += summary.slipsSettled;

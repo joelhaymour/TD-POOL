@@ -4,6 +4,7 @@ import { gameStarted } from "@/lib/props/slip";
 import { gameDone, settleLeagueParlays } from "@/lib/services/settle-parlays";
 import { syncNflWeek } from "@/lib/services/sync-nfl-week";
 import type { League } from "@/lib/types";
+import { cronAuthorized } from "@/lib/auth/cron";
 
 /** Scores and grading only — the board rebuild lives in refresh-td-board. */
 export const maxDuration = 60;
@@ -28,18 +29,14 @@ export async function GET(request: Request) {
     return NextResponse.json({ skipped: "Settle ticker is off here" });
   }
 
-  const secret = process.env.CRON_SECRET?.trim();
-  if (secret) {
-    const auth = request.headers.get("authorization") ?? "";
-    if (auth !== `Bearer ${secret}`) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+  if (!cronAuthorized(request)) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   const store = getStore();
-  // Only sections that grade legs: group parlays and posted tickets.
+  // Only leagues that grade legs: the ones running Tickets.
   const leagues = (await store.listLeagues()).filter(
-    (l): l is League => l.sections.group_bets || l.sections.tickets,
+    (l): l is League => l.sections.tickets,
   );
 
   const working: League[] = [];

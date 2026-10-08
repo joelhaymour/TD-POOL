@@ -474,7 +474,7 @@ export function PostTicketSheet({
           {hint ? <p className="text-[11px] text-warning">{hint}</p> : null}
 
           {/* A link but no picture, in the app: back to the bet, screenshot,
-              share it to Pool'd. That reopens Post a ticket from the home
+              share it to Pool'd. Coming back opens Post a ticket from the home
               screen, which picks this link and league back up. */}
           {inApp && !picture && parseShareLink(shareText).ok ? (
             <BackToBetSteps link={shareText} slug={slug} />

@@ -70,25 +70,13 @@ export async function PATCH(
       logo_url,
       member_count,
       active_week_id,
-      pick_mode,
       sections,
     } = body;
 
     const settings: UpdateLeagueSettingsInput = {};
-    if (pick_mode !== undefined) {
-      if (pick_mode !== "one_each" && pick_mode !== "open") {
-        return NextResponse.json(
-          { error: "pick_mode must be one_each or open", code: "VALIDATION" },
-          { status: 400 },
-        );
-      }
-      settings.pick_mode = pick_mode;
-    }
     if (sections !== undefined) {
       const next = mergeSections(league.sections, sectionsFromBody(sections));
-      if (
-        !next.td_pool && !next.group_bets && !next.tickets
-      ) {
+      if (!next.td_pool && !next.tickets) {
         return NextResponse.json(
           { error: "Keep at least one section on", code: "VALIDATION" },
           { status: 400 },

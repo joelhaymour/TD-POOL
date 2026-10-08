@@ -13,10 +13,11 @@
     "db:v2:push": "node scripts/db-v2.mjs push",
     "db:v2:status": "node scripts/db-v2.mjs status",
     "setup:v2": "node scripts/setup-v2.mjs",
-    "seed": "curl -X POST http://localhost:3000/api/seed",
+    "seed": "npx --yes tsx --env-file-if-exists=.env.local --tsconfig tsconfig.json scripts/seed.ts",
     "test:model": "npx --yes tsx scripts/verify-td-model.ts",
     "backtest": "npx --yes tsx scripts/backtest-td-pool.ts",
-    "ios:sync": "cap sync ios",
+    "ios:sync": "env -u CAP_SERVER_URL cap sync ios",
+    "ios:sync:staging": "CAP_SERVER_URL=https://td-pool-v2.vercel.app cap sync ios",
     "ios:open": "cap open ios",
     "ios:assets": "capacitor-assets generate --ios --assetPath native/assets --iosProject ios/App",
     "ios:artwork": "swift native/make-artwork.swift"

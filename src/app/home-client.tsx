@@ -4,13 +4,12 @@ import { useRouter } from "next/navigation";
 import { useMemo, useState, type FormEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { Sheet } from "@/components/ui/sheet";
-import { PickModeField } from "@/components/league/pick-mode-field";
 import { SectionToggles } from "@/components/league/section-toggles";
 import { useToast } from "@/components/ui/toast";
 import { inviteLink } from "@/lib/league/invite";
 import { generateJoinPin, normalizeJoinSlug, pinFromInvite } from "@/lib/league/join";
-import { ALL_SECTIONS_ON, withoutSections } from "@/lib/league/sections";
-import type { LeagueSection, LeagueSections, PickMode } from "@/lib/types";
+import { ALL_SECTIONS_ON } from "@/lib/league/sections";
+import type { LeagueSections } from "@/lib/types";
 
 type CreatedLeague = {
   slug: string;
@@ -29,7 +28,6 @@ export function HomeClient({
   hasLeagues,
   pendingJoinSlug,
   pendingJoinPin = "",
-  hiddenSections = [],
 }: {
   accountName: string;
   hasLeagues: boolean;
@@ -37,8 +35,6 @@ export function HomeClient({
   pendingJoinSlug: string;
   /** The PIN from the invite link, when the admin's link carried it. */
   pendingJoinPin?: string;
-  /** Sections this screen leaves out (group bets in the iOS app). */
-  hiddenSections?: LeagueSection[];
 }) {
   const router = useRouter();
   const { toast } = useToast();
@@ -51,10 +47,7 @@ export function HomeClient({
 
   const [name, setName] = useState("");
   const [displayName, setDisplayName] = useState(accountName);
-  const [sections, setSections] = useState<LeagueSections>(() =>
-    withoutSections({ sections: ALL_SECTIONS_ON }, hiddenSections).sections,
-  );
-  const [pickMode, setPickMode] = useState<PickMode>("open");
+  const [sections, setSections] = useState<LeagueSections>(ALL_SECTIONS_ON);
   const [creating, setCreating] = useState(false);
 
   const [joinSlug, setJoinSlug] = useState(pendingJoinSlug);
@@ -91,7 +84,6 @@ export function HomeClient({
           admin_display_name: displayName.trim(),
           join_pin: newJoinPin,
           sections,
-          pick_mode: sections.group_bets ? pickMode : undefined,
         }),
       });
       const data = (await res.json()) as CreatedLeague & { error?: string };
@@ -208,14 +200,8 @@ export function HomeClient({
     <form onSubmit={onCreate} className="space-y-3">
       <div>
         <span className={labelClass}>What&apos;s in this league</span>
-        <SectionToggles value={sections} onChange={setSections} hidden={hiddenSections} />
+        <SectionToggles value={sections} onChange={setSections} />
       </div>
-      {sections.group_bets ? (
-        <div>
-          <span className={labelClass}>Group bets</span>
-          <PickModeField value={pickMode} onChange={setPickMode} />
-        </div>
-      ) : null}
       <label className="block">
         <span className={labelClass}>League name</span>
         <input

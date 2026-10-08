@@ -5,16 +5,11 @@ import { syncNflWeek } from "@/lib/services/sync-nfl-week";
 import { requireApiAdmin } from "@/lib/auth/api";
 
 type SyncBody = {
-  simulateFinal?: boolean;
   season?: number;
   week?: number;
 };
 
-/**
- * Admin: sync NFL game statuses and resolve TD pick results for the league week.
- * Body: { simulateFinal?: boolean } — development only: asOf is set far in the
- * future so the mock provider finalizes every game.
- */
+/** Admin: sync NFL game statuses and resolve TD pick results for the league week. */
 export async function POST(
   request: Request,
   context: RouteContext<"/api/leagues/[slug]/sync">,
@@ -45,22 +40,14 @@ export async function POST(
       }
     }
 
-    // A testing aid: never in production, where it would only confuse.
-    const simulateFinal = Boolean(body.simulateFinal) && process.env.NODE_ENV !== "production";
-    const asOf = simulateFinal ? new Date("2099-12-31T23:59:59.000Z") : new Date();
-
     const summary = await syncNflWeek(store, {
       season,
       week,
-      asOf,
+      asOf: new Date(),
       leagueId: league.id,
     });
 
-    return NextResponse.json({
-      ok: true,
-      simulateFinal,
-      summary,
-    });
+    return NextResponse.json({ ok: true, summary });
   } catch (err) {
     return storeErrorResponse(err);
   }

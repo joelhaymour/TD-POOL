@@ -20,8 +20,8 @@ export type MoneySettingsFormProps = {
 const modes: { id: BettingMode; title: string; hint: string }[] = [
   {
     id: "fixed",
-    title: "Fixed Group Bet",
-    hint: "One amount wagered each week",
+    title: "Fixed stake",
+    hint: "One stake on the league parlay each week",
   },
   {
     id: "none",

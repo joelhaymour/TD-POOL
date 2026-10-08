@@ -4,10 +4,8 @@
 	"webDir": "native/www",
 	"backgroundColor": "#f2f3ee",
 	"zoomEnabled": false,
-	"appendUserAgent": "TDPoolApp",
 	"server": {
 		"url": "https://td-pool-five.vercel.app",
-		"cleartext": false,
 		"errorPath": "error.html"
 	},
 	"plugins": {

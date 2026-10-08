@@ -28,7 +28,7 @@ export default function PrivacyPage() {
             <ul className="mt-2 list-disc space-y-1 pl-5">
               <li>Your email address and password, used only to sign you in.</li>
               <li>The display name you choose in each league.</li>
-              <li>Your picks, group bets and tickets, and any screenshot of a bet slip you post.</li>
+              <li>Your picks and tickets, and any screenshot of a bet slip you post.</li>
               <li>
                 Share links you paste from a sportsbook, so other members of your league can open
                 the same bet.

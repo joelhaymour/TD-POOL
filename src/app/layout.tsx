@@ -6,7 +6,7 @@ import { PwaRegister } from "@/components/pwa-register";
 import { PushBootstrap } from "@/components/notify/push-bootstrap";
 import { NativeRefresh } from "@/components/native-refresh";
 import { ThemeSync } from "@/components/appearance-picker";
-import { APPEARANCE_READY, parseTheme, THEME_COOKIE } from "@/lib/theme";
+import { parseTheme, THEME_COOKIE } from "@/lib/theme";
 import { ToastProvider } from "@/components/ui/toast";
 import "./globals.css";
 
@@ -40,13 +40,11 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: APPEARANCE_READY
-    ? [
-        { media: "(prefers-color-scheme: light)", color: "#f2f3ee" },
-        { media: "(prefers-color-scheme: dark)", color: "#0e110d" },
-      ]
-    : "#f2f3ee",
-  colorScheme: APPEARANCE_READY ? "light dark" : "light",
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#f2f3ee" },
+    { media: "(prefers-color-scheme: dark)", color: "#0e110d" },
+  ],
+  colorScheme: "light dark",
   // Draw under the notch and home bar; the shell pads with env(safe-area-inset-*).
   viewportFit: "cover",
 };
@@ -64,9 +62,7 @@ const stagingVars = {
 
 export default async function RootLayout({ children }: LayoutProps<"/">) {
   // Light, Dark or Automatic from the account sheet, painted on the first frame.
-  const theme = APPEARANCE_READY
-    ? parseTheme((await cookies()).get(THEME_COOKIE)?.value)
-    : "light";
+  const theme = parseTheme((await cookies()).get(THEME_COOKIE)?.value);
   return (
     <html
       lang="en"

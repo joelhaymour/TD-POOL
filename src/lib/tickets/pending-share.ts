@@ -1,7 +1,7 @@
 /**
  * A bet link waiting for its screenshot. When a book shares only a link, the
  * member goes back to the bet, screenshots it and shares the picture to
- * Pool'd — which reopens the post screen from scratch. The link (and the
+ * Pool'd — and coming back opens the post screen from scratch. The link (and the
  * league they were posting to) is kept here meanwhile, and the picture picks
  * it up when it arrives. Half an hour, then it's stale.
  */

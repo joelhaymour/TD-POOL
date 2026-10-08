@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { syncSeasonGoalLine } from "@/lib/services/sync-goal-line";
 import { resolvePoolWeek } from "@/lib/nfl/calendar";
+import { cronAuthorized } from "@/lib/auth/cron";
 
 /** Streams and folds a full season of play-by-play; measured at ~3s. */
 export const maxDuration = 300;
@@ -15,12 +16,8 @@ export async function GET(request: Request) {
   if (process.env.ENABLE_CRON_JOBS === "false") {
     return NextResponse.json({ skipped: "Scheduled jobs disabled in this environment" });
   }
-  const secret = process.env.CRON_SECRET?.trim();
-  if (secret) {
-    const auth = request.headers.get("authorization") ?? "";
-    if (auth !== `Bearer ${secret}`) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+  if (!cronAuthorized(request)) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   const { season } = resolvePoolWeek(new Date());

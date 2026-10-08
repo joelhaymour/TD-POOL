@@ -16,12 +16,9 @@ const labelClass =
 export function AdminTools({
   slug,
   viewerMemberId,
-  isOwner = false,
 }: {
   slug: string;
   viewerMemberId: string;
-  /** Pool'd's owner: may force an odds pull (spends shared credits). */
-  isOwner?: boolean;
 }) {
   const { toast } = useToast();
 
@@ -32,15 +29,7 @@ export function AdminTools({
   const [overrideMemberId, setOverrideMemberId] = useState("");
   const [overridePlayerId, setOverridePlayerId] = useState("");
   const [overriding, setOverriding] = useState(false);
-  const [oddsRefreshing, setOddsRefreshing] = useState(false);
   const [pendingMemberId, setPendingMemberId] = useState<string | null>(null);
-  const [lastOddsSync, setLastOddsSync] = useState<{
-    source: string;
-    quotes: number;
-    playersUpdated: number;
-    fetchedAt: string;
-    error?: string;
-  } | null>(null);
 
   const refresh = useCallback(async () => {
     try {
@@ -97,48 +86,6 @@ export function AdminTools({
       toast({ title: "Network error", tone: "error" });
     } finally {
       setSyncing(false);
-    }
-  }
-
-  async function runOddsRefresh() {
-    setOddsRefreshing(true);
-    try {
-      const res = await fetch(`/api/leagues/${slug}/odds-sync`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ force: true }),
-      });
-      const data = (await res.json()) as {
-        error?: string;
-        summary?: {
-          source: string;
-          quotes: number;
-          playersUpdated: number;
-          fetchedAt: string;
-          error?: string;
-        };
-      };
-      if (!res.ok || !data.summary) {
-        toast({
-          title: "Odds refresh failed",
-          description: data.error ?? "Try again.",
-          tone: "error",
-        });
-        return;
-      }
-      setLastOddsSync(data.summary);
-      toast({
-        title: "Odds refreshed",
-        description: `${data.summary.source} · ${data.summary.quotes} quotes · ${data.summary.playersUpdated} players${
-          data.summary.error ? ` · ${data.summary.error}` : ""
-        }`,
-        tone: data.summary.error ? "error" : "success",
-      });
-      await refresh();
-    } catch {
-      toast({ title: "Network error", tone: "error" });
-    } finally {
-      setOddsRefreshing(false);
     }
   }
 
@@ -319,23 +266,6 @@ export function AdminTools({
             ? new Date(dashboard.odds_updated_at).toLocaleString()
             : "n/a"}
         </p>
-        {isOwner ? (
-          <Button
-            fullWidth
-            variant="secondary"
-            disabled={oddsRefreshing}
-            onClick={() => void runOddsRefresh()}
-          >
-            {oddsRefreshing ? "Refreshing…" : "Force odds refresh (owner only · uses credits)"}
-          </Button>
-        ) : null}
-        {lastOddsSync ? (
-          <p className="rounded-xl bg-field px-3 py-2 text-xs text-ink-muted">
-            Last force refresh · {lastOddsSync.source} · {lastOddsSync.quotes}{" "}
-            quotes · {lastOddsSync.playersUpdated} players
-            {lastOddsSync.error ? ` · ${lastOddsSync.error}` : ""}
-          </p>
-        ) : null}
       </section>
 
       <section className="space-y-3 rounded-[1.4rem] bg-chalk shadow-card p-4">

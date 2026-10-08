@@ -7,20 +7,16 @@
  */
 export type BettingMode = "fixed" | "none";
 /**
- * What a league runs. Any combination: the classic weekly TD pool, shared
- * parlays built from the prop board, and tickets — bets members placed
- * themselves and posted for the rest of the league to follow and ride.
+ * What a league runs: the classic weekly TD pool, tickets (bets members placed
+ * themselves and posted for the rest of the league to follow and ride), or both.
  */
-export type LeagueSection = "td_pool" | "group_bets" | "tickets";
+export type LeagueSection = "td_pool" | "tickets";
 export type LeagueSections = Record<LeagueSection, boolean>;
 export type ParlayStatus = "open" | "locked";
 /**
- * How a group slip fills. One pick each: it is complete, and locks itself,
- * when the last member is in. Open: anyone adds as many as they like and
- * whoever places the bet locks it in.
+ * A ticket is one member's placed bet. "group" rows are the retired Group Bets
+ * slips (2026-09-25); they stay in the database but nothing reads them.
  */
-export type PickMode = "one_each" | "open";
-/** A group slip is built together from the board; a ticket is one member's placed bet. */
 export type ParlayKind = "group" | "ticket";
 export type ParlayResult = "pending" | "won" | "lost" | "push";
 export type LegResult = "pending" | "won" | "lost" | "push" | "void";
@@ -75,8 +71,6 @@ export interface League {
   slug: string;
   admin_user_id: string | null;
   sections: LeagueSections;
-  /** Group bets: one pick each, or an open slip. */
-  pick_mode: PickMode;
   currency: Currency;
   betting_mode: BettingMode;
   contribution_per_member: number | null;
@@ -346,7 +340,6 @@ export interface CreateLeagueInput {
   name: string;
   slug?: string;
   sections?: Partial<LeagueSections>;
-  pick_mode?: PickMode;
   currency?: Currency;
   betting_mode?: BettingMode;
   contribution_per_member?: number | null;
@@ -517,7 +510,6 @@ export interface SelectPickInput {
 export interface UpdateLeagueSettingsInput {
   name?: string;
   sections?: Partial<LeagueSections>;
-  pick_mode?: PickMode;
   currency?: Currency;
   betting_mode?: BettingMode;
   contribution_per_member?: number | null;
