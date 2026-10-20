@@ -1,5 +1,9 @@
 # Next release: Pool’d 1.0 (build 2) — resubmission after the 5.6 rejection
 
+**Update 2026-10-20:** Apple's second review dropped the 5.6 issue and asked
+only for the Age Rating "Gambling" answer to be Yes (Guideline 2.3.6). Set in
+App Information → Age Ratings (step 6); rating stays 18+. No new build.
+
 **Status (2026-10-08):** Apple rejected 1.0 (1) under Guideline 5.6 ("features
 intentionally hidden during review"). The code below is ready on `v2`; it has
 not been released to `main` or uploaded yet. Same version number (1.0), new

@@ -205,7 +205,10 @@ Content rights:      "Yes, it contains third-party content" → tick that you ha
                      data providers). Your call — say if you're unsure.
 Age rating:  click Set Up / Edit and answer honestly:
              - Simulated gambling: None
-             - Real-money gambling in the app: No (the app takes no bets)
+             - Gambling: YES. Apple requires it (Guideline 2.3.6, 2026-10-20)
+               because the app shows odds and bet tracking, even though it
+               takes no bets. Rating 18+; not sold in a few countries
+               (Brazil, Korea, UAE, Saudi Arabia and others) — US/Canada fine.
              - Contests: Yes (friends' pick'em, no money through the app)
              - Everything else (violence, profanity, etc.): None
              It will likely come out 17+ / 18+ because of betting themes. That's fine.
